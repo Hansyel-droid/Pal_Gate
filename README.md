@@ -4,8 +4,8 @@
 Download the project to your local machine:
 
 ```bash
-git clone https://github.com/your-username/your-repo-name.git
-cd your-repo-name
+git clone https://github.com/Hansyel-droid/Pal_Gate
+cd Pal-Gate
 ```
 ## 2. Set Up Virtual Environment
 It is highly recommended to use a virtual environment to avoid library conflicts.
