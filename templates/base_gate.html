@@ -1,0 +1,63 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}GateGuard{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    {% block extra_css %}{% endblock %}
+    <link rel="stylesheet" href="{% static 'css/gate_guard/style.css' %}">
+</head>
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <h1 class="brand-name">GateGuard</h1>
+                <p class="brand-sub">MAIN ENTRANCE</p>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="{% url 'gate_guard:overview' %}" class="nav-item {% if request.resolver_match.url_name == 'overview' %}active{% endif %}">
+                    <i data-lucide="layout-grid"></i> Overview
+                </a>
+                <a href="{% url 'gate_guard:logs' %}" class="nav-item {% if request.resolver_match.url_name == 'logs' %}active{% endif %}">
+                    <i data-lucide="clipboard-list"></i> Logs
+                </a>
+                <a href="{% url 'gate_guard:campus_map' %}" class="nav-item {% if request.resolver_match.url_name == 'campus_map' %}active{% endif %}">
+                    <i data-lucide="map"></i> Campus Map
+                </a>
+                <a href="{% url 'gate_guard:settings' %}" class="nav-item {% if request.resolver_match.url_name == 'settings' %}active{% endif %}">
+                    <i data-lucide="settings"></i> Settings
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed={{ user.username }}" alt="Officer" class="avatar">
+                    <div class="user-info">
+                        <p class="user-name">{{ user.get_full_name|default:user.username }}</p>
+                        <p class="user-role">Security Head</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        <main class="content">
+            {% block content %}{% endblock %}
+            <footer class="main-footer">
+                <p>© 2024 GATE MANAGEMENT SYSTEM. ALL RIGHTS RESERVED.</p>
+                <div class="footer-links">
+                    <a href="#">PRIVACY POLICY</a>
+                    <a href="#">TERMS OF SERVICE</a>
+                    <a href="#">CONTACT SUPPORT</a>
+                </div>
+            </footer>
+        </main>
+    </div>
+<script>
+    lucide.createIcons();
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

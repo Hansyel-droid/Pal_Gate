@@ -1,0 +1,181 @@
+{% extends 'base_gate.html' %}
+{% load static %}
+
+{% block title %}GateGuard - Campus Map{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/gate_guard/map.css' %}">
+{% endblock %}
+
+{% block content %}
+<header class="top-header">
+    <div class="header-title">
+        <p class="subtitle">Security Navigation</p>
+        <h2 class="title">Campus Map</h2>
+    </div>
+</header>
+
+<!-- Region Cards (2-column) -->
+<section class="region-cards-two-col">
+    <div class="card" onclick="showRegion('North', 'North_map.png')">
+        <div class="card-left">
+            <div class="card-icon">
+                <i data-lucide="compass"></i>
+            </div>
+            <div class="card-info">
+                <h4 class="card-name">North Section</h4>
+                <div class="card-count">Vehicle Count: {{ region_counts.North|default:"0" }}</div>
+            </div>
+        </div>
+        <button class="card-action">
+            Open Section <i data-lucide="chevron-right"></i>
+        </button>
+    </div>
+
+    <div class="card" onclick="showRegion('South', 'South_map.png')">
+        <div class="card-left">
+            <div class="card-icon">
+                <i data-lucide="compass"></i>
+            </div>
+            <div class="card-info">
+                <h4 class="card-name">South Section</h4>
+                <div class="card-count">Vehicle Count: {{ region_counts.South|default:"0" }}</div>
+            </div>
+        </div>
+        <button class="card-action">
+            Open Section <i data-lucide="chevron-right"></i>
+        </button>
+    </div>
+
+    <div class="card" onclick="showRegion('East', 'East_map.png')">
+        <div class="card-left">
+            <div class="card-icon">
+                <i data-lucide="compass"></i>
+            </div>
+            <div class="card-info">
+                <h4 class="card-name">East Section</h4>
+                <div class="card-count">Vehicle Count: {{ region_counts.East|default:"0" }}</div>
+            </div>
+        </div>
+        <button class="card-action">
+            Open Section <i data-lucide="chevron-right"></i>
+        </button>
+    </div>
+
+    <div class="card" onclick="showRegion('West', 'West_map.png')">
+        <div class="card-left">
+            <div class="card-icon">
+                <i data-lucide="compass"></i>
+            </div>
+            <div class="card-info">
+                <h4 class="card-name">West Section</h4>
+                <div class="card-count">Vehicle Count: {{ region_counts.West|default:"0" }}</div>
+            </div>
+        </div>
+        <button class="card-action">
+            Open Section <i data-lucide="chevron-right"></i>
+        </button>
+    </div>
+</section>
+
+<!-- Global Map View -->
+<section id="global-map-view" class="map-main-container">
+    <div class="map-wrapper" style="position: relative;">
+        <img src="{% static 'img/map.png' %}" id="mainCampusMap" alt="Main Map" class="campus-map-img">
+        <div class="map-region-overlay" id="regionLabel">MAIN CAMPUS</div>
+    </div>
+</section>
+
+<!-- Regional Detail View (drill-down) -->
+<section id="regional-detail-view" style="display: none;">
+    <div class="detail-grid">
+        <div class="table-section">
+            <div class="table-header-row">
+                <h3 id="selected-region-title">North Section Activity</h3>
+                <button class="back-btn" onclick="hideRegion()">
+                    <i data-lucide="arrow-left"></i> Back to Global
+                </button>
+            </div>
+            <div class="table-filters">
+                <div class="search-box">
+                    <i data-lucide="search"></i>
+                    <input type="text" placeholder="Search plate or driver..." id="region-search">
+                </div>
+                <select class="filter-select" id="region-filter">
+                    <option>All Status</option>
+                    <option>Entry</option>
+                    <option>Exit</option>
+                </select>
+            </div>
+            <table class="logs-table">
+                <thead>
+                    <tr>
+                        <th>PLATE NUMBER</th>
+                        <th>DRIVER</th>
+                        <th>TIME</th>
+                        <th>STATUS</th>
+                    </tr>
+                </thead>
+                <tbody id="region-table-body">
+                    <!-- JavaScript will populate this -->
+                </tbody>
+            </table>
+        </div>
+        <aside class="small-map-sidebar">
+            <div class="mini-map-container">
+                <img src="" id="miniMap" alt="Region Detail">
+            </div>
+        </aside>
+    </div>
+</section>
+
+<script>
+    // Initialize Lucide icons
+    lucide.createIcons();
+
+    // Region data mapping (static for now)
+    const regionData = {
+        'North': { map: 'North_map.png', logs: [
+            { plate: 'ABC-1234', driver: 'Juan Dela Cruz', time: '08:45 AM', status: 'Entry' },
+            { plate: 'XYZ-8899', driver: 'Maria Santos', time: '09:12 AM', status: 'Exit' },
+            { plate: 'PSU-4451', driver: 'Officer James', time: '09:30 AM', status: 'Entry' }
+        ]},
+        'South': { map: 'South_map.png', logs: [
+            { plate: 'GH-552-JK', driver: 'Randel Sahur', time: '10:00 AM', status: 'Entry' },
+            { plate: 'K-900-LP', driver: 'Amanda Waller', time: '10:15 AM', status: 'Exit' }
+        ]},
+        'East': { map: 'East_map.png', logs: [
+            { plate: 'ABC-1234', driver: 'Juan Dela Cruz', time: '11:00 AM', status: 'Entry' }
+        ]},
+        'West': { map: 'West_map.png', logs: [
+            { plate: 'XYZ-9876', driver: 'Sarah Jenkins', time: '09:50 AM', status: 'Exit' }
+        ]}
+    };
+
+    function showRegion(regionName, mapFileName) {
+        document.getElementById('global-map-view').style.display = 'none';
+        document.getElementById('regional-detail-view').style.display = 'block';
+        document.getElementById('selected-region-title').innerText = regionName + " Section Activity";
+        document.getElementById('miniMap').src = "{% static 'img/' %}" + mapFileName;
+
+        const data = regionData[regionName] || { logs: [] };
+        const tbody = document.getElementById('region-table-body');
+        tbody.innerHTML = '';
+        data.logs.forEach(log => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><span class="plate">${log.plate}</span></td>
+                <td class="driver-name">${log.driver}</td>
+                <td class="log-time">${log.time}</td>
+                <td><span class="badge ${log.status.toLowerCase()}">${log.status}</span></td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    function hideRegion() {
+        document.getElementById('global-map-view').style.display = 'block';
+        document.getElementById('regional-detail-view').style.display = 'none';
+    }
+</script>
+{% endblock %}

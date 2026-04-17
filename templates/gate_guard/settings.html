@@ -1,0 +1,151 @@
+{% extends 'base_gate.html' %}
+{% load static %}
+
+{% block title %}GateGuard - System Settings{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/gate_guard/settings.css' %}">
+{% endblock %}
+
+{% block content %}
+<header class="settings-header">
+    <h2 class="page-title">System Settings</h2>
+    <p class="page-subtitle">Manage your security profile and interface preferences.</p>
+</header>
+
+<!-- Profile Card -->
+<section class="settings-card profile-card">
+    <div class="profile-avatar-wrapper">
+        <div class="avatar-container">
+            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed={{ user.username }}" alt="Officer">
+            <button class="edit-avatar-btn"><i data-lucide="pencil"></i></button>
+        </div>
+    </div>
+    <div class="profile-fields">
+        <form method="post" id="profile-form">
+            {% csrf_token %}
+            <input type="hidden" name="update_profile" value="1">
+            <div class="field-group">
+                <label>FULL NAME</label>
+                <div style="display: flex; gap: 10px;">
+                    {{ profile_form.first_name }}
+                    {{ profile_form.last_name }}
+                </div>
+            </div>
+            <div class="field-group">
+                <label>EMPLOYEE ID</label>
+                {{ profile_form.employee_id }}
+            </div>
+            <div class="field-group">
+                <label>CONTACT NUMBER</label>
+                {{ profile_form.contact_number }}
+            </div>
+            <button type="submit" class="btn-primary" style="margin-top: 15px;">Save Profile</button>
+        </form>
+    </div>
+</section>
+
+<!-- Password Change -->
+<section class="settings-card">
+    <h3 class="card-title">Change Password</h3>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="change_password" value="1">
+        <div class="field-group full-width">
+            <label>OLD PASSWORD</label>
+            {{ password_form.old_password }}
+            {% if password_form.old_password.errors %}
+                <div class="error-text">{{ password_form.old_password.errors }}</div>
+            {% endif %}
+        </div>
+        <div class="field-group full-width">
+            <label>NEW PASSWORD</label>
+            {{ password_form.new_password1 }}
+        </div>
+        <div class="field-group full-width">
+            <label>CONFIRM NEW PASSWORD</label>
+            {{ password_form.new_password2 }}
+            {% if password_form.new_password2.errors %}
+                <div class="error-text">{{ password_form.new_password2.errors }}</div>
+            {% endif %}
+        </div>
+        <button type="submit" class="btn-primary">Change Password</button>
+    </form>
+</section>
+
+<!-- Preferences Grid -->
+<div class="preferences-grid">
+    <section class="settings-card">
+        <div class="card-header">
+            <i data-lucide="sliders" class="header-icon"></i>
+            <h3 class="card-title">System Preferences</h3>
+        </div>
+        <div class="preference-item">
+            <div class="item-text">
+                <p class="item-label">Dark Mode</p>
+                <p class="item-desc">Adjust interface for low-light</p>
+            </div>
+            <label class="toggle">
+                <input type="checkbox">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div class="preference-item">
+            <div class="item-text">
+                <p class="item-label">Notification Sound</p>
+                <p class="item-desc">Alert audio for new gate logs</p>
+            </div>
+            <label class="toggle">
+                <input type="checkbox" checked>
+                <span class="slider"></span>
+            </label>
+        </div>
+    </section>
+
+    <section class="settings-card">
+        <div class="card-header">
+            <i data-lucide="type" class="header-icon"></i>
+            <h3 class="card-title">Text Appearance</h3>
+        </div>
+        <div class="field-group">
+            <label>SCALE SIZE</label>
+            <div class="scale-selector">
+                <button class="scale-btn">Small</button>
+                <button class="scale-btn active">Medium</button>
+                <button class="scale-btn">Large</button>
+            </div>
+        </div>
+        <div class="preview-box">
+            "The quick brown fox jumps over the lazy dog."
+        </div>
+    </section>
+</div>
+
+<!-- Security & Session Banner -->
+<section class="security-banner">
+    <div class="banner-content">
+        <div class="banner-icon">
+            <i data-lucide="shield-check"></i>
+        </div>
+        <div class="banner-text">
+            <h4 class="banner-title">Security & Session</h4>
+            <p class="banner-desc">Manage your current active session and account access.</p>
+        </div>
+    </div>
+    <form action="{% url 'accounts:logout' %}" method="post" style="display: inline;">
+    {% csrf_token %}
+    <button type="submit" class="sign-out-full-btn">
+        <i data-lucide="log-out"></i> Sign Out
+    </button>
+</form>
+        <i data-lucide="log-out"></i> Sign Out
+    </a>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    lucide.createIcons();
+    // Add any additional JS for toggles/scale buttons here
+</script>
+{% endblock %}

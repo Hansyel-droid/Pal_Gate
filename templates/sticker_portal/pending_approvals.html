@@ -1,0 +1,93 @@
+{% extends 'base_sticker.html' %}
+{% load static %}
+
+{% block title %}PalSU Sticker - Pending Approvals{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sticker_portal/pending.css' %}">
+{% endblock %}
+
+{% block breadcrumb %}Dashboard / Pending Approvals{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Pending Approvals</h1>
+        <p class="page-subtitle">Review and manage vehicle sticker applications for the academic year 2024-2025.</p>
+    </div>
+    <button class="btn-report"><i data-lucide="filter"></i> Filter</button>
+</div>
+
+<!-- High Priority & Processed Today Cards -->
+<div class="metrics-row">
+    <div class="metric-card priority">
+        <div class="metric-info">
+            <h4>⚠️ HIGH PRIORITY</h4>
+            <div class="metric-main">
+                <span class="metric-number">{{ high_priority_count }}</span>
+                <span class="metric-detail">Applications > 3 days old</span>
+            </div>
+        </div>
+        <i data-lucide="alert-triangle" style="color:#DC2626; width:28px; height:28px;"></i>
+    </div>
+    <div class="metric-card processed">
+        <div class="metric-info">
+            <h4>✅ PROCESSED TODAY</h4>
+            <div class="metric-main">
+                <span class="metric-number">{{ processed_today }}</span>
+                <span class="metric-trend"><i data-lucide="trending-up" style="width:14px;"></i> ~15% increase</span>
+            </div>
+        </div>
+        <i data-lucide="check-circle" style="color:var(--stat-green); width:28px; height:28px;"></i>
+    </div>
+</div>
+
+<!-- Pending Applications Table -->
+<div class="approvals-card">
+    <div class="approvals-header">
+        <h2>📋 Pending requests</h2>
+        <span>Academic year 2024-2025</span>
+    </div>
+    <div class="table-wrapper">
+        <table class="approvals-table">
+            <thead>
+                <tr>
+                    <th>DATE SUBMITTED</th>
+                    <th>APPLICANT</th>
+                    <th>PLATE / ID</th>
+                    <th>ROLE</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for app in applications %}
+                <tr>
+                    <td>{{ app.submitted_at|date:"M d, Y" }}</td>
+                    <td>
+                        <div class="applicant-cell">
+                            <span class="applicant-name">{{ app.applicant.get_full_name }}</span>
+                            <span class="applicant-id">ID: {{ app.applicant.student_id|default:app.applicant.employee_id }}</span>
+                        </div>
+                    </td>
+                    <td><span class="plate-badge">{{ app.vehicle.plate_number }}</span></td>
+                    <td><span class="role-tag">{{ app.applicant.get_classification_display|default:"Student" }}</span></td>
+                    <td>
+                        <a href="{% url 'sticker_portal:application_detail' app.id %}" class="btn-review">
+                            <i data-lucide="file-text"></i> Review Documents
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 40px;">No pending applications.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <!-- Pagination can be added later -->
+    <div class="pagination-info">
+        <span>Showing {{ applications|length }} pending request{{ applications|length|pluralize }}</span>
+    </div>
+</div>
+{% endblock %}

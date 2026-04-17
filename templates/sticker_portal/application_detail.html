@@ -1,0 +1,93 @@
+{% extends 'base_sticker.html' %}
+{% load static %}
+
+{% block title %}Application #{{ application.id }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sticker_portal/pending.css' %}">
+{% endblock %}
+
+{% block breadcrumb %}Dashboard / Pending / Application #{{ application.id }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Application Review</h1>
+        <p class="page-subtitle">{{ application.applicant.get_full_name }} - {{ application.vehicle.plate_number }}</p>
+    </div>
+    <a href="{% url 'sticker_portal:pending_approvals' %}" class="btn-report">
+        <i data-lucide="arrow-left"></i> Back to List
+    </a>
+</div>
+
+<div class="detail-grid">
+    <div class="info-section">
+        <div class="info-group">
+            <label>APPLICANT INFORMATION</label>
+            <div class="info-card">
+                <div class="info-row"><span>Full Name</span><strong>{{ application.applicant.get_full_name }}</strong></div>
+                <div class="info-row"><span>ID</span><strong>{{ application.applicant.student_id|default:application.applicant.employee_id }}</strong></div>
+                <div class="info-row"><span>College/Dept</span><strong>{{ application.applicant.college_department }}</strong></div>
+                <div class="info-row"><span>Classification</span><strong>{{ application.applicant.get_classification_display }}</strong></div>
+                <div class="info-row"><span>Contact</span><strong>{{ application.applicant.contact_number }}</strong></div>
+            </div>
+        </div>
+
+        <div class="info-group">
+            <label>VEHICLE INFORMATION</label>
+            <div class="info-card">
+                <div class="info-row"><span>Plate Number</span><strong>{{ application.vehicle.plate_number }}</strong></div>
+                <div class="info-row"><span>Model</span><strong>{{ application.vehicle.model }}</strong></div>
+                <div class="info-row"><span>Color</span><strong>{{ application.vehicle.color }}</strong></div>
+                <div class="info-row"><span>Ownership</span><strong>{% if application.vehicle.is_owner %}Registered in applicant's name{% else %}Not owner{% endif %}</strong></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="documents-section">
+        <label>UPLOADED DOCUMENTS</label>
+        <div class="documents-list">
+            {% for doc in documents %}
+            <div class="document-item">
+                <i data-lucide="{% if doc.document_type == 'or_cr' %}file-text{% elif doc.document_type == 'drivers_license' %}id-card{% elif doc.document_type == 'cor' %}graduation-cap{% else %}file-signature{% endif %}"></i>
+                <span>{{ doc.get_document_type_display }}</span>
+                <a href="{{ doc.file.url }}" target="_blank" class="view-link">View</a>
+            </div>
+            {% empty %}
+            <p>No documents uploaded.</p>
+            {% endfor %}
+        </div>
+
+        <form method="post" class="action-form">
+            {% csrf_token %}
+            <div class="form-group" id="rejection-reason-group" style="display: none;">
+                <label>REJECTION REASON</label>
+                <textarea name="reason" rows="3" class="form-input"></textarea>
+            </div>
+            <div class="action-buttons">
+                <button type="submit" name="action" value="approve" class="btn-approve">
+                    <i data-lucide="check"></i> Approve Application
+                </button>
+                <button type="button" id="show-reject-btn" class="btn-reject">
+                    <i data-lucide="x"></i> Reject Application
+                </button>
+                <button type="submit" name="action" value="reject" id="confirm-reject-btn" class="btn-reject-confirm" style="display: none;">
+                    Confirm Rejection
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    lucide.createIcons();
+    const showBtn = document.getElementById('show-reject-btn');
+    const confirmBtn = document.getElementById('confirm-reject-btn');
+    const reasonGroup = document.getElementById('rejection-reason-group');
+    showBtn.addEventListener('click', () => {
+        reasonGroup.style.display = 'block';
+        showBtn.style.display = 'none';
+        confirmBtn.style.display = 'inline-flex';
+    });
+</script>
+{% endblock %}

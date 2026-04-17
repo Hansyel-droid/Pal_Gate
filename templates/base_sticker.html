@@ -1,0 +1,87 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}PalSU Sticker{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon">
+                    <i data-lucide="grid-2x2"></i>
+                </div>
+                <span class="brand-name">PalSU Sticker</span>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="{% url 'sticker_portal:dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                    <i data-lucide="layout-dashboard"></i> Dashboard
+                </a>
+                <a href="{% url 'sticker_portal:pending_approvals' %}" class="nav-item {% if request.resolver_match.url_name == 'pending_approvals' %}active{% endif %}">
+                    <i data-lucide="clock"></i> Pending Approvals
+                </a>
+
+                <p class="nav-section-label">Administration</p>
+                <a href="{% url 'sticker_portal:settings' %}" class="nav-item {% if request.resolver_match.url_name == 'settings' %}active{% endif %}">
+                    <i data-lucide="settings"></i> Settings
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed={{ user.username }}" alt="Admin" class="avatar">
+                <div>
+                    <p class="user-name">{% if user.get_full_name %}{{ user.get_full_name }}{% else %}Admin User{% endif %}</p>
+                    <p class="user-role">{{ user.get_user_type_display }}</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="main">
+            <!-- Top Bar -->
+            <div class="topbar">
+                <span class="breadcrumb">{% block breadcrumb %}Dashboard{% endblock %}</span>
+                <div class="topbar-actions">
+                    <button class="icon-btn"><i data-lucide="bell"></i></button>
+                    <form action="{% url 'accounts:logout' %}" method="post" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn-new">
+                            <i data-lucide="log-out"></i> Sign Out
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Page Content -->
+            <div class="page-content">
+                {% block content %}{% endblock %}
+            </div>
+
+            <!-- Footer -->
+            <footer class="page-footer">
+                <span>© 2024 GATE MANAGEMENT SYSTEM. ALL RIGHTS RESERVED.</span>
+                <div class="footer-links">
+                    <a href="#">PRIVACY POLICY</a>
+                    <a href="#">TERMS OF SERVICE</a>
+                    <a href="#">CONTACT SUPPORT</a>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+{% block extra_js %}
+<script>
+    lucide.createIcons();
+</script>
+{% endblock %}
+</body>
+</html>

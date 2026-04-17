@@ -1,0 +1,115 @@
+{% extends 'base_gate.html' %}
+{% load static %}
+
+{% block title %}GateGuard Overview{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/gate_guard/style2.css' %}">
+{% endblock %}
+
+{% block content %}
+<header class="top-header">
+    <div class="header-title">
+        <p class="subtitle">Security</p>
+        <h2 class="title">Dashboard</h2>
+    </div>
+    <div class="header-actions">
+        <button class="icon-btn"><i data-lucide="bell"></i></button>
+        <a href="{% url 'gate_guard:settings' %}" class="icon-btn"><i data-lucide="user-circle"></i></a>
+        <form action="{% url 'accounts:logout' %}" method="post" style="display: inline;">
+            {% csrf_token %}
+        <button type="submit" class="sign-out-btn">Sign Out</button>
+    </form>
+    </div>
+</header>
+
+<section class="stats-grid">
+    <div class="stat-card">
+        <p class="stat-label">TOTAL TODAY</p>
+        <div class="stat-value-container">
+            <span class="stat-number">{{ total_today }}</span>
+            <span class="stat-badge">+12%</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <p class="stat-label">ENTRIES</p>
+        <div class="stat-value-container">
+            <span class="stat-number">{{ entries_today }}</span>
+            <i data-lucide="log-in" class="stat-icon entry"></i>
+        </div>
+    </div>
+    <div class="stat-card">
+        <p class="stat-label">EXITS</p>
+        <div class="stat-value-container">
+            <span class="stat-number">{{ exits_today }}</span>
+            <i data-lucide="log-out" class="stat-icon exit"></i>
+        </div>
+    </div>
+    <div class="stat-card">
+        <p class="stat-label">ACTIVE PASSES</p>
+        <div class="stat-value-container">
+            <span class="stat-number">{{ active_passes }}</span>
+            <i data-lucide="briefcase" class="stat-icon pass"></i>
+        </div>
+    </div>
+</section>
+
+<section class="chart-container">
+    <!-- Chart static for now, we can implement real chart later -->
+    <div class="chart-header">
+        <div>
+            <h3 class="section-title">Traffic Activity Chart</h3>
+            <p class="section-desc">Hourly entry and exit volume over the last 24 hours</p>
+        </div>
+        <div class="chart-legend">
+            <span class="legend-item"><span class="dot entry"></span> Entries</span>
+            <span class="legend-item"><span class="dot exit"></span> Exits</span>
+        </div>
+    </div>
+    <div class="chart-placeholder">
+        <svg viewBox="0 0 800 200" class="svg-chart">
+            <path d="M0,150 Q100,120 200,140 T400,100 T600,130 T800,80" fill="none" stroke="#10B981" stroke-width="3"/>
+            <path d="M0,160 Q100,150 200,165 T400,150 T600,160 T800,120" fill="none" stroke="#8B5A00" stroke-width="3"/>
+        </svg>
+        <div class="chart-labels">
+            <span>00:00</span><span>04:00</span><span>08:00</span><span>12:00</span><span>16:00</span><span>20:00</span><span>23:59</span>
+        </div>
+    </div>
+</section>
+
+<section class="logs-container">
+    <h3 class="section-title">Live Gate Logs</h3>
+    <table class="logs-table">
+        <thead>
+            <tr>
+                <th>PLATE NUMBER</th>
+                <th>ACTION</th>
+                <th>DRIVER NAME</th>
+                <th>GATE</th>
+                <th>TIME</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in live_logs %}
+            <tr>
+                <td class="plate">{{ log.plate_number }}</td>
+                <td>
+                    {% if log.action == 'entry' %}
+                        <span class="badge entry">Entry</span>
+                    {% elif log.action == 'exit' %}
+                        <span class="badge exit">Exit</span>
+                    {% else %}
+                        <span class="badge denied">Denied</span>
+                    {% endif %}
+                </td>
+                <td>{{ log.driver_name }}</td>
+                <td>{{ log.get_gate_display }}</td>
+                <td>{{ log.timestamp|time:"H:i:s" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5">No logs yet.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends 'base_applicant.html' %}
+{% load static %}
+
+{% block title %}My Applications{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sticker_portal/form.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="top-bar">
+        <div class="top-bar-left">
+            <span class="portal-label">Sticker Portal</span>
+            <span class="separator">/</span>
+            <span class="page-label">My Applications</span>
+        </div>
+        <form action="{% url 'accounts:logout' %}" method="post">
+            {% csrf_token %}
+            <button type="submit" class="sign-out-btn">
+                <i data-lucide="log-out"></i> Sign Out
+            </button>
+        </form>
+    </div>
+
+    <div class="app-wrapper">
+        <div class="application-card">
+            <h2>My Sticker Applications</h2>
+            {% if applications %}
+            <table class="logs-table">
+                <thead>
+                    <tr>
+                        <th>Date Submitted</th>
+                        <th>Plate Number</th>
+                        <th>Status</th>
+                        <th>Expiry Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for app in applications %}
+                    <tr>
+                        <td>{{ app.submitted_at|date:"M d, Y" }}</td>
+                        <td>{{ app.vehicle.plate_number }}</td>
+                        <td><span class="badge {{ app.status }}">{{ app.get_status_display }}</span></td>
+                        <td>{{ app.expiry_date|date:"M d, Y" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p>You haven't submitted any applications yet. <a href="{% url 'sticker_portal:apply' %}">Apply now</a>.</p>
+            {% endif %}
+            <div style="margin-top: 20px;">
+                <a href="{% url 'sticker_portal:apply' %}" class="btn-primary">New Application</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

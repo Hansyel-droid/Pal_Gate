@@ -1,0 +1,130 @@
+{% extends 'base_gate.html' %}
+{% load static %}
+
+{% block title %}GateGuard - Security Archives{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/gate_guard/logs.css' %}">
+{% endblock %}
+
+{% block content %}
+<header class="top-header">
+    <div class="header-title">
+        <h2 class="archive-title">Security Archives</h2>
+        <p class="archive-desc">Reviewing entry and exit records for Main Entrance</p>
+    </div>
+    <div class="header-actions">
+        <a href="{% url 'gate_guard:export_logs_csv' %}" class="btn-secondary">
+            <i data-lucide="download"></i> Export CSV
+        </a>
+        <button class="btn-primary" onclick="window.print()">
+            <i data-lucide="printer"></i> Print Log
+        </button>
+    </div>
+</header>
+
+<!-- Filter Card -->
+<form method="get" class="filter-card">
+    <div class="filter-group">
+        <label>SEARCH RECORDS</label>
+        <div class="filter-input-wrapper">
+            <i data-lucide="search"></i>
+            <input type="text" name="search" placeholder="Plate or Driver Name" value="{{ search_query }}">
+        </div>
+    </div>
+    <div class="filter-group">
+        <label>GATE LOCATION</label>
+        <select name="gate" class="filter-select">
+            <option value="">All Gates</option>
+            {% for value, label in gate_choices %}
+            <option value="{{ value }}" {% if gate_filter == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-group">
+        <label>DATE FROM</label>
+        <div class="filter-input-wrapper">
+            <i data-lucide="calendar"></i>
+            <input type="date" name="date_from" value="{{ date_from }}">
+        </div>
+    </div>
+    <div class="filter-group">
+        <label>DATE TO</label>
+        <div class="filter-input-wrapper">
+            <i data-lucide="calendar"></i>
+            <input type="date" name="date_to" value="{{ date_to }}">
+        </div>
+    </div>
+    <button type="submit" class="apply-filters-btn">
+        <i data-lucide="sliders-horizontal"></i> Apply Filters
+    </button>
+    <a href="{% url 'gate_guard:logs' %}" class="apply-filters-btn" style="background: #6B7280;">Clear</a>
+</form>
+
+<!-- Logs Table -->
+<div class="log-view-grid">
+    <section class="records-container">
+        <table class="archives-table">
+            <thead>
+                <tr>
+                    <th>PLATE NUMBER</th>
+                    <th>ACTION</th>
+                    <th>NAME</th>
+                    <th>GATE</th>
+                    <th>TIME</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in page_obj %}
+                <tr onclick="window.location='{% url 'gate_guard:incident_report' log.id %}';" style="cursor: pointer;">
+                    <td><span class="plate-box">{{ log.plate_number }}</span></td>
+                    <td class="action-{{ log.action }}">
+                        {% if log.action == 'entry' %}
+                            <i data-lucide="log-in"></i> ENTRY
+                        {% elif log.action == 'exit' %}
+                            <i data-lucide="log-out"></i> EXIT
+                        {% else %}
+                            <i data-lucide="ban"></i> DENIED
+                        {% endif %}
+                    </td>
+                    <td>{{ log.driver_name }}</td>
+                    <td>{{ log.get_gate_display }}</td>
+                    <td>{{ log.timestamp|date:"h:i A" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 40px;">No logs found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <div class="pagination">
+            {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}&search={{ search_query }}&gate={{ gate_filter }}&date_from={{ date_from }}&date_to={{ date_to }}">&laquo; Prev</a>
+            {% endif %}
+            <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}&search={{ search_query }}&gate={{ gate_filter }}&date_from={{ date_from }}&date_to={{ date_to }}">Next &raquo;</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </section>
+
+    <!-- Preview Panel (simplified - we'll link to incident report later) -->
+    <aside class="details-panel">
+        <div class="panel-header">
+            <div>
+                <h3 class="panel-title">Capture Preview</h3>
+                <p class="panel-ref">Click a row for details</p>
+            </div>
+        </div>
+        <div class="capture-img-container">
+            <img src="https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=400" alt="Car Capture">
+        </div>
+        <p style="font-size: 0.8rem; color: #8E8577;">Incident report view coming soon.</p>
+    </aside>
+</div>
+{% endblock %}

@@ -1,0 +1,132 @@
+{% extends 'base_sticker.html' %}
+{% load static %}
+
+{% block title %}PalSU Sticker - Administrative Overview{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sticker_portal/admin.css' %}">
+{% endblock %}
+
+{% block breadcrumb %}Dashboard / Overview{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Administrative Overview</h1>
+        <p class="page-subtitle">Manage university vehicle access and sticker issuance.</p>
+    </div>
+    <button class="btn-report">Generate Report</button>
+</div>
+
+<!-- Stats Grid -->
+<div class="stats-grid">
+    <div class="stat-card yellow">
+        <p class="stat-tag yellow">Attention Required</p>
+        <p class="stat-desc">Pending Applications</p>
+        <div class="stat-bottom">
+            <span class="stat-number">{{ pending_count }}</span>
+            <span class="stat-badge orange">
+                <i data-lucide="trending-up"></i> +3 today
+            </span>
+        </div>
+    </div>
+
+    <div class="stat-card green">
+        <p class="stat-tag green">Completed</p>
+        <p class="stat-desc">Approved Today</p>
+        <div class="stat-bottom">
+            <span class="stat-number">{{ approved_today }}</span>
+            <span class="stat-badge green">
+                <i data-lucide="check"></i> Target Met
+            </span>
+        </div>
+    </div>
+
+    <div class="stat-card blue">
+        <p class="stat-tag blue">Logistics</p>
+        <p class="stat-desc">Waiting for Claim</p>
+        <div class="stat-bottom">
+            <span class="stat-number">{{ waiting_claim }}</span>
+            <span class="stat-badge blue">
+                <i data-lucide="package"></i>
+            </span>
+        </div>
+    </div>
+
+    <div class="stat-card red">
+        <p class="stat-tag red">Issues</p>
+        <p class="stat-desc">Rejected / Incomplete</p>
+        <div class="stat-bottom">
+            <span class="stat-number">{{ rejected_incomplete }}</span>
+            <span class="stat-badge pink">
+                <i data-lucide="alert-circle"></i> Review
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- Bottom: Activity + Tip -->
+<div class="bottom-grid">
+    <!-- Activity Log -->
+    <div class="activity-card">
+        <div class="activity-header">
+            <h3 class="activity-title">Recent Activity Log</h3>
+            <a href="#" class="view-all-link">View All Logs</a>
+        </div>
+
+        <div class="activity-list">
+            {% for app in recent_activity %}
+            <div class="activity-item">
+                <div class="activity-dot {% if app.status == 'approved' %}green{% elif app.status == 'rejected' %}red{% else %}orange{% endif %}"></div>
+                <div class="activity-body">
+                    <p class="activity-text">
+                        <strong>{{ app.updated_at|time:"h:i A" }}</strong> – 
+                        Application for <strong>{{ app.applicant.get_full_name }}</strong> 
+                        {% if app.status == 'approved' %}approved{% elif app.status == 'rejected' %}rejected{% else %}updated{% endif %}
+                    </p>
+                    <p class="activity-meta">Vehicle: {{ app.vehicle.model }} ({{ app.vehicle.plate_number }})</p>
+                </div>
+            </div>
+            {% empty %}
+            <p>No recent activity.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Portal Tip -->
+    <div class="tip-card">
+        <div class="tip-icon">
+            <i data-lucide="lightbulb"></i>
+        </div>
+        <h3 class="tip-title">Portal Tip</h3>
+        <p class="tip-text">
+            Did you know? You can now batch-approve renewals from the Vehicle Masterlist. This saves an average of 4 minutes per entry.
+        </p>
+        <button class="btn-tip">Try Batch Processing</button>
+    </div>
+</div>
+
+<!-- High Priority & Processed Today Cards -->
+<div class="metrics-row" style="margin-top: 24px;">
+    <div class="metric-card priority">
+        <div class="metric-info">
+            <h4>⚠️ HIGH PRIORITY</h4>
+            <div class="metric-main">
+                <span class="metric-number">{{ high_priority }}</span>
+                <span class="metric-detail">Applications > 3 days old</span>
+            </div>
+        </div>
+        <i data-lucide="alert-triangle" style="color:#DC2626; width:28px; height:28px;"></i>
+    </div>
+    <div class="metric-card processed">
+        <div class="metric-info">
+            <h4>✅ PROCESSED TODAY</h4>
+            <div class="metric-main">
+                <span class="metric-number">{{ processed_today }}</span>
+                <span class="metric-trend"><i data-lucide="trending-up" style="width:14px;"></i> ~15% increase</span>
+            </div>
+        </div>
+        <i data-lucide="check-circle" style="color:var(--stat-green); width:28px; height:28px;"></i>
+    </div>
+</div>
+{% endblock %}

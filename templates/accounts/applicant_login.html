@@ -1,0 +1,88 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student & Staff Portal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="{% static 'css/sticker_portal/reg_login.css' %}">
+</head>
+<body>
+<div class="portal-container">
+    <div class="portal-card">
+        <div class="portal-header">
+            <div class="brand-icon-lg">
+                <i data-lucide="shield-check"></i>
+            </div>
+            <h1 class="portal-title">GateGuard & Sticker Portal</h1>
+            <p class="portal-subtitle">STUDENT & STAFF PORTAL</p>
+        </div>
+
+        <div class="sticker-section">
+            <div class="sticker-header">
+                <i data-lucide="car" class="sticker-icon"></i>
+                <h2 class="sticker-title">Sticker Portal</h2>
+            </div>
+            <p class="sticker-desc">Renew permits, apply for new gate stickers, and manage vehicle registrations.</p>
+        </div>
+
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="alert alert-error">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="post" class="login-form">
+            {% csrf_token %}
+            <div class="input-group">
+                <label>CORPORATE EMAIL / USERNAME</label>
+                <div class="input-wrapper">
+                    <i data-lucide="mail" class="input-icon"></i>
+                    <input type="text" name="username" placeholder="user@university.edu" class="form-input" required>
+                </div>
+            </div>
+            <div class="input-group">
+                <label>PASSWORD</label>
+                <div class="input-wrapper">
+                    <i data-lucide="lock" class="input-icon"></i>
+                    <input type="password" name="password" placeholder="••••••••" class="form-input" required>
+                    <i data-lucide="eye" class="toggle-password" id="togglePassword"></i>
+                </div>
+            </div>
+            <button type="submit" class="btn-apply">
+                Apply For Sticker <i data-lucide="arrow-right"></i>
+            </button>
+        </form>
+
+        <div class="portal-footer">
+            <span>© 2024 GateGuard Security Systems. All rights reserved.</span>
+            <div class="footer-links">
+                <a href="#">Login</a>
+                <span class="divider">|</span>
+                <a href="#">Support</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    lucide.createIcons();
+    const toggleBtn = document.getElementById('togglePassword');
+    const pwdField = document.querySelector('input[name="password"]');
+    if (toggleBtn && pwdField) {
+        toggleBtn.addEventListener('click', function() {
+            const type = pwdField.getAttribute('type') === 'password' ? 'text' : 'password';
+            pwdField.setAttribute('type', type);
+            this.setAttribute('data-lucide', type === 'password' ? 'eye' : 'eye-off');
+            lucide.createIcons();
+        });
+    }
+</script>
+</body>
+</html>

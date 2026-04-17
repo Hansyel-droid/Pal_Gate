@@ -1,0 +1,267 @@
+{% extends 'base_applicant.html' %}
+{% load static %}
+
+{% block title %}Vehicle Sticker Application{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sticker_portal/form.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <!-- Top Bar with POST logout -->
+    <div class="top-bar">
+        <div class="top-bar-left">
+            <span class="portal-label">Sticker Portal</span>
+            <span class="separator">/</span>
+            <span class="page-label">Application</span>
+        </div>
+        <form action="{% url 'accounts:logout' %}" method="post" style="display: inline;">
+            {% csrf_token %}
+            <button type="submit" class="sign-out-btn">
+                <i data-lucide="log-out"></i> Sign Out
+            </button>
+        </form>
+    </div>
+
+    <div class="app-wrapper">
+        <div class="application-card">
+            <!-- Header -->
+            <div class="form-header">
+                <h1 class="form-title">Vehicle Sticker Application</h1>
+                <p class="form-subtitle">Academic Year 2025–2026 • PalSU Gate System Access</p>
+            </div>
+
+            <form method="post" enctype="multipart/form-data" id="stickerForm">
+                {% csrf_token %}
+
+                <!-- Applicant Profile Section -->
+                <section class="form-section">
+                    <div class="section-header">
+                        <i data-lucide="user" class="section-icon"></i>
+                        <h2 class="section-title">Applicant Profile</h2>
+                    </div>
+                    <div class="form-grid">
+                        <div class="field-group full-width">
+                            <label>FULL NAME</label>
+                            {{ app_form.full_name }}
+                        </div>
+                        <div class="field-group">
+                            <label>COLLEGE/DEPARTMENT</label>
+                            {{ app_form.college_department }}
+                        </div>
+                        <div class="field-group">
+                            <label>STUDENT/EMPLOYEE ID</label>
+                            {{ app_form.student_id }}
+                        </div>
+                        <div class="field-group full-width">
+                            <label>CLASSIFICATION</label>
+                            <div class="radio-group">
+                                {% for radio in app_form.classification %}
+                                <label class="radio-label">
+                                    {{ radio.tag }} {{ radio.choice_label }}
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Vehicle Information Section -->
+                <section class="form-section">
+                    <div class="section-header">
+                        <i data-lucide="car" class="section-icon"></i>
+                        <h2 class="section-title">Vehicle Information</h2>
+                    </div>
+                    <div class="form-grid">
+                        <div class="field-group">
+                            <label>PLATE NUMBER</label>
+                            {{ vehicle_form.plate_number }}
+                        </div>
+                        <div class="field-group">
+                            <label>MODEL</label>
+                            {{ vehicle_form.model }}
+                        </div>
+                        <div class="field-group">
+                            <label>VEHICLE COLOR</label>
+                            {{ vehicle_form.color }}
+                        </div>
+                        <div class="field-group full-width">
+                            <label>OWNERSHIP STATUS</label>
+                            <p class="hint-text">Is the vehicle registered in your name?</p>
+                            <div class="radio-group">
+                                <label class="radio-label">
+                                    <input type="radio" name="is_owner" value="True" checked> Yes
+                                </label>
+                                <label class="radio-label">
+                                    <input type="radio" name="is_owner" value="False"> No
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Digital Vault Uploads -->
+                <section class="form-section">
+                    <div class="section-header">
+                        <i data-lucide="folder-lock" class="section-icon"></i>
+                        <h2 class="section-title">Digital Vault</h2>
+                    </div>
+                    <p class="upload-note">Required Documents: Upload clear scans in PDF or JPG format (Max 5MB)</p>
+
+                    <div class="upload-grid">
+                        <!-- OR/CR -->
+                        <div class="upload-item">
+                            <div class="upload-header">
+                                <i data-lucide="file-text" class="upload-icon"></i>
+                                <div>
+                                    <h4>Upload OR/CR</h4>
+                                    <p>Official Receipt / Certificate of Registration</p>
+                                </div>
+                            </div>
+                            <input type="file" name="or_cr" accept=".pdf,.jpg,.jpeg,.png" id="orcrInput" style="display: none;">
+                            <button type="button" class="upload-btn" id="orcrBtn">
+                                <i data-lucide="upload-cloud"></i> Choose File
+                            </button>
+                            <span class="file-name" id="orcrName">No file chosen</span>
+                        </div>
+
+                        <!-- Driver's License -->
+                        <div class="upload-item">
+                            <div class="upload-header">
+                                <i data-lucide="id-card" class="upload-icon"></i>
+                                <div>
+                                    <h4>Driver's License</h4>
+                                    <p>Valid Professional or Non-Pro License</p>
+                                </div>
+                            </div>
+                            <input type="file" name="drivers_license" accept=".pdf,.jpg,.jpeg,.png" id="licenseInput" style="display: none;">
+                            <button type="button" class="upload-btn" id="licenseBtn">
+                                <i data-lucide="upload-cloud"></i> Choose File
+                            </button>
+                            <span class="file-name" id="licenseName">No file chosen</span>
+                        </div>
+
+                        <!-- Certificate of Registration (conditional) -->
+                        <div class="upload-item" id="corUpload">
+                            <div class="upload-header">
+                                <i data-lucide="graduation-cap" class="upload-icon"></i>
+                                <div>
+                                    <h4>Certificate of Registration</h4>
+                                    <p>Current Academic Year Enrollment form</p>
+                                </div>
+                            </div>
+                            <input type="file" name="cor" accept=".pdf,.jpg,.jpeg,.png" id="corInput" style="display: none;">
+                            <button type="button" class="upload-btn" id="corBtn">
+                                <i data-lucide="upload-cloud"></i> Choose File
+                            </button>
+                            <span class="file-name" id="corName">No file chosen</span>
+                            <div class="locked-overlay" id="corLock" style="display: none;">
+                                <i data-lucide="lock"></i> Only required for students
+                            </div>
+                        </div>
+
+                        <!-- Authorization Letter (conditional) -->
+                        <div class="upload-item" id="authUpload">
+                            <div class="upload-header">
+                                <i data-lucide="file-signature" class="upload-icon"></i>
+                                <div>
+                                    <h4>Authorization Letter</h4>
+                                    <p>Required only if non-owner</p>
+                                </div>
+                            </div>
+                            <input type="file" name="auth_letter" accept=".pdf,.jpg,.jpeg,.png" id="authInput" style="display: none;">
+                            <button type="button" class="upload-btn" id="authBtn">
+                                <i data-lucide="upload-cloud"></i> Choose File
+                            </button>
+                            <span class="file-name" id="authName">No file chosen</span>
+                            <div class="locked-overlay" id="authLock">
+                                <i data-lucide="lock"></i> Required only if non-owner
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Form Actions -->
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" id="saveDraftBtn">
+                        <i data-lucide="save"></i> Save Draft
+                    </button>
+                    <button type="submit" class="btn-primary">
+                        Submit Application <i data-lucide="arrow-right"></i>
+                    </button>
+                </div>
+                <p class="review-note">Please review your application before submitting the form.</p>
+            </form>
+
+            <footer class="form-footer">
+                <span>© 2024 University Sticker Services. All rights reserved.</span>
+            </footer>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Initialize Lucide icons
+    lucide.createIcons();
+
+    const classificationRadios = document.querySelectorAll('input[name="classification"]');
+    const ownershipRadios = document.querySelectorAll('input[name="is_owner"]');
+    const corUploadDiv = document.getElementById('corUpload');
+    const corBtn = document.getElementById('corBtn');
+    const corLock = document.getElementById('corLock');
+    const authUploadDiv = document.getElementById('authUpload');
+    const authBtn = document.getElementById('authBtn');
+    const authLock = document.getElementById('authLock');
+
+    function updateUploadStates() {
+        const isStudent = document.querySelector('input[name="classification"]:checked')?.value === 'student';
+        if (isStudent) {
+            corBtn.disabled = false;
+            corLock.style.display = 'none';
+            corUploadDiv.classList.remove('locked');
+        } else {
+            corBtn.disabled = true;
+            corLock.style.display = 'flex';
+            corUploadDiv.classList.add('locked');
+        }
+
+        const isOwner = document.querySelector('input[name="is_owner"]:checked')?.value === 'True';
+        if (isOwner) {
+            authBtn.disabled = true;
+            authLock.style.display = 'flex';
+            authUploadDiv.classList.add('locked');
+        } else {
+            authBtn.disabled = false;
+            authLock.style.display = 'none';
+            authUploadDiv.classList.remove('locked');
+        }
+    }
+
+    classificationRadios.forEach(radio => radio.addEventListener('change', updateUploadStates));
+    ownershipRadios.forEach(radio => radio.addEventListener('change', updateUploadStates));
+    updateUploadStates();
+
+    function setupFileUpload(btnId, inputId, spanId) {
+        const btn = document.getElementById(btnId);
+        const input = document.getElementById(inputId);
+        const span = document.getElementById(spanId);
+        if (!btn || !input || !span) return;
+        btn.addEventListener('click', () => { if (!btn.disabled) input.click(); });
+        input.addEventListener('change', (e) => {
+            span.textContent = e.target.files.length ? e.target.files[0].name : 'No file chosen';
+        });
+    }
+
+    setupFileUpload('orcrBtn', 'orcrInput', 'orcrName');
+    setupFileUpload('licenseBtn', 'licenseInput', 'licenseName');
+    setupFileUpload('corBtn', 'corInput', 'corName');
+    setupFileUpload('authBtn', 'authInput', 'authName');
+
+    document.getElementById('saveDraftBtn').addEventListener('click', () => {
+        alert('Draft saved (demo).');
+    });
+</script>
+{% endblock %}
