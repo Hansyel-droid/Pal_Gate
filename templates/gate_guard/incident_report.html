@@ -1,0 +1,99 @@
+{% extends 'base_gate.html' %}
+{% load static %}
+
+{% block title %}Incident Report #{{ log.id }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/gate_guard/report.css' %}">
+{% endblock %}
+
+{% block content %}
+<header class="report-header">
+    <div class="header-left">
+        <a href="{% url 'gate_guard:logs' %}" class="back-link">
+            <i data-lucide="arrow-left"></i> Back to Archives
+        </a>
+        <h2 class="report-id">Incident Report: #LOG-{{ log.id }}</h2>
+    </div>
+    <div class="header-actions">
+        <button class="btn-icon" onclick="window.print()"><i data-lucide="printer"></i></button>
+        <button class="btn-icon"><i data-lucide="share-2"></i></button>
+    </div>
+</header>
+
+<div class="report-grid">
+    <section class="details-section">
+        <!-- Status Banner -->
+        <div class="status-banner {{ log.action }}">
+            {% if log.action == 'entry' %}
+                <i data-lucide="log-in"></i>
+                <span>AUTHORIZED ENTRY</span>
+            {% elif log.action == 'exit' %}
+                <i data-lucide="log-out"></i>
+                <span>AUTHORIZED EXIT</span>
+            {% else %}
+                <i data-lucide="ban"></i>
+                <span>ACCESS DENIED</span>
+            {% endif %}
+            <span class="timestamp">{{ log.timestamp|date:"M d, Y"|upper }} - {{ log.timestamp|time:"h:i:s A" }}</span>
+        </div>
+
+        <!-- Vehicle Information -->
+        <div class="info-group">
+            <label>VEHICLE INFORMATION</label>
+            <div class="info-card">
+                <div class="info-row"><span>Plate Number</span><strong>{{ vehicle_info.plate_number }}</strong></div>
+                <div class="info-row"><span>Vehicle Type</span><strong>{{ vehicle_info.color }} {{ vehicle_info.model }}</strong></div>
+                {% if vehicle_info.sticker_id %}
+                <div class="info-row"><span>Sticker ID</span><strong>{{ vehicle_info.sticker_id }}</strong></div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Driver Information -->
+        <div class="info-group">
+            <label>DRIVER INFORMATION</label>
+            <div class="info-card">
+                <div class="info-row"><span>Full Name</span><strong>{{ driver_info.name }}</strong></div>
+                {% if driver_info.affiliation %}
+                <div class="info-row"><span>Affiliation</span><strong>{{ driver_info.affiliation }}</strong></div>
+                {% endif %}
+                {% if driver_info.contact %}
+                <div class="info-row"><span>Contact</span><strong>{{ driver_info.contact }}</strong></div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Denial Reason if applicable -->
+        {% if log.action == 'denied' and log.reason_denied %}
+        <div class="info-group">
+            <label>DENIAL REASON</label>
+            <div class="info-card">
+                <div class="info-row"><span>Reason</span><strong>{{ log.reason_denied }}</strong></div>
+            </div>
+        </div>
+        {% endif %}
+    </section>
+
+    <section class="evidence-section">
+        <label>VISUAL EVIDENCE</label>
+        <div class="evidence-card">
+            <div class="main-capture">
+                <img src="{{ primary_image }}" alt="Primary Capture">
+                <span class="img-label">CAM-01 (Main Entrance)</span>
+            </div>
+            <div class="capture-grid">
+                <div class="sub-capture">
+                    <img src="{{ side_image }}" alt="Side View">
+                    <span>CAM-02</span>
+                </div>
+                <div class="sub-capture">
+                    <img src="{{ plate_zoom }}" alt="Plate Zoom">
+                    <span>PLATE ZOOM</span>
+                </div>
+            </div>
+        </div>
+        <button class="btn-full-report" onclick="window.print()">Download Full PDF Report</button>
+    </section>
+</div>
+{% endblock %}
