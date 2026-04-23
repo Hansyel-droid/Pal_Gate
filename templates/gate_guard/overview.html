@@ -5,6 +5,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/gate_guard/style2.css' %}">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 {% endblock %}
 
 {% block content %}
@@ -67,13 +68,7 @@
         </div>
     </div>
     <div class="chart-placeholder">
-        <svg viewBox="0 0 800 200" class="svg-chart">
-            <path d="M0,150 Q100,120 200,140 T400,100 T600,130 T800,80" fill="none" stroke="#10B981" stroke-width="3"/>
-            <path d="M0,160 Q100,150 200,165 T400,150 T600,160 T800,120" fill="none" stroke="#8B5A00" stroke-width="3"/>
-        </svg>
-        <div class="chart-labels">
-            <span>00:00</span><span>04:00</span><span>08:00</span><span>12:00</span><span>16:00</span><span>20:00</span><span>23:59</span>
-        </div>
+        <canvas id="trafficChart" width="800" height="200"></canvas>
     </div>
 </section>
 
@@ -112,4 +107,48 @@
         </tbody>
     </table>
 </section>
+
+{% block extra_js %}
+<script>
+    lucide.createIcons();
+    const ctx = document.getElementById('trafficChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ traffic_data.labels|safe }},
+            datasets: [
+                {
+                    label: 'Entries',
+                    data: {{ traffic_data.entries|safe }},
+                    borderColor: '#10B981',
+                    backgroundColor: 'transparent',
+                    tension: 0.4,
+                    borderWidth: 3,
+                    pointRadius: 0,
+                },
+                {
+                    label: 'Exits',
+                    data: {{ traffic_data.exits|safe }},
+                    borderColor: '#8B5A00',
+                    backgroundColor: 'transparent',
+                    tension: 0.4,
+                    borderWidth: 3,
+                    pointRadius: 0,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: { beginAtZero: true }
+            }
+        }
+    });
+</script>
+{% endblock %}
 {% endblock %}

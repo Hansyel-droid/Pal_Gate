@@ -93,7 +93,9 @@
                 </div>
             </div>
         </div>
-        <button class="btn-full-report" onclick="window.print()">Download Full PDF Report</button>
+        <a href="{% url 'gate_guard:download_incident_pdf' log.id %}" class="btn-full-report">
+            Download Full PDF Report
+        </a>
     </section>
 </div>
 {% endblock %}

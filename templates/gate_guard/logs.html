@@ -61,70 +61,77 @@
     <a href="{% url 'gate_guard:logs' %}" class="apply-filters-btn" style="background: #6B7280;">Clear</a>
 </form>
 
-<!-- Logs Table -->
-<div class="log-view-grid">
-    <section class="records-container">
-        <table class="archives-table">
-            <thead>
-                <tr>
-                    <th>PLATE NUMBER</th>
-                    <th>ACTION</th>
-                    <th>NAME</th>
-                    <th>GATE</th>
-                    <th>TIME</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for log in page_obj %}
-                <tr onclick="window.location='{% url 'gate_guard:incident_report' log.id %}';" style="cursor: pointer;">
-                    <td><span class="plate-box">{{ log.plate_number }}</span></td>
-                    <td class="action-{{ log.action }}">
-                        {% if log.action == 'entry' %}
-                            <i data-lucide="log-in"></i> ENTRY
-                        {% elif log.action == 'exit' %}
-                            <i data-lucide="log-out"></i> EXIT
-                        {% else %}
-                            <i data-lucide="ban"></i> DENIED
-                        {% endif %}
-                    </td>
-                    <td>{{ log.driver_name }}</td>
-                    <td>{{ log.get_gate_display }}</td>
-                    <td>{{ log.timestamp|date:"h:i A" }}</td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="5" style="text-align: center; padding: 40px;">No logs found.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+<!-- Logs Table (Full Width) -->
+<section class="records-container full-width">
+    <table class="archives-table">
+        <thead>
+            <tr>
+                <th>PLATE NUMBER</th>
+                <th>ACTION</th>
+                <th>NAME</th>
+                <th>GATE</th>
+                <th>TIME</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in page_obj %}
+            <tr onclick="window.location='{% url 'gate_guard:incident_report' log.id %}';" style="cursor: pointer;">
+                <td><span class="plate-box">{{ log.plate_number }}</span></td>
+                <td class="action-{{ log.action }}">
+                    {% if log.action == 'entry' %}
+                        <i data-lucide="log-in"></i> ENTRY
+                    {% elif log.action == 'exit' %}
+                        <i data-lucide="log-out"></i> EXIT
+                    {% else %}
+                        <i data-lucide="ban"></i> DENIED
+                    {% endif %}
+                </td>
+                <td>{{ log.driver_name }}</td>
+                <td>{{ log.get_gate_display }}</td>
+                <td>{{ log.timestamp|date:"h:i A" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" style="text-align: center; padding: 40px;">No logs found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 
-        <!-- Pagination -->
-        {% if page_obj.has_other_pages %}
-        <div class="pagination">
+    <!-- Enhanced Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="pagination-container">
+        <div class="pagination-info">
+            Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }} records
+        </div>
+        <div class="pagination-controls">
             {% if page_obj.has_previous %}
-                <a href="?page={{ page_obj.previous_page_number }}&search={{ search_query }}&gate={{ gate_filter }}&date_from={{ date_from }}&date_to={{ date_to }}">&laquo; Prev</a>
+                <a href="?page={{ page_obj.previous_page_number }}&search={{ search_query }}&gate={{ gate_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" class="page-btn" title="Previous">
+                    <i data-lucide="chevron-left"></i>
+                </a>
+            {% else %}
+                <span class="page-btn disabled"><i data-lucide="chevron-left"></i></span>
             {% endif %}
-            <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
-            {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}&search={{ search_query }}&gate={{ gate_filter }}&date_from={{ date_from }}&date_to={{ date_to }}">Next &raquo;</a>
-            {% endif %}
-        </div>
-        {% endif %}
-    </section>
 
-    <!-- Preview Panel (simplified - we'll link to incident report later) -->
-    <aside class="details-panel">
-        <div class="panel-header">
-            <div>
-                <h3 class="panel-title">Capture Preview</h3>
-                <p class="panel-ref">Click a row for details</p>
-            </div>
+            {% for num in page_obj.paginator.page_range %}
+                {% if num >= page_obj.number|add:"-2" and num <= page_obj.number|add:"2" %}
+                    {% if page_obj.number == num %}
+                        <span class="page-btn active">{{ num }}</span>
+                    {% else %}
+                        <a href="?page={{ num }}&search={{ search_query }}&gate={{ gate_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" class="page-btn">{{ num }}</a>
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}&search={{ search_query }}&gate={{ gate_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" class="page-btn" title="Next">
+                    <i data-lucide="chevron-right"></i>
+                </a>
+            {% else %}
+                <span class="page-btn disabled"><i data-lucide="chevron-right"></i></span>
+            {% endif %}
         </div>
-        <div class="capture-img-container">
-            <img src="https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=400" alt="Car Capture">
-        </div>
-        <p style="font-size: 0.8rem; color: #8E8577;">Incident report view coming soon.</p>
-    </aside>
-</div>
+    </div>
+    {% endif %}
+</section>
 {% endblock %}

@@ -169,6 +169,6 @@ body { background: var(--bg-main); color: var(--text-dark); }
 .sub-capture img { width: 100%; height: 100%; object-fit: cover; }
 .sub-capture span { position: absolute; top: 5px; right: 5px; font-size: 0.5rem; color: white; background: rgba(0,0,0,0.4); padding: 2px 5px; border-radius: 2px; }
 
-.btn-full-report { width: 100%; padding: 16px; background: var(--primary); color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; }
+.btn-full-report { width: 100%; padding: 16px; background: var(--primary); color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; text-decoration: none; }
 .btn-full-report:hover { background: #724a00; }
 

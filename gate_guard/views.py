@@ -53,12 +53,15 @@ def overview(request):
         'rfid_tag__sticker_application__vehicle'
     ).order_by('-timestamp')[:20]
 
+    traffic_data = get_hourly_traffic_data()
+    
     context = {
         'total_today': total_today,
         'entries_today': entries_today,
         'exits_today': exits_today,
         'active_passes': active_passes,
         'live_logs': live_logs,
+        'traffic_data': traffic_data,
     }
     return render(request, 'gate_guard/overview.html', context)
 
@@ -98,7 +101,7 @@ def logs(request):
         except ValueError:
             pass
 
-    paginator = Paginator(logs_qs, 50)
+    paginator = Paginator(logs_qs, 15)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
@@ -236,3 +239,53 @@ def export_logs_csv(request):
     for log in logs:
         writer.writerow(log)
     return response
+
+
+from django.db.models.functions import TruncHour
+from django.db.models import Count, Q
+
+def get_hourly_traffic_data():
+    """Return hourly entry and exit counts for the last 24 hours."""
+    end_time = timezone.now()
+    start_time = end_time - timedelta(hours=24)
+
+    entries = GateLog.objects.filter(
+        timestamp__gte=start_time,
+        timestamp__lt=end_time,
+        action='entry'
+    ).annotate(hour=TruncHour('timestamp')).values('hour').annotate(count=Count('id')).order_by('hour')
+
+    exits = GateLog.objects.filter(
+        timestamp__gte=start_time,
+        timestamp__lt=end_time,
+        action='exit'
+    ).annotate(hour=TruncHour('timestamp')).values('hour').annotate(count=Count('id')).order_by('hour')
+
+    # Fill missing hours with zeros
+    hours = [(start_time + timedelta(hours=i)).strftime('%H:%M') for i in range(24)]
+    entry_counts = [0] * 24
+    exit_counts = [0] * 24
+
+    for e in entries:
+        idx = (e['hour'].hour - start_time.hour) % 24
+        entry_counts[idx] = e['count']
+    for e in exits:
+        idx = (e['hour'].hour - start_time.hour) % 24
+        exit_counts[idx] = e['count']
+
+    return {
+        'labels': hours,
+        'entries': entry_counts,
+        'exits': exit_counts,
+    }
+
+from django.http import FileResponse
+from .pdf_utils import generate_incident_report_pdf
+import io
+
+@login_required
+@user_passes_test(is_security_officer, login_url='/accounts/login/')
+def download_incident_pdf(request, log_id):
+    log = get_object_or_404(GateLog, id=log_id)
+    buffer = generate_incident_report_pdf(log)
+    return FileResponse(buffer, as_attachment=True, filename=f'incident_report_{log.id}.pdf')
