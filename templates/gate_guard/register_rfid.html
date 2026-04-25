@@ -1,0 +1,245 @@
+{% extends 'base_gate.html' %}
+{% load static %}
+
+{% block title %}Register RFID Card{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/gate_guard/style2.css' %}">
+<style>
+    .rfid-form-card {
+        background: var(--bg-white);
+        border-radius: 16px;
+        padding: 32px;
+        max-width: 750px;
+        margin: 0 auto;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+        border: 1px solid var(--border);
+    }
+    .rfid-form-card h2 {
+        margin-bottom: 24px;
+        color: var(--primary);
+        font-weight: 700;
+    }
+
+    .form-row {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 22px;
+    }
+
+    .form-group {
+        flex: 1;
+    }
+
+    .form-group label {
+        display: block;
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: var(--text-muted);
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* Make input fields clearly visible */
+    .form-input,
+    input[type="text"],
+    input[type="email"],
+    input[type="date"],
+    input[type="password"],
+    select {
+        width: 100%;
+        padding: 12px 14px;
+        background: #F4F3F1;          /* light warm grey, not pure white */
+        border: 2px solid transparent;
+        border-radius: 10px;
+        font-size: 0.95rem;
+        color: var(--text-dark);
+        transition: border 0.2s, background 0.2s;
+        outline: none;
+    }
+
+    .form-input:focus,
+    input:focus {
+        border-color: var(--primary-orange, #F2994A);
+        background: white;
+        box-shadow: 0 0 0 3px rgba(242,153,74,0.15);
+    }
+
+    .radio-group {
+        display: flex;
+        gap: 20px;
+        margin-top: 6px;
+    }
+    .radio-label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.9rem;
+    }
+    .radio-label input {
+        accent-color: var(--primary-orange, #F2994A);
+        width: 16px;
+        height: 16px;
+        margin: 0;
+    }
+
+    .checkbox {
+        accent-color: var(--primary-orange, #F2994A);
+    }
+
+    .btn-submit {
+        background: var(--primary-orange, #F2994A);
+        color: white;
+        border: none;
+        padding: 14px 28px;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 1rem;
+        cursor: pointer;
+        width: 100%;
+        transition: background 0.2s;
+        margin-top: 8px;
+        box-shadow: 0 4px 8px rgba(242,153,74,0.2);
+    }
+    .btn-submit:hover {
+        background: var(--primary, #8B5A00);
+        box-shadow: 0 6px 14px rgba(242,153,74,0.3);
+    }
+
+    .messages {
+        margin-bottom: 24px;
+    }
+    .alert {
+        padding: 12px 16px;
+        border-radius: 10px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        border-left: 4px solid;
+    }
+    .alert-success {
+        background: #ECFDF5;
+        color: #065F46;
+        border-left-color: #10B981;
+    }
+    .alert-error {
+        background: #FEF2F2;
+        color: #991B1B;
+        border-left-color: #EF4444;
+    }
+
+    hr {
+        border: none;
+        border-top: 1px solid var(--border);
+        margin: 24px 0;
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+        .form-row {
+            flex-direction: column;
+            gap: 16px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<header class="top-header">
+    <div class="header-title">
+        <h2 class="title">Register RFID Card</h2>
+        <p class="subtitle">Create a new vehicle pass instantly</p>
+    </div>
+</header>
+
+<div class="rfid-form-card">
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="alert {% if message.tags == 'error' %}alert-error{% else %}alert-success{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="{{ form.rfid_uid.id_for_label }}">RFID UID</label>
+                {{ form.rfid_uid }}
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="{{ form.driver_name.id_for_label }}">Driver Full Name</label>
+                {{ form.driver_name }}
+            </div>
+            <div class="form-group">
+                <label for="{{ form.email.id_for_label }}">Email Address</label>
+                {{ form.email }}
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>Classification</label>
+                <div class="radio-group">
+                    {% for radio in form.classification %}
+                    <label class="radio-label">{{ radio.tag }} {{ radio.choice_label }}</label>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="{{ form.college_department.id_for_label }}">College/Department</label>
+                {{ form.college_department }}
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="{{ form.contact_number.id_for_label }}">Contact Number</label>
+                {{ form.contact_number }}
+            </div>
+        </div>
+
+        <hr style="margin: 20px 0;">
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="{{ form.plate_number.id_for_label }}">Plate Number</label>
+                {{ form.plate_number }}
+            </div>
+            <div class="form-group">
+                <label for="{{ form.vehicle_model.id_for_label }}">Vehicle Model</label>
+                {{ form.vehicle_model }}
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="{{ form.vehicle_color.id_for_label }}">Vehicle Color</label>
+                {{ form.vehicle_color }}
+            </div>
+            <div class="form-group">
+                <label for="{{ form.is_owner.id_for_label }}" style="display: flex; align-items: center; gap: 8px;">
+                    {{ form.is_owner }} Registered in driver's name
+                </label>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="{{ form.expiry_date.id_for_label }}">Sticker Expiry Date</label>
+                {{ form.expiry_date }}
+            </div>
+            <div class="form-group"></div>
+        </div>
+
+        <button type="submit" class="btn-submit">Register RFID & Create Pass</button>
+    </form>
+</div>
+{% endblock %}

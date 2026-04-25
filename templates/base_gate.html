@@ -29,9 +29,25 @@
                 <a href="{% url 'gate_guard:campus_map' %}" class="nav-item {% if request.resolver_match.url_name == 'campus_map' %}active{% endif %}">
                     <i data-lucide="map"></i> Campus Map
                 </a>
+                <a href="{% url 'gate_guard:register_rfid' %}" class="nav-item {% if request.resolver_match.url_name == 'register_rfid' %}active{% endif %}">
+                    <i data-lucide="plus-circle"></i> Register RFID
+                </a>
                 <a href="{% url 'gate_guard:settings' %}" class="nav-item {% if request.resolver_match.url_name == 'settings' %}active{% endif %}">
                     <i data-lucide="settings"></i> Settings
                 </a>
+                {% if user.is_security_officer %}
+                <li style="list-style:none; margin-top: 10px;">
+                    {% with config=system_config %}
+                    <form method="post" action="{% url 'gate_guard:toggle_admin_mode' %}" style="padding: 0 12px;">
+                        {% csrf_token %}
+                        <button type="submit" class="nav-item" style="width:100%; border:none; background:none; cursor:pointer;">
+                            <i data-lucide="{% if config.admin_mode %}toggle-right{% else %}toggle-left{% endif %}"></i>
+                            Admin Mode: {% if config.admin_mode %}ON{% else %}OFF{% endif %}
+                        </button>
+                    </form>
+                    {% endwith %}
+                </li>
+                {% endif %}
             </nav>
             <div class="sidebar-footer">
                 <div class="user-profile">

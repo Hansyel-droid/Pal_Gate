@@ -1,9 +1,11 @@
 import json
+from datetime import timedelta
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
-from gate_guard.models import RFIDTag, GateLog
+from gate_guard.models import RFIDTag, GateLog, PendingRFIDRegistration
 from django.views.decorators.http import require_POST
+from gate_guard.models import SystemConfig
 
 @csrf_exempt
 @require_POST
@@ -54,6 +56,17 @@ def scan(request):
     last_log = GateLog.objects.filter(rfid_tag=tag).order_by('-timestamp').first()
     action = 'exit' if last_log and last_log.action == 'entry' else 'entry'
 
+    # If the ESP32 sent empty strings, use the database values
+    vehicle = tag.sticker_application.vehicle
+    if not data.get('driver_name'):
+        data['driver_name'] = tag.sticker_application.applicant.get_full_name()
+    if not data.get('plate_number'):
+        data['plate_number'] = vehicle.plate_number
+    if not data.get('vehicle_model'):
+        data['vehicle_model'] = vehicle.model
+    if not data.get('vehicle_color'):
+        data['vehicle_color'] = vehicle.color
+
     GateLog.objects.create(
         rfid_tag=tag,
         action=action,
@@ -70,3 +83,32 @@ def scan(request):
     tag.save(update_fields=['last_used'])
 
     return JsonResponse({'allowed': True})
+
+
+@csrf_exempt
+@require_POST
+def register_uid(request):
+    try:
+        data = json.loads(request.body)
+        uid = data.get('rfid_uid', '').strip()
+    except (json.JSONDecodeError, KeyError):
+        return JsonResponse({'error': 'Invalid payload'}, status=400)
+
+    if not uid:
+        return JsonResponse({'error': 'Empty UID'}, status=400)
+
+    # Save / update the UID (keep only the latest per UID, or delete old)
+    PendingRFIDRegistration.objects.filter(rfid_uid=uid).delete()  # optional refresh
+    PendingRFIDRegistration.objects.create(rfid_uid=uid)
+
+    # Optionally, delete really old entries to keep the table small
+    PendingRFIDRegistration.objects.filter(
+        created_at__lt=timezone.now() - timedelta(hours=1)
+    ).delete()
+
+    return JsonResponse({'status': 'UID stored', 'uid': uid})
+
+
+def admin_status(request):
+    config = SystemConfig.load()
+    return JsonResponse({'admin_mode': config.admin_mode})

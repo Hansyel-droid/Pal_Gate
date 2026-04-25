@@ -45,3 +45,23 @@ class GateLog(models.Model):
 
     def __str__(self):
         return f"{self.timestamp} - {self.plate_number} - {self.action}"
+    
+class PendingRFIDRegistration(models.Model):
+    rfid_uid = models.CharField(max_length=100, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.rfid_uid
+    
+class SystemConfig(models.Model):
+    # Only one row should ever exist – keep as singleton
+    admin_mode = models.BooleanField(default=False)
+
+    def save(self, *args, **kwargs):
+        self.pk = 1  # force single row
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def load(cls):
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj
