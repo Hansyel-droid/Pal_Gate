@@ -14,7 +14,10 @@ from accounts.models import User
 from .models import GateLog, RFIDTag, PendingRFIDRegistration, SystemConfig
 from sticker_portal.models import StickerApplication, Vehicle
 from .forms import OfficerProfileForm, RFIDRegistrationForm
-
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib import messages
+from django.shortcuts import redirect
+from .models import SystemConfig
 
 # ------------------------------------------------------------------
 # Helper functions for role-based access
@@ -385,4 +388,14 @@ def toggle_admin_mode(request):
         status = 'ON' if config.admin_mode else 'OFF'
         messages.success(request, f'Admin Mode turned {status}.')
         return redirect('gate_guard:overview')   # or wherever you want
+    return redirect('gate_guard:overview')
+
+@login_required
+@user_passes_test(is_security_officer)
+def toggle_gate(request):
+    config = SystemConfig.load()
+    config.gate_open = not config.gate_open
+    config.save()
+    status = 'OPEN' if config.gate_open else 'CLOSED'
+    messages.success(request, f'Gate is now {status}.')
     return redirect('gate_guard:overview')

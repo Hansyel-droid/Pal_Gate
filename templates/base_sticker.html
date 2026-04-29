@@ -29,6 +29,9 @@
                 <a href="{% url 'sticker_portal:pending_approvals' %}" class="nav-item {% if request.resolver_match.url_name == 'pending_approvals' %}active{% endif %}">
                     <i data-lucide="clock"></i> Pending Approvals
                 </a>
+                <a href="{% url 'sticker_portal:sticker_register_rfid' %}" class="nav-item {% if request.resolver_match.url_name == 'sticker_register_rfid' %}active{% endif %}">
+                    <i data-lucide="plus-circle"></i> Register RFID
+                </a>
 
                 <p class="nav-section-label">Administration</p>
                 <a href="{% url 'sticker_portal:settings' %}" class="nav-item {% if request.resolver_match.url_name == 'settings' %}active{% endif %}">

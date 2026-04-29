@@ -15,7 +15,12 @@
         <h1 class="page-title">Administrative Overview</h1>
         <p class="page-subtitle">Manage university vehicle access and sticker issuance.</p>
     </div>
-    <button class="btn-report">Generate Report</button>
+    <div class="header-actions">
+        <button class="btn-report">Generate Report</button>
+        <a href="{% url 'gate_guard:register_rfid' %}" class="btn-report">
+            <i data-lucide="plus-circle"></i> Register RFID
+        </a>
+    </div>
 </div>
 
 <!-- Stats Grid -->

@@ -71,6 +71,7 @@
                 <th>NAME</th>
                 <th>GATE</th>
                 <th>TIME</th>
+                <th>PHOTO</th>
             </tr>
         </thead>
         <tbody>
@@ -89,10 +90,20 @@
                 <td>{{ log.driver_name }}</td>
                 <td>{{ log.get_gate_display }}</td>
                 <td>{{ log.timestamp|date:"h:i A" }}</td>
+                <td>
+                    {% with photo=log.photos.first %}
+                        {% if photo %}
+                            <img src="{{ photo.image.url }}" width="40" style="border-radius:4px; cursor:pointer;" 
+                                 onclick="event.stopPropagation(); window.open('{{ photo.image.url }}', '_blank');">
+                        {% else %}
+                            -
+                        {% endif %}
+                    {% endwith %}
+                </td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="5" style="text-align: center; padding: 40px;">No logs found.</td>
+                <td colspan="6" style="text-align: center; padding: 40px;">No logs found.</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -134,4 +145,34 @@
     </div>
     {% endif %}
 </section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-refresh the logs every 5 seconds
+    setInterval(function() {
+        fetch(window.location.href)
+            .then(response => response.text())
+            .then(html => {
+                // Create a temporary DOM parser
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+
+                // Extract the new table body
+                const newTbody = doc.querySelector('.archives-table tbody');
+                const currentTbody = document.querySelector('.archives-table tbody');
+                if (newTbody && currentTbody) {
+                    currentTbody.innerHTML = newTbody.innerHTML;
+                }
+
+                // Update pagination info
+                const newPagination = doc.querySelector('.pagination-container');
+                const currentPagination = document.querySelector('.pagination-container');
+                if (newPagination && currentPagination) {
+                    currentPagination.innerHTML = newPagination.innerHTML;
+                }
+            })
+            .catch(err => console.error('Auto-refresh failed:', err));
+    }, 500);  // Refresh every 5 seconds (adjust as needed)
+</script>
 {% endblock %}

@@ -13,4 +13,5 @@ urlpatterns = [
     path('incident/<int:log_id>/pdf/', views.download_incident_pdf, name='download_incident_pdf'),
     path('register-rfid/', views.register_rfid, name='register_rfid'),
     path('toggle-admin/', views.toggle_admin_mode, name='toggle_admin_mode'),
+    path('toggle-gate/', views.toggle_gate, name='toggle_gate')
 ]

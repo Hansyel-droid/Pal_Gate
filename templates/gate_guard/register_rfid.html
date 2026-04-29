@@ -163,83 +163,172 @@
     </div>
     {% endif %}
 
-    <form method="post">
-        {% csrf_token %}
+    <form method="post" autocomplete="off">
+    {% csrf_token %}
 
-        <div class="form-row">
-            <div class="form-group">
-                <label for="{{ form.rfid_uid.id_for_label }}">RFID UID</label>
-                {{ form.rfid_uid }}
-            </div>
+    <!-- Form-wide errors -->
+    {% if form.errors %}
+    <div class="alert alert-error">
+        <strong>Please fix the errors below:</strong>
+        {{ form.non_field_errors }}
+    </div>
+    {% endif %}
+
+    <!-- RFID UID -->
+    <div class="form-row">
+        <div class="form-group">
+            <label for="id_rfid_uid">RFID UID</label>
+            <input type="text" name="rfid_uid" value="{{ form.rfid_uid.value|default:'' }}" 
+                   class="form-input" maxlength="100" required id="id_rfid_uid" autocomplete="off">
+            {% if form.rfid_uid.errors %}
+            <span class="error-text">{{ form.rfid_uid.errors|join:", " }}</span>
+            {% endif %}
         </div>
+    </div>
 
-        <div class="form-row">
-            <div class="form-group">
-                <label for="{{ form.driver_name.id_for_label }}">Driver Full Name</label>
-                {{ form.driver_name }}
-            </div>
-            <div class="form-group">
-                <label for="{{ form.email.id_for_label }}">Email Address</label>
-                {{ form.email }}
-            </div>
+    <!-- Driver Name + Email -->
+    <div class="form-row">
+        <div class="form-group">
+            <label for="id_driver_name">Driver Full Name</label>
+            <input type="text" name="driver_name" value="{{ form.driver_name.value|default:'' }}" 
+                   class="form-input" maxlength="150" required id="id_driver_name" autocomplete="off">
+            {% if form.driver_name.errors %}
+            <span class="error-text">{{ form.driver_name.errors|join:", " }}</span>
+            {% endif %}
         </div>
-
-        <div class="form-row">
-            <div class="form-group">
-                <label>Classification</label>
-                <div class="radio-group">
-                    {% for radio in form.classification %}
-                    <label class="radio-label">{{ radio.tag }} {{ radio.choice_label }}</label>
-                    {% endfor %}
-                </div>
-            </div>
-            <div class="form-group">
-                <label for="{{ form.college_department.id_for_label }}">College/Department</label>
-                {{ form.college_department }}
-            </div>
+        <div class="form-group">
+            <label for="id_email">Email Address</label>
+            <input type="email" name="email" value="{{ form.email.value|default:'' }}" 
+                   class="form-input" required id="id_email" autocomplete="off">
+            {% if form.email.errors %}
+            <span class="error-text">{{ form.email.errors|join:", " }}</span>
+            {% endif %}
         </div>
+    </div>
 
-        <div class="form-row">
-            <div class="form-group">
-                <label for="{{ form.contact_number.id_for_label }}">Contact Number</label>
-                {{ form.contact_number }}
-            </div>
-        </div>
-
-        <hr style="margin: 20px 0;">
-
-        <div class="form-row">
-            <div class="form-group">
-                <label for="{{ form.plate_number.id_for_label }}">Plate Number</label>
-                {{ form.plate_number }}
-            </div>
-            <div class="form-group">
-                <label for="{{ form.vehicle_model.id_for_label }}">Vehicle Model</label>
-                {{ form.vehicle_model }}
-            </div>
-        </div>
-
-        <div class="form-row">
-            <div class="form-group">
-                <label for="{{ form.vehicle_color.id_for_label }}">Vehicle Color</label>
-                {{ form.vehicle_color }}
-            </div>
-            <div class="form-group">
-                <label for="{{ form.is_owner.id_for_label }}" style="display: flex; align-items: center; gap: 8px;">
-                    {{ form.is_owner }} Registered in driver's name
+    <!-- Classification + College/Department -->
+    <div class="form-row">
+        <div class="form-group">
+            <label>Classification</label>
+            <div class="radio-group">
+                <label class="radio-label">
+                    <input type="radio" name="classification" value="student" 
+                           {% if form.classification.value == 'student' %}checked{% endif %}> Student
+                </label>
+                <label class="radio-label">
+                    <input type="radio" name="classification" value="faculty" 
+                           {% if form.classification.value == 'faculty' %}checked{% endif %}> Faculty/Staff
                 </label>
             </div>
+            {% if form.classification.errors %}
+            <span class="error-text">{{ form.classification.errors|join:", " }}</span>
+            {% endif %}
         </div>
-
-        <div class="form-row">
-            <div class="form-group">
-                <label for="{{ form.expiry_date.id_for_label }}">Sticker Expiry Date</label>
-                {{ form.expiry_date }}
-            </div>
-            <div class="form-group"></div>
+        <div class="form-group">
+            <label for="id_college_department">College/Department</label>
+            <input type="text" name="college_department" value="{{ form.college_department.value|default:'' }}" 
+                   class="form-input" maxlength="100" id="id_college_department" autocomplete="off">
+            {% if form.college_department.errors %}
+            <span class="error-text">{{ form.college_department.errors|join:", " }}</span>
+            {% endif %}
         </div>
+    </div>
 
-        <button type="submit" class="btn-submit">Register RFID & Create Pass</button>
-    </form>
+    <!-- Contact Number -->
+    <div class="form-row">
+        <div class="form-group">
+            <label for="id_contact_number">Contact Number</label>
+            <input type="text" name="contact_number" value="{{ form.contact_number.value|default:'' }}" 
+                   class="form-input" maxlength="15" id="id_contact_number" autocomplete="off">
+            {% if form.contact_number.errors %}
+            <span class="error-text">{{ form.contact_number.errors|join:", " }}</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <hr style="margin: 20px 0;">
+
+    <!-- Plate Number + Vehicle Model -->
+    <div class="form-row">
+        <div class="form-group">
+            <label for="id_plate_number">Plate Number</label>
+            <input type="text" name="plate_number" value="{{ form.plate_number.value|default:'' }}" 
+                   class="form-input" maxlength="20" required id="id_plate_number" autocomplete="off">
+            {% if form.plate_number.errors %}
+            <span class="error-text">{{ form.plate_number.errors|join:", " }}</span>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            <label for="id_vehicle_model">Vehicle Model</label>
+            <input type="text" name="vehicle_model" value="{{ form.vehicle_model.value|default:'' }}" 
+                   class="form-input" maxlength="100" required id="id_vehicle_model" autocomplete="off">
+            {% if form.vehicle_model.errors %}
+            <span class="error-text">{{ form.vehicle_model.errors|join:", " }}</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Vehicle Color + Ownership -->
+    <div class="form-row">
+        <div class="form-group">
+            <label for="id_vehicle_color">Vehicle Color</label>
+            <input type="text" name="vehicle_color" value="{{ form.vehicle_color.value|default:'' }}" 
+                   class="form-input" maxlength="50" required id="id_vehicle_color" autocomplete="off">
+            {% if form.vehicle_color.errors %}
+            <span class="error-text">{{ form.vehicle_color.errors|join:", " }}</span>
+            {% endif %}
+        </div>
+        <div class="form-group">
+            <label for="id_is_owner" style="display: flex; align-items: center; gap: 8px;">
+                <input type="checkbox" name="is_owner" class="checkbox" id="id_is_owner" 
+                       {% if form.is_owner.value %}checked{% endif %}> Registered in driver's name
+            </label>
+            {% if form.is_owner.errors %}
+            <span class="error-text">{{ form.is_owner.errors|join:", " }}</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Expiry Date -->
+    <div class="form-row">
+        <div class="form-group">
+            <label for="id_expiry_date">Sticker Expiry Date</label>
+            <input type="date" name="expiry_date" value="{{ form.expiry_date.value|default:'' }}" 
+                   class="form-input" required id="id_expiry_date" autocomplete="off">
+            {% if form.expiry_date.errors %}
+            <span class="error-text">{{ form.expiry_date.errors|join:", " }}</span>
+            {% endif %}
+        </div>
+        <div class="form-group"></div>
+    </div>
+
+    <button type="submit" class="btn-submit">Register RFID & Create Pass</button>
+</form>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    lucide.createIcons();
+
+    // Track the last UID we've already filled to avoid overwriting manually typed data
+    let lastFilledUID = "";
+
+    // Poll the server for a new pending UID every 3 seconds
+    setInterval(function() {
+        fetch("{% url 'api:get_latest_pending_uid' %}")
+            .then(response => response.json())
+            .then(data => {
+                if (data.uid && data.uid !== lastFilledUID) {
+                    const uidField = document.getElementById('id_rfid_uid');
+                    // Only auto-fill if the field is empty or still contains the previous auto-filled UID
+                    if (uidField && (uidField.value === '' || uidField.value === lastFilledUID)) {
+                        uidField.value = data.uid;
+                        lastFilledUID = data.uid;
+                    }
+                }
+            })
+            .catch(err => console.error('UID poll failed:', err));
+    }, 3000);  // Check every 3 seconds
+</script>
 {% endblock %}

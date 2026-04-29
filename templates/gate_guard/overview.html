@@ -12,15 +12,15 @@
 <header class="top-header">
     <div class="header-title">
         <p class="subtitle">Security</p>
-        <h2 class="title">Dashboard</h2>
+        <h2 class="title">Dashboard <span id="refresh-status" style="font-size:0.7rem; color: var(--text-muted); margin-left:10px;">Auto‑refresh active</span></h2>
     </div>
     <div class="header-actions">
         <button class="icon-btn"><i data-lucide="bell"></i></button>
         <a href="{% url 'gate_guard:settings' %}" class="icon-btn"><i data-lucide="user-circle"></i></a>
         <form action="{% url 'accounts:logout' %}" method="post" style="display: inline;">
             {% csrf_token %}
-        <button type="submit" class="sign-out-btn">Sign Out</button>
-    </form>
+            <button type="submit" class="sign-out-btn">Sign Out</button>
+        </form>
     </div>
 </header>
 
@@ -56,7 +56,6 @@
 </section>
 
 <section class="chart-container">
-    <!-- Chart static for now, we can implement real chart later -->
     <div class="chart-header">
         <div>
             <h3 class="section-title">Traffic Activity Chart</h3>
@@ -67,8 +66,8 @@
             <span class="legend-item"><span class="dot exit"></span> Exits</span>
         </div>
     </div>
-    <div class="chart-placeholder">
-        <canvas id="trafficChart" width="800" height="200"></canvas>
+    <div class="chart-placeholder" style="height: 250px;">
+        <canvas id="trafficChart" width="800" height="250"></canvas>
     </div>
 </section>
 
@@ -107,12 +106,18 @@
         </tbody>
     </table>
 </section>
+{% endblock %}
 
 {% block extra_js %}
 <script>
+    // Initialize Lucide icons
     lucide.createIcons();
+
+    // =========================================
+    //  TRAFFIC CHART
+    // =========================================
     const ctx = document.getElementById('trafficChart').getContext('2d');
-    new Chart(ctx, {
+    let trafficChart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: {{ traffic_data.labels|safe }},
@@ -140,15 +145,57 @@
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-            },
+            plugins: { legend: { display: false } },
             scales: {
                 x: { grid: { display: false } },
                 y: { beginAtZero: true }
             }
         }
     });
+
+    // =========================================
+    //  REAL‑TIME REFRESH (5 seconds)
+    // =========================================
+    const statusEl = document.getElementById('refresh-status');
+
+    async function refreshOverview() {
+        if (statusEl) statusEl.textContent = 'Refreshing...';
+        try {
+            const response = await fetch(window.location.href);
+            const html = await response.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+
+            // Update stat cards
+            const newStats = doc.querySelectorAll('.stat-number');
+            const currentStats = document.querySelectorAll('.stat-number');
+            newStats.forEach((stat, i) => {
+                if (currentStats[i]) currentStats[i].textContent = stat.textContent;
+            });
+
+            // Update live logs table
+            const newTbody = doc.querySelector('.logs-table tbody');
+            const currentTbody = document.querySelector('.logs-table tbody');
+            if (newTbody && currentTbody) {
+                currentTbody.innerHTML = newTbody.innerHTML;
+            }
+
+            // Update chart data (re‑fetch from API)
+            const chartRes = await fetch("{% url 'api:hourly_traffic_data' %}");
+            const chartData = await chartRes.json();
+            trafficChart.data.labels = chartData.labels;
+            trafficChart.data.datasets[0].data = chartData.entries;
+            trafficChart.data.datasets[1].data = chartData.exits;
+            trafficChart.update();
+
+            if (statusEl) statusEl.textContent = 'Auto‑refresh active';
+        } catch (err) {
+            console.error('Overview refresh failed:', err);
+            if (statusEl) statusEl.textContent = 'Refresh failed';
+        }
+    }
+
+    // Refresh every 5 seconds
+    setInterval(refreshOverview, 500);
 </script>
-{% endblock %}
 {% endblock %}

@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 
+
 class RFIDTag(models.Model):
     """RFID tag associated with an approved sticker application."""
     tag_id = models.CharField(max_length=100, unique=True)
@@ -45,17 +46,20 @@ class GateLog(models.Model):
 
     def __str__(self):
         return f"{self.timestamp} - {self.plate_number} - {self.action}"
-    
+
+
 class PendingRFIDRegistration(models.Model):
     rfid_uid = models.CharField(max_length=100, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.rfid_uid
-    
+
+
 class SystemConfig(models.Model):
-    # Only one row should ever exist – keep as singleton
+    """Singleton model to hold system-wide configuration."""
     admin_mode = models.BooleanField(default=False)
+    gate_open = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs):
         self.pk = 1  # force single row
@@ -65,3 +69,11 @@ class SystemConfig(models.Model):
     def load(cls):
         obj, created = cls.objects.get_or_create(pk=1)
         return obj
+    
+class GatePhoto(models.Model):
+    gate_log = models.ForeignKey(GateLog, on_delete=models.CASCADE, related_name='photos')
+    image = models.ImageField(upload_to='gate_photos/%Y/%m/%d/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Photo for log #{self.gate_log.id}"

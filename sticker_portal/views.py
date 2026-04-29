@@ -236,3 +236,84 @@ def apply(request):
 def my_applications(request):
     applications = StickerApplication.objects.filter(applicant=request.user).order_by('-submitted_at')
     return render(request, 'sticker_portal/my_applications.html', {'applications': applications})
+
+
+from gate_guard.forms import RFIDRegistrationForm
+from gate_guard.models import PendingRFIDRegistration, RFIDTag
+from accounts.models import User
+from .models import Vehicle, StickerApplication
+
+@login_required
+@user_passes_test(lambda u: u.user_type in ['security_officer', 'sticker_admin'], login_url='/accounts/login/')
+def sticker_register_rfid(request):
+    last_pending = PendingRFIDRegistration.objects.order_by('-created_at').first()
+    pending_uid = last_pending.rfid_uid if last_pending else ''
+
+    if request.method == 'POST':
+        form = RFIDRegistrationForm(request.POST)
+        if form.is_valid():
+            data = form.cleaned_data
+
+            # 1. Create or get the driver (User)
+            username = data['email'].split('@')[0]
+            user, created = User.objects.get_or_create(
+                email=data['email'],
+                defaults={
+                    'username': username,
+                    'first_name': data['driver_name'].split(' ')[0],
+                    'last_name': ' '.join(data['driver_name'].split(' ')[1:]) or 'NoSurname',
+                    'user_type': 'applicant',
+                    'classification': data['classification'],
+                    'college_department': data['college_department'],
+                    'contact_number': data['contact_number'],
+                }
+            )
+
+            if not created:
+                user.contact_number = data['contact_number']
+                user.save()
+
+            # 2. Create or get Vehicle
+            vehicle, _ = Vehicle.objects.get_or_create(
+                plate_number=data['plate_number'],
+                defaults={
+                    'model': data['vehicle_model'],
+                    'color': data['vehicle_color'],
+                    'owner': user,
+                    'is_owner': data['is_owner'],
+                }
+            )
+
+            # 3. Create an approved StickerApplication
+            application = StickerApplication.objects.create(
+                applicant=user,
+                vehicle=vehicle,
+                status='approved',
+                expiry_date=data['expiry_date'],
+                approved_at=timezone.now(),
+                approved_by=request.user,
+                submitted_at=timezone.now()
+            )
+
+            # 4. Check for existing RFID tag
+            if RFIDTag.objects.filter(tag_id=data['rfid_uid']).exists():
+                messages.error(request, f'RFID UID {data["rfid_uid"]} already exists!')
+            else:
+                RFIDTag.objects.create(
+                    tag_id=data['rfid_uid'],
+                    sticker_application=application,
+                    is_active=True
+                )
+                messages.success(request, f'RFID {data["rfid_uid"]} registered successfully for {data["driver_name"]} ({data["plate_number"]})')
+                PendingRFIDRegistration.objects.all().delete()
+                return redirect('sticker_portal:sticker_register_rfid')
+    else:
+        initial = {}
+        if pending_uid:
+            initial['rfid_uid'] = pending_uid
+        form = RFIDRegistrationForm(initial=initial)
+
+    return render(request, 'sticker_portal/register_rfid.html', {
+        'form': form,
+        'pending_uid': pending_uid,
+    })

@@ -78,20 +78,40 @@
     <section class="evidence-section">
         <label>VISUAL EVIDENCE</label>
         <div class="evidence-card">
-            <div class="main-capture">
-                <img src="{{ primary_image }}" alt="Primary Capture">
-                <span class="img-label">CAM-01 (Main Entrance)</span>
-            </div>
-            <div class="capture-grid">
-                <div class="sub-capture">
-                    <img src="{{ side_image }}" alt="Side View">
-                    <span>CAM-02</span>
-                </div>
-                <div class="sub-capture">
-                    <img src="{{ plate_zoom }}" alt="Plate Zoom">
-                    <span>PLATE ZOOM</span>
-                </div>
-            </div>
+            {% with photos=log.photos.all %}
+                {% if photos %}
+                    <!-- Show the most recent photo as the main capture -->
+                    <div class="main-capture">
+                        <img src="{{ photos.last.image.url }}" alt="Primary Capture">
+                        <span class="img-label">CAM-01 (Main Entrance)</span>
+                    </div>
+                    <!-- Show additional photos in the grid -->
+                    <div class="capture-grid">
+                        {% for photo in photos %}
+                            <div class="sub-capture">
+                                <img src="{{ photo.image.url }}" alt="Gate Photo {{ forloop.counter }}">
+                                <span>PHOTO {{ forloop.counter }}</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <!-- Fallback to placeholder images when no real photos exist -->
+                    <div class="main-capture">
+                        <img src="{{ primary_image }}" alt="Primary Capture">
+                        <span class="img-label">CAM-01 (Main Entrance)</span>
+                    </div>
+                    <div class="capture-grid">
+                        <div class="sub-capture">
+                            <img src="{{ side_image }}" alt="Side View">
+                            <span>CAM-02</span>
+                        </div>
+                        <div class="sub-capture">
+                            <img src="{{ plate_zoom }}" alt="Plate Zoom">
+                            <span>PLATE ZOOM</span>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endwith %}
         </div>
         <a href="{% url 'gate_guard:download_incident_pdf' log.id %}" class="btn-full-report">
             Download Full PDF Report

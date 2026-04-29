@@ -12,4 +12,5 @@ urlpatterns = [
     # Applicant
     path('apply/', views.apply, name='apply'),
     path('my-applications/', views.my_applications, name='my_applications'),
+    path('register-rfid/', views.sticker_register_rfid, name='sticker_register_rfid'),
 ]
