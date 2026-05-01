@@ -1,0 +1,38 @@
+{% extends 'base_applicant.html' %}
+{% load static %}
+
+{% block title %}Application Submitted{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sticker_portal/form.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="top-bar">
+        <div class="top-bar-left">
+            <span class="portal-label">Sticker Portal</span>
+            <span class="separator">/</span>
+            <span class="page-label">Success</span>
+        </div>
+        <form action="{% url 'accounts:logout' %}" method="post" style="display: inline;">
+            {% csrf_token %}
+            <button type="submit" class="sign-out-btn"><i data-lucide="log-out"></i> Sign Out</button>
+        </form>
+    </div>
+
+    <div class="app-wrapper">
+        <div class="application-card" style="text-align: center;">
+            <i data-lucide="check-circle" style="width: 64px; height: 64px; color: #10B981;"></i>
+            <h2>Application Submitted!</h2>
+            <p>Your schedule:</p>
+            <h3 style="color: var(--primary);">{{ schedule|date:"F j, Y, g:i A" }}</h3>
+            <div class="alert alert-warning" style="margin: 24px auto; max-width: 400px;">
+                <p><strong>Please proceed at the exact time.</strong></p>
+                <p><strong>Bring ₱50.00 for the sticker fee.</strong></p>
+            </div>
+            <a href="{% url 'sticker_portal:my_applications' %}" class="btn-primary">My Applications</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

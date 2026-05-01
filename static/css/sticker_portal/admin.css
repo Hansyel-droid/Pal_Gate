@@ -583,3 +583,37 @@ body {
     align-items: center;
     gap: 4px;
 }
+
+/* Admin Mode Toggle Button in Top Bar */
+.btn-admin-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: transparent;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-mid);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-admin-toggle:hover {
+    border-color: var(--primary-orange);
+    color: var(--primary-orange);
+    background: var(--primary-light);
+}
+
+.btn-admin-toggle.active {
+    background: var(--primary-orange);
+    color: white;
+    border-color: var(--primary-orange);
+}
+
+.btn-admin-toggle i {
+    width: 16px;
+    height: 16px;
+}
+

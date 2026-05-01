@@ -12,6 +12,13 @@ class User(AbstractUser):
         ('faculty', 'Faculty/Staff'),
     )
 
+    TEXT_SIZE_CHOICES = (
+        ('small', 'Small'),
+        ('medium', 'Medium'),
+        ('large', 'Large'),
+    )
+
+    text_size = models.CharField(max_length=10, choices=TEXT_SIZE_CHOICES, default='medium')
     user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, default='applicant')
     employee_id = models.CharField(max_length=50, blank=True, null=True, unique=True)
     student_id = models.CharField(max_length=50, blank=True, null=True, unique=True)

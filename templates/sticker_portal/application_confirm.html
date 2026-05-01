@@ -1,0 +1,124 @@
+{% extends 'base_applicant.html' %}
+{% load static %}
+
+{% block title %}Confirm Application{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sticker_portal/form.css' %}">
+<style>
+    .confirm-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 24px;
+        margin: 24px 0;
+    }
+    .confirm-card {
+        background: var(--bg-white);
+        border-radius: 12px;
+        padding: 24px;
+        flex: 1 1 280px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .confirm-card h3 {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--text-muted);
+        margin-bottom: 16px;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 8px;
+    }
+    .confirm-card p {
+        margin-bottom: 8px;
+        font-size: 0.9rem;
+        display: flex;
+        justify-content: space-between;
+    }
+    .confirm-card p strong {
+        font-weight: 600;
+        color: var(--text-dark);
+    }
+    .schedule-highlight {
+        background: var(--primary-light);
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        margin: 20px 0;
+    }
+    .schedule-highlight i {
+        color: var(--primary-orange);
+        margin-right: 8px;
+    }
+    .action-buttons {
+        display: flex;
+        gap: 16px;
+        justify-content: center;
+        margin-top: 32px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="top-bar">
+        <div class="top-bar-left">
+            <span class="portal-label">Sticker Portal</span>
+            <span class="separator">/</span>
+            <span class="page-label">Confirm</span>
+        </div>
+        <form action="{% url 'accounts:logout' %}" method="post" style="display: inline;">
+            {% csrf_token %}
+            <button type="submit" class="sign-out-btn"><i data-lucide="log-out"></i> Sign Out</button>
+        </form>
+    </div>
+
+    <div class="app-wrapper">
+        <div class="application-card">
+            <h2 class="form-title">Please review your application</h2>
+            <p class="form-subtitle">Check all details before submitting. You won't be able to edit afterwards.</p>
+
+            <div class="confirm-grid">
+                <!-- Applicant -->
+                <div class="confirm-card">
+                    <h3><i data-lucide="user"></i> Applicant</h3>
+                    <p><span>Name</span> <strong>{{ application.applicant.get_full_name }}</strong></p>
+                    <p><span>ID</span> <strong>{{ application.applicant.student_id|default:application.applicant.employee_id }}</strong></p>
+                    <p><span>Classification</span> <strong>{{ application.applicant.get_classification_display }}</strong></p>
+                    <p><span>College/Dept</span> <strong>{{ application.applicant.college_department }}</strong></p>
+                    <p><span>Contact</span> <strong>{{ application.applicant.contact_number }}</strong></p>
+                </div>
+
+                <!-- Vehicle -->
+                <div class="confirm-card">
+                    <h3><i data-lucide="car"></i> Vehicle</h3>
+                    <p><span>Plate</span> <strong>{{ application.vehicle.plate_number }}</strong></p>
+                    <p><span>Model</span> <strong>{{ application.vehicle.model }}</strong></p>
+                    <p><span>Color</span> <strong>{{ application.vehicle.color }}</strong></p>
+                </div>
+            </div>
+
+            <!-- Schedule highlight -->
+            <div class="schedule-highlight">
+                <i data-lucide="calendar"></i>
+                <strong>Your schedule:</strong> {{ schedule|date:"F j, Y, g:i A" }}
+            </div>
+
+            <div class="alert alert-info" style="margin-top: 16px;">
+                <i data-lucide="info"></i> Please arrive at the exact time. Bring <strong>₱50.00</strong> for the sticker fee and pay at the same day of your scheduled appointment.
+            </div>
+
+            <div class="action-buttons">
+                <a href="{% url 'sticker_portal:schedule_appointment' application.id %}" class="btn-secondary" style="text-decoration: none;">
+                    <i data-lucide="arrow-left"></i> Back
+                </a>
+                <form method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-primary">
+                        <i data-lucide="check"></i> Confirm & Submit
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

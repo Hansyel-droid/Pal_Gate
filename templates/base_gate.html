@@ -12,7 +12,7 @@
     {% block extra_css %}{% endblock %}
     <link rel="stylesheet" href="{% static 'css/gate_guard/style.css' %}">
 </head>
-<body>
+<body class="{% if user.is_authenticated and user.text_size %}text-{{ user.text_size }}{% else %}text-medium{% endif %}">
     <div class="dashboard-container">
         <aside class="sidebar">
             <div class="sidebar-brand">
@@ -26,27 +26,12 @@
                 <a href="{% url 'gate_guard:logs' %}" class="nav-item {% if request.resolver_match.url_name == 'logs' %}active{% endif %}">
                     <i data-lucide="clipboard-list"></i> Logs
                 </a>
-                <a href="{% url 'gate_guard:campus_map' %}" class="nav-item {% if request.resolver_match.url_name == 'campus_map' %}active{% endif %}">
-                    <i data-lucide="map"></i> Campus Map
-                </a>
-                <a href="{% url 'gate_guard:register_rfid' %}" class="nav-item {% if request.resolver_match.url_name == 'register_rfid' %}active{% endif %}">
-                    <i data-lucide="plus-circle"></i> Register RFID
+                <a href="{% url 'gate_guard:time_tracker' %}" class="nav-item {% if request.resolver_match.url_name == 'time_tracker' %}active{% endif %}">
+                    <i data-lucide="timer"></i> Time Tracker
                 </a>
                 <a href="{% url 'gate_guard:settings' %}" class="nav-item {% if request.resolver_match.url_name == 'settings' %}active{% endif %}">
                     <i data-lucide="settings"></i> Settings
                 </a>
-                {% if user.is_security_officer %}
-                <li style="list-style:none; margin-top: 10px;">
-                    {% with config=system_config %}
-                    <form method="post" action="{% url 'gate_guard:toggle_admin_mode' %}" style="padding: 0 12px;">
-                        {% csrf_token %}
-                        <button type="submit" class="nav-item" style="width:100%; border:none; background:none; cursor:pointer;">
-                            <i data-lucide="{% if config.admin_mode %}toggle-right{% else %}toggle-left{% endif %}"></i>
-                            Admin Mode: {% if config.admin_mode %}ON{% else %}OFF{% endif %}
-                        </button>
-                    </form>
-                    {% endwith %}
-                </li>
                 <li style="list-style:none; margin-top: 10px;">
                     <form method="post" action="{% url 'gate_guard:toggle_gate' %}" style="padding: 0 12px;">
                         {% csrf_token %}
@@ -56,7 +41,6 @@
                         </button>
                     </form>
                 </li>
-                {% endif %}
             </nav>
             <div class="sidebar-footer">
                 <div class="user-profile">
@@ -80,9 +64,9 @@
             </footer>
         </main>
     </div>
-<script>
-    lucide.createIcons();
-</script>
-{% block extra_js %}{% endblock %}
+    <script>
+        lucide.createIcons();
+    </script>
+    {% block extra_js %}{% endblock %}
 </body>
 </html>

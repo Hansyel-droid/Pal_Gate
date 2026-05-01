@@ -22,6 +22,7 @@ INSTALLED_APPS = [
     'gate_guard',
     'sticker_portal',
     'api',
+    'django_extensions',
 ]
 
 MIDDLEWARE = [

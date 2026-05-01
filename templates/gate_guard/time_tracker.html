@@ -1,0 +1,101 @@
+{% extends 'base_gate.html' %}
+{% load static %}
+
+{% block title %}GateGuard - Time Tracker{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/gate_guard/logs.css' %}">
+<style>
+    .warning-banner {
+        background: #FFF3CD;
+        border: 1px solid #FFC107;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 24px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    .warning-banner i {
+        color: #FF9800;
+        width: 28px;
+        height: 28px;
+    }
+    .overstay-row {
+        background-color: #FFF8E1 !important;
+    }
+    .vehicle-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .driver-name { font-weight: 600; }
+    .affiliation { font-size: 0.8rem; color: var(--text-muted); }
+</style>
+{% endblock %}
+
+{% block content %}
+<header class="top-header">
+    <div class="header-title">
+        <h2 class="archive-title">Time Tracker</h2>
+        <p class="archive-desc">Vehicles currently inside the campus</p>
+    </div>
+    <div class="header-actions">
+        <button class="btn-primary" onclick="window.print()">
+            <i data-lucide="printer"></i> Print List
+        </button>
+    </div>
+</header>
+
+{% if is_after_hours %}
+<div class="warning-banner">
+    <i data-lucide="alert-triangle"></i>
+    <div>
+        <strong>Overstay Warning – It's past 10:00 PM</strong>
+        <p style="margin:0; font-size:0.9rem;">The following vehicles have not exited the campus. Please notify the owners or security.</p>
+    </div>
+</div>
+{% endif %}
+
+<section class="records-container full-width">
+    <table class="archives-table">
+        <thead>
+            <tr>
+                <th>PLATE NUMBER</th>
+                <th>DRIVER</th>
+                <th>ENTRY TIME</th>
+                <th>DURATION INSIDE</th>
+                <th>STATUS</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for v in vehicles_inside %}
+            <tr class="{% if v.is_overstay %}overstay-row{% endif %}">
+                <td><span class="plate-box">{{ v.plate }}</span></td>
+                <td>
+                    <div class="vehicle-info">
+                        <span class="driver-name">{{ v.driver }}</span>
+                        {% if v.applicant %}
+                            <span class="affiliation">{{ v.applicant.get_classification_display }} — {{ v.applicant.college_department }}</span>
+                        {% endif %}
+                    </div>
+                </td>
+                <td>{{ v.entry_time|date:"M d, Y h:i A" }}</td>
+                <td>{{ v.duration }}</td>
+                <td>
+                    {% if v.is_overstay %}
+                        <span class="badge denied">OVERSTAY</span>
+                    {% else %}
+                        <span class="badge entry">INSIDE</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" style="text-align: center; padding: 40px;">No vehicles currently inside.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

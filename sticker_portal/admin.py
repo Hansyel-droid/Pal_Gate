@@ -40,3 +40,11 @@ class StickerApplicationAdmin(admin.ModelAdmin):
 class DocumentAdmin(admin.ModelAdmin):
     list_display = ('application', 'document_type', 'uploaded_at')
     list_filter = ('document_type',)
+
+from .models import AvailableDate
+
+@admin.register(AvailableDate)
+class AvailableDateAdmin(admin.ModelAdmin):
+    list_display = ('date', 'is_active')
+    list_filter = ('is_active',)
+    search_fields = ('date',)

@@ -278,3 +278,26 @@ input:checked + .slider:before { transform: translateX(20px); }
     border-color: var(--primary);
     background: white;
 }
+
+html {
+    font-size: 16px;   /* base = medium */
+}
+body.text-small {
+    font-size: 0.85rem;   /* ~13.6px */
+}
+body.text-large {
+    font-size: 1.15rem;   /* ~18.4px */
+}
+
+.text-small {
+    --scale-ratio: 0.9;
+}
+.text-medium {
+    --scale-ratio: 1;
+}
+.text-large {
+    --scale-ratio: 1.1;
+}
+body {
+    font-size: calc(1rem * var(--scale-ratio, 1));
+}

@@ -4,20 +4,20 @@ from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
 from django.utils import timezone
-from datetime import timedelta, datetime, date
+from datetime import timedelta, datetime
 from django.db.models import Q, Count
 from django.core.paginator import Paginator
-from django.http import HttpResponse
+from django.http import HttpResponse, FileResponse
+from django.db.models.functions import TruncHour
 import csv
+import io
 
 from accounts.models import User
 from .models import GateLog, RFIDTag, PendingRFIDRegistration, SystemConfig
 from sticker_portal.models import StickerApplication, Vehicle
 from .forms import OfficerProfileForm, RFIDRegistrationForm
-from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib import messages
-from django.shortcuts import redirect
-from .models import SystemConfig
+from .pdf_utils import generate_incident_report_pdf
+
 
 # ------------------------------------------------------------------
 # Helper functions for role-based access
@@ -58,7 +58,7 @@ def overview(request):
     ).order_by('-timestamp')[:20]
 
     traffic_data = get_hourly_traffic_data()
-    
+
     context = {
         'total_today': total_today,
         'entries_today': entries_today,
@@ -215,6 +215,13 @@ def settings(request):
                 return redirect('gate_guard:settings')
             else:
                 messages.error(request, 'Please correct the password errors.')
+        elif 'text_size' in request.POST:
+            new_size = request.POST['text_size']
+            if new_size in ['small', 'medium', 'large']:
+                request.user.text_size = new_size
+                request.user.save()
+                messages.success(request, f'Text size set to {new_size}.')
+            return redirect('gate_guard:settings')
     else:
         profile_form = OfficerProfileForm(instance=request.user)
         password_form = PasswordChangeForm(user=request.user)
@@ -245,9 +252,6 @@ def export_logs_csv(request):
     return response
 
 
-from django.db.models.functions import TruncHour
-from django.db.models import Count, Q
-
 def get_hourly_traffic_data():
     """Return hourly entry and exit counts for the last 24 hours."""
     end_time = timezone.now()
@@ -265,7 +269,6 @@ def get_hourly_traffic_data():
         action='exit'
     ).annotate(hour=TruncHour('timestamp')).values('hour').annotate(count=Count('id')).order_by('hour')
 
-    # Fill missing hours with zeros
     hours = [(start_time + timedelta(hours=i)).strftime('%H:%M') for i in range(24)]
     entry_counts = [0] * 24
     exit_counts = [0] * 24
@@ -283,9 +286,6 @@ def get_hourly_traffic_data():
         'exits': exit_counts,
     }
 
-from django.http import FileResponse
-from .pdf_utils import generate_incident_report_pdf
-import io
 
 @login_required
 @user_passes_test(is_security_officer, login_url='/accounts/login/')
@@ -295,10 +295,13 @@ def download_incident_pdf(request, log_id):
     return FileResponse(buffer, as_attachment=True, filename=f'incident_report_{log.id}.pdf')
 
 
+# ------------------------------------------------------------------
+# RFID Registration and Admin Mode – STICKER ADMIN ONLY
+# ------------------------------------------------------------------
+
 @login_required
-@user_passes_test(lambda u: u.user_type in ['security_officer', 'sticker_admin'], login_url='/accounts/login/')
+@user_passes_test(lambda u: u.user_type == 'sticker_admin', login_url='/accounts/login/')
 def register_rfid(request):
-    # Get the latest pending UID (if any)
     last_pending = PendingRFIDRegistration.objects.order_by('-created_at').first()
     pending_uid = last_pending.rfid_uid if last_pending else ''
 
@@ -307,8 +310,7 @@ def register_rfid(request):
         if form.is_valid():
             data = form.cleaned_data
 
-            # 1. Create or get the driver (User)
-            username = data['email'].split('@')[0]  # simple username from email
+            username = data['email']
             user, created = User.objects.get_or_create(
                 email=data['email'],
                 defaults={
@@ -321,16 +323,13 @@ def register_rfid(request):
                     'contact_number': data['contact_number'],
                 }
             )
+
+            # Do NOT overwrite existing user details
             if not created:
-                # Update existing user info
-                user.first_name = data['driver_name'].split(' ')[0]
-                user.last_name = ' '.join(data['driver_name'].split(' ')[1:]) or user.last_name
-                user.classification = data['classification']
-                user.college_department = data['college_department']
                 user.contact_number = data['contact_number']
                 user.save()
 
-            # 2. Create or get Vehicle
+            # Create or get Vehicle
             vehicle, _ = Vehicle.objects.get_or_create(
                 plate_number=data['plate_number'],
                 defaults={
@@ -341,7 +340,7 @@ def register_rfid(request):
                 }
             )
 
-            # 3. Create an approved StickerApplication
+            # Create an approved StickerApplication
             application = StickerApplication.objects.create(
                 applicant=user,
                 vehicle=vehicle,
@@ -352,7 +351,7 @@ def register_rfid(request):
                 submitted_at=timezone.now()
             )
 
-            # 4. Check for existing RFID tag
+            # Check for existing RFID tag
             if RFIDTag.objects.filter(tag_id=data['rfid_uid']).exists():
                 messages.error(request, f'RFID UID {data["rfid_uid"]} already exists!')
             else:
@@ -362,10 +361,8 @@ def register_rfid(request):
                     is_active=True
                 )
                 messages.success(request, f'RFID {data["rfid_uid"]} registered successfully for {data["driver_name"]} ({data["plate_number"]})')
-                # After successful registration, delete all pending UIDs
                 PendingRFIDRegistration.objects.all().delete()
-                return redirect('gate_guard:register_rfid')   # stay on page or redirect to log
-
+                return redirect('gate_guard:register_rfid')
     else:
         initial = {}
         if pending_uid:
@@ -379,7 +376,7 @@ def register_rfid(request):
 
 
 @login_required
-@user_passes_test(is_security_officer, login_url='/accounts/login/')
+@user_passes_test(lambda u: u.user_type == 'sticker_admin', login_url='/accounts/login/')
 def toggle_admin_mode(request):
     config = SystemConfig.load()
     if request.method == 'POST':
@@ -387,11 +384,14 @@ def toggle_admin_mode(request):
         config.save()
         status = 'ON' if config.admin_mode else 'OFF'
         messages.success(request, f'Admin Mode turned {status}.')
-        return redirect('gate_guard:overview')   # or wherever you want
-    return redirect('gate_guard:overview')
+        referer = request.META.get('HTTP_REFERER', '/')
+        return redirect(referer)
+    return redirect('sticker_portal:dashboard')
 
+
+# Gate toggle – still for security officers
 @login_required
-@user_passes_test(is_security_officer)
+@user_passes_test(is_security_officer, login_url='/accounts/login/')
 def toggle_gate(request):
     config = SystemConfig.load()
     config.gate_open = not config.gate_open
@@ -399,3 +399,48 @@ def toggle_gate(request):
     status = 'OPEN' if config.gate_open else 'CLOSED'
     messages.success(request, f'Gate is now {status}.')
     return redirect('gate_guard:overview')
+
+@login_required
+@user_passes_test(is_security_officer, login_url='/accounts/login/')
+def time_tracker(request):
+    # 1. Find all RFID tags whose most recent log is an entry (i.e. still inside)
+    from django.db.models import OuterRef, Subquery
+    latest_log = GateLog.objects.filter(
+        rfid_tag=OuterRef('rfid_tag')
+    ).order_by('-timestamp')
+
+    inside_logs = GateLog.objects.filter(
+        rfid_tag__is_active=True,          # only consider active tags
+        action='entry'
+    ).annotate(
+        latest_action=Subquery(latest_log.values('action')[:1])
+    ).filter(latest_action='entry').select_related(
+        'rfid_tag__sticker_application__applicant',
+        'rfid_tag__sticker_application__vehicle'
+    ).order_by('-timestamp')
+
+    # 2. Check if current time is past 22:00
+    now = timezone.localtime()
+    is_after_hours = now.hour >= 22
+
+    # 3. Build a list with extra info
+    vehicles_inside = []
+    for log in inside_logs:
+        entry_time = log.timestamp
+        duration = now - entry_time
+        hours, remainder = divmod(duration.seconds, 3600)
+        minutes = remainder // 60
+        vehicles_inside.append({
+            'plate': log.plate_number or 'N/A',
+            'driver': log.driver_name or 'Unknown',
+            'entry_time': entry_time,
+            'duration': f"{hours}h {minutes}m",
+            'is_overstay': is_after_hours,   # if it's after 22:00, all are flagged
+            'applicant': log.rfid_tag.sticker_application.applicant if log.rfid_tag and log.rfid_tag.sticker_application else None,
+        })
+
+    context = {
+        'vehicles_inside': vehicles_inside,
+        'is_after_hours': is_after_hours,
+    }
+    return render(request, 'gate_guard/time_tracker.html', context)

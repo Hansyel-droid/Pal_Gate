@@ -1,0 +1,151 @@
+{% extends 'base_applicant.html' %}
+{% load static %}
+
+{% block title %}Choose Schedule{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sticker_portal/form.css' %}">
+<style>
+    .calendar { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    .calendar th, .calendar td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+    .calendar th { background: #f5f5f5; }
+    .calendar td a { display: block; text-decoration: none; color: var(--primary); font-weight: 600; }
+    .calendar td.disabled { color: #ccc; }
+    .calendar td.today { background: #FFF3E0; }
+    .calendar td.active {
+        background: var(--primary-orange);
+        color: white;
+        border-radius: 4px;
+    }
+    .calendar td.active a { color: white; }
+
+    .slot-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    .slot-table th, .slot-table td { border: 1px solid #ddd; padding: 12px; text-align: center; }
+    .slot-table tr { cursor: pointer; transition: background 0.2s; }
+    .slot-table tr:hover { background: #f0f0f0; }
+    .slot-row-selected {
+        background: var(--primary-light) !important;
+        font-weight: 600;
+    }
+    .slot-btn { display: inline-block; padding: 8px 12px; background: var(--primary-orange); color: white; border: none; border-radius: 6px; cursor: pointer; }
+    .slot-btn:disabled { background: #ccc; cursor: not-allowed; }
+    .selected-date-header { background: var(--primary-light); font-weight: bold; padding: 12px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="top-bar">
+        <div class="top-bar-left">
+            <span class="portal-label">Sticker Portal</span>
+            <span class="separator">/</span>
+            <span class="page-label">Schedule</span>
+        </div>
+        <form action="{% url 'accounts:logout' %}" method="post" style="display: inline;">
+            {% csrf_token %}
+            <button type="submit" class="sign-out-btn"><i data-lucide="log-out"></i> Sign Out</button>
+        </form>
+    </div>
+
+    <div class="app-wrapper">
+        <div class="application-card">
+            <h2>Choose your appointment schedule</h2>
+            <p class="text-muted">Select a date and available time slot.</p>
+
+            <div class="text-center mb-4">
+                <h3 class="text-uppercase font-weight-bold">{{ month_name }} {{ year }}</h3>
+            </div>
+
+            <table class="calendar">
+                <thead>
+                    <tr>
+                        <th>Sun</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for week in weeks %}
+                    <tr>
+                        {% for day_info in week %}
+                            {% if day_info is None %}
+                                <td class="disabled"></td>
+                            {% else %}
+                                <td class="{% if day_info.is_today %}today{% endif %} {% if day_info.date == selected_date %}active{% endif %}">
+                                    {% if day_info.is_selectable %}
+                                        <a href="?date={{ day_info.date }}&month={{ month }}&year={{ year }}">
+                                            {{ day_info.day }}
+                                        </a>
+                                    {% else %}
+                                        <span class="disabled">{{ day_info.day }}</span>
+                                    {% endif %}
+                                </td>
+                            {% endif %}
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            {% if selected_date %}
+            <div class="selected-date-header">
+                {{ selected_date|date:"l, F j, Y" }}
+            </div>
+            {% if slots %}
+            <form method="post" id="slot-form">
+                {% csrf_token %}
+                <input type="hidden" name="chosen_datetime" id="chosenDatetimeInput">
+                <table class="slot-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Available Slots</th>
+                            <th>In Percentage</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for slot in slots %}
+                        <tr class="slot-row" data-datetime="{{ slot.datetime }}"
+                            onclick="selectTime(this)" {% if slot.available == 0 %}style="opacity:0.5; cursor:not-allowed;"{% endif %}>
+                            <td>
+                                <span class="slot-btn {% if slot.available == 0 %}disabled{% endif %}">
+                                    {{ slot.time }}
+                                </span>
+                            </td>
+                            <td>{{ slot.available }}/{{ slot.max }}</td>
+                            <td>{{ slot.percentage|floatformat:1 }}%</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <div class="flex justify-between" style="margin-top: 30px;">
+                    <a href="{% url 'sticker_portal:apply' %}" class="btn-secondary" style="text-decoration: none;">Back</a>
+                    <button type="submit" class="btn-primary" id="nextBtn" disabled>Next</button>
+                </div>
+            </form>
+            {% else %}
+            <p>No slots available for this date.</p>
+            {% endif %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const nextBtn = document.getElementById('nextBtn');
+    const hiddenInput = document.getElementById('chosenDatetimeInput');
+    let selectedRow = null;
+
+    function selectTime(row) {
+        if (row.style.opacity === '0.5') return;
+        if (selectedRow) {
+            selectedRow.classList.remove('slot-row-selected');
+        }
+        row.classList.add('slot-row-selected');
+        selectedRow = row;
+        hiddenInput.value = row.dataset.datetime;
+        nextBtn.disabled = false;
+    }
+</script>
+{% endblock %}

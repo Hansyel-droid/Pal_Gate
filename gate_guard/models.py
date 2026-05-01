@@ -34,10 +34,10 @@ class GateLog(models.Model):
     action = models.CharField(max_length=10, choices=ACTION_CHOICES)
     gate = models.CharField(max_length=20, choices=GATE_CHOICES)
     timestamp = models.DateTimeField()
-    driver_name = models.CharField(max_length=100, blank=True)
+    driver_name = models.CharField(max_length=100, blank=True, db_index=True)
     vehicle_model = models.CharField(max_length=100, blank=True)
     vehicle_color = models.CharField(max_length=50, blank=True)
-    plate_number = models.CharField(max_length=20, blank=True)
+    plate_number = models.CharField(max_length=20, blank=True, db_index=True)
     reason_denied = models.CharField(max_length=200, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

@@ -8,10 +8,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="{% static 'js/lucide.min.js' %}"></script>
     {% block extra_css %}{% endblock %}
 </head>
-<body>
+<body class="{% if user.is_authenticated and user.text_size %}text-{{ user.text_size }}{% else %}text-medium{% endif %}">
     <div class="layout">
         <!-- Sidebar -->
         <aside class="sidebar">
@@ -26,8 +26,8 @@
                 <a href="{% url 'sticker_portal:dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
                     <i data-lucide="layout-dashboard"></i> Dashboard
                 </a>
-                <a href="{% url 'sticker_portal:pending_approvals' %}" class="nav-item {% if request.resolver_match.url_name == 'pending_approvals' %}active{% endif %}">
-                    <i data-lucide="clock"></i> Pending Approvals
+                <a href="{% url 'sticker_portal:appointment_management' %}" class="nav-item {% if request.resolver_match.url_name == 'appointment_management' %}active{% endif %}">
+                    <i data-lucide="calendar-check-2"></i> Appointments
                 </a>
                 <a href="{% url 'sticker_portal:sticker_register_rfid' %}" class="nav-item {% if request.resolver_match.url_name == 'sticker_register_rfid' %}active{% endif %}">
                     <i data-lucide="plus-circle"></i> Register RFID
@@ -54,10 +54,19 @@
             <div class="topbar">
                 <span class="breadcrumb">{% block breadcrumb %}Dashboard{% endblock %}</span>
                 <div class="topbar-actions">
-                    <button class="icon-btn"><i data-lucide="bell"></i></button>
+                    <!-- Admin Mode Toggle -->
+                    <form method="post" action="{% url 'gate_guard:toggle_admin_mode' %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn-admin-toggle {% if system_config.admin_mode %}active{% endif %}">
+                            <i data-lucide="{% if system_config.admin_mode %}toggle-right{% else %}toggle-left{% endif %}"></i>
+                            Admin Mode {% if system_config.admin_mode %}ON{% else %}OFF{% endif %}
+                        </button>
+                    </form>
+
+                    <!-- Sign Out -->
                     <form action="{% url 'accounts:logout' %}" method="post" style="display: inline;">
                         {% csrf_token %}
-                        <button type="submit" class="btn-new">
+                        <button type="submit" class="btn-new" style="background: #A52A2A;">
                             <i data-lucide="log-out"></i> Sign Out
                         </button>
                     </form>
@@ -80,11 +89,10 @@
             </footer>
         </div>
     </div>
-
-{% block extra_js %}
-<script>
-    lucide.createIcons();
-</script>
-{% endblock %}
+    <script>
+        // Always render icons, regardless of child blocks
+        lucide.createIcons();
+    </script>
+    {% block extra_js %}{% endblock %}
 </body>
 </html>

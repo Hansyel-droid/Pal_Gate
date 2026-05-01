@@ -102,23 +102,24 @@
         </div>
     </section>
 
-    <section class="settings-card">
-        <div class="card-header">
-            <i data-lucide="type" class="header-icon"></i>
-            <h3 class="card-title">Text Appearance</h3>
+<section class="settings-card">
+    <div class="card-header">
+        <i data-lucide="type" class="header-icon"></i>
+        <h3 class="card-title">Text Appearance</h3>
+    </div>
+    <form method="post" action="">
+        {% csrf_token %}
+        <input type="hidden" name="text_size" value="">
+        <div class="scale-selector">
+            <button type="submit" name="text_size" value="small" class="scale-btn {% if user.text_size == 'small' %}active{% endif %}">Small</button>
+            <button type="submit" name="text_size" value="medium" class="scale-btn {% if user.text_size == 'medium' %}active{% endif %}">Medium</button>
+            <button type="submit" name="text_size" value="large" class="scale-btn {% if user.text_size == 'large' %}active{% endif %}">Large</button>
         </div>
-        <div class="field-group">
-            <label>SCALE SIZE</label>
-            <div class="scale-selector">
-                <button class="scale-btn">Small</button>
-                <button class="scale-btn active">Medium</button>
-                <button class="scale-btn">Large</button>
-            </div>
-        </div>
-        <div class="preview-box">
-            "The quick brown fox jumps over the lazy dog."
-        </div>
-    </section>
+    </form>
+    <div class="preview-box" style="font-size: {% if user.text_size == 'small' %}0.85rem{% elif user.text_size == 'large' %}1.15rem{% else %}1rem{% endif %};">
+        "The quick brown fox jumps over the lazy dog."
+    </div>
+</section>
 </div>
 
 <!-- Security & Session Banner -->

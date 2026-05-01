@@ -20,13 +20,15 @@ class Vehicle(models.Model):
 class StickerApplication(models.Model):
     """Main sticker application record."""
     STATUS_CHOICES = (
-        ('pending', 'Pending Review'),
+        ('draft', 'Draft'),  
+        ('pending', 'Scheduled'),
         ('approved', 'Approved'),
         ('rejected', 'Rejected'),
         ('issued', 'Sticker Issued'),
         ('expired', 'Expired'),
     )
 
+    scheduled_datetime = models.DateTimeField(null=True, blank=True)
     applicant = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='applications')
     vehicle = models.OneToOneField(Vehicle, on_delete=models.CASCADE, related_name='application')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
@@ -73,3 +75,10 @@ class Document(models.Model):
 
     def __str__(self):
         return f"{self.get_document_type_display()} - {self.application.id}"
+
+class AvailableDate(models.Model):
+    date = models.DateField(unique=True)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.date} {'Active' if self.is_active else 'Inactive'}"
