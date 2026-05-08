@@ -1,7 +1,7 @@
 {% extends 'base_applicant.html' %}
 {% load static %}
 
-{% block title %}Vehicle Sticker Application{% endblock %}
+{% block title %}Vehicle & Documents{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/sticker_portal/all2.css' %}">
@@ -22,6 +22,42 @@
     .other-specify {
         margin-top: 8px;
     }
+    .file-upload-box {
+        border: 2px dashed var(--border);
+        border-radius: var(--r-sm);
+        padding: 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: border-color 0.2s, background 0.2s;
+        position: relative;
+    }
+    .file-upload-box:hover {
+        border-color: var(--primary);
+        background: var(--primary-light);
+    }
+    .file-upload-box input[type="file"] {
+        opacity: 0;
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+    }
+    .file-upload-label {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        pointer-events: none;
+    }
+    .file-upload-label i {
+        margin-right: 6px;
+        vertical-align: middle;
+    }
+    .file-name {
+        font-size: 0.8rem;
+        color: var(--primary);
+        margin-top: 8px;
+        display: block;
+    }
 </style>
 {% endblock %}
 
@@ -31,7 +67,7 @@
         <div class="top-bar-left">
             <span class="portal-label">Sticker Portal</span>
             <span class="separator">/</span>
-            <span class="page-label">Application</span>
+            <span class="page-label">Vehicle &amp; Documents</span>
         </div>
         <form action="{% url 'accounts:logout' %}" method="post" style="display: inline;">
             {% csrf_token %}
@@ -45,76 +81,36 @@
         <div class="application-card">
             <div class="form-header">
                 <h1 class="form-title">Vehicle Sticker Application</h1>
-                <p class="form-subtitle">Academic Year 2025–2026 • PalSU Gate System Access</p>
+                <p class="form-subtitle">Step 2 of 3 • Vehicle &amp; Required Documents</p>
             </div>
 
-            {% if app_form.errors or vehicle_form.errors or doc_form.errors %}
+            {% if vehicle_form.errors or doc_form.errors %}
             <div class="alert alert-error" style="margin-bottom: 20px; padding: 12px; background: #FEF2F2; border-left: 4px solid #DC2626; color: #991B1B;">
                 <strong>Please correct the errors below.</strong>
             </div>
             {% endif %}
 
-            <!-- Stepper -->
+            <!-- Stepper: step 2 active -->
             <div class="stepper">
+                <div class="step completed">
+                    <span class="circle"><i data-lucide="check" style="width:16px;height:16px;"></i></span>
+                    <span class="label">Personal Details</span>
+                </div>
+                <div class="connector completed"></div>
                 <div class="step active">
-                    <span class="circle">1</span>
-                    <span class="label">Application Details</span>
+                    <span class="circle">2</span>
+                    <span class="label">Vehicle &amp; Docs</span>
                 </div>
                 <div class="connector"></div>
                 <div class="step">
-                    <span class="circle">2</span>
+                    <span class="circle">3</span>
                     <span class="label">Confirm</span>
                 </div>
             </div>
 
-            <form method="post" id="stickerForm" enctype="multipart/form-data">
+            <form method="post" enctype="multipart/form-data" id="vehicleForm">
                 {% csrf_token %}
 
-                <!-- Applicant Profile -->
-                <section class="form-section">
-                    <div class="section-header">
-                        <i data-lucide="user" class="section-icon"></i>
-                        <h2 class="section-title">Applicant Profile</h2>
-                    </div>
-                    <div class="form-grid">
-                        <div class="field-group full-width">
-                            <label>FULL NAME <span class="required-star">*</span></label>
-                            {{ app_form.full_name }}
-                            {% for error in app_form.full_name.errors %}
-                                <span class="error-text">{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                        <div class="field-group">
-                            <label>COLLEGE/DEPARTMENT</label>
-                            {{ app_form.college_department }}
-                            {% for error in app_form.college_department.errors %}
-                                <span class="error-text">{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                        <div class="field-group">
-                            <label>STUDENT/EMPLOYEE ID</label>
-                            {{ app_form.student_id }}
-                            {% for error in app_form.student_id.errors %}
-                                <span class="error-text">{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                        <div class="field-group full-width">
-                            <label>CLASSIFICATION <span class="required-star">*</span></label>
-                            <div class="radio-group">
-                                {% for radio in app_form.classification %}
-                                <label class="radio-label">
-                                    {{ radio.tag }} {{ radio.choice_label }}
-                                </label>
-                                {% endfor %}
-                            </div>
-                            {% for error in app_form.classification.errors %}
-                                <span class="error-text">{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Vehicle Information -->
                 <section class="form-section">
                     <div class="section-header">
                         <i data-lucide="car" class="section-icon"></i>
@@ -164,40 +160,55 @@
                     </div>
                 </section>
 
-                <!-- Document Uploads -->
                 <section class="form-section">
                     <div class="section-header">
                         <i data-lucide="file-text" class="section-icon"></i>
                         <h2 class="section-title">Required Documents</h2>
                     </div>
                     <p style="font-size:0.8rem; color: var(--text-muted); margin-bottom: 12px;">
-                        Upload clear photos or PDF scans. Accepted formats: JPG, PNG, PDF.
+                        Accepted formats: JPG, PNG, PDF.
                     </p>
                     <div class="form-grid">
                         <div class="field-group">
-                            <label>OR / CR (Certificate of Registration) <span class="required-star">*</span></label>
-                            <input type="file" name="or_cr" class="form-input" accept=".jpg,.jpeg,.png,.pdf" required>
+                            <label>OR / CR <span class="required-star">*</span></label>
+                            <div class="file-upload-box" id="or-cr-box">
+                                <span class="file-upload-label"><i data-lucide="upload-cloud"></i> Upload OR/CR</span>
+                                <input type="file" name="or_cr" accept=".jpg,.jpeg,.png,.pdf" required id="id_or_cr">
+                                <span class="file-name" id="or-cr-name"></span>
+                            </div>
                             {% for error in doc_form.or_cr.errors %}
                                 <span class="error-text">{{ error }}</span>
                             {% endfor %}
                         </div>
                         <div class="field-group">
                             <label>DRIVER'S LICENSE <span class="required-star">*</span></label>
-                            <input type="file" name="drivers_license" class="form-input" accept=".jpg,.jpeg,.png,.pdf" required>
+                            <div class="file-upload-box" id="drivers-box">
+                                <span class="file-upload-label"><i data-lucide="upload-cloud"></i> Upload License</span>
+                                <input type="file" name="drivers_license" accept=".jpg,.jpeg,.png,.pdf" required id="id_drivers_license">
+                                <span class="file-name" id="drivers-name"></span>
+                            </div>
                             {% for error in doc_form.drivers_license.errors %}
                                 <span class="error-text">{{ error }}</span>
                             {% endfor %}
                         </div>
                         <div class="field-group" id="cor-upload-group" style="display: none;">
                             <label>CERTIFICATE OF REGISTRATION (COR) <span class="required-star">*</span></label>
-                            <input type="file" name="cor" class="form-input" accept=".jpg,.jpeg,.png,.pdf">
+                            <div class="file-upload-box" id="cor-box">
+                                <span class="file-upload-label"><i data-lucide="upload-cloud"></i> Upload COR</span>
+                                <input type="file" name="cor" accept=".jpg,.jpeg,.png,.pdf" id="id_cor">
+                                <span class="file-name" id="cor-name"></span>
+                            </div>
                             {% for error in doc_form.cor.errors %}
                                 <span class="error-text">{{ error }}</span>
                             {% endfor %}
                         </div>
                         <div class="field-group" id="auth-upload-group" style="display: none;">
                             <label>AUTHORIZATION LETTER <span class="required-star">*</span></label>
-                            <input type="file" name="auth_letter" class="form-input" accept=".jpg,.jpeg,.png,.pdf">
+                            <div class="file-upload-box" id="auth-box">
+                                <span class="file-upload-label"><i data-lucide="upload-cloud"></i> Upload Letter</span>
+                                <input type="file" name="auth_letter" accept=".jpg,.jpeg,.png,.pdf" id="id_auth_letter">
+                                <span class="file-name" id="auth-name"></span>
+                            </div>
                             {% for error in doc_form.auth_letter.errors %}
                                 <span class="error-text">{{ error }}</span>
                             {% endfor %}
@@ -205,12 +216,14 @@
                     </div>
                 </section>
 
-                <div class="form-actions">
+                <div class="form-actions" style="justify-content: space-between;">
+                    <a href="{% url 'sticker_portal:apply_edit' application.id %}" class="btn-secondary">
+                        <i data-lucide="arrow-left"></i> Back
+                    </a>
                     <button type="submit" class="btn-primary">
-                        Save & Review <i data-lucide="arrow-right"></i>
+                        Continue to Review <i data-lucide="arrow-right"></i>
                     </button>
                 </div>
-                <p class="review-note">You'll be able to review your application before final submission.</p>
             </form>
 
             <footer class="form-footer">
@@ -225,11 +238,10 @@
 <script>
     lucide.createIcons();
 
-    // Toggle "other" input for Type of Vehicle
+    // Toggle "other" inputs
     const vehicleSelect = document.querySelector('#id_type_of_vehicle');
     const vehicleOtherWrapper = document.getElementById('vehicle-type-other-wrapper');
     const vehicleOtherInput = document.getElementById('vehicle_type_other');
-
     function toggleVehicleOther() {
         if (vehicleSelect && vehicleOtherWrapper) {
             if (vehicleSelect.value === 'other') {
@@ -242,17 +254,14 @@
             }
         }
     }
-
     if (vehicleSelect) {
         vehicleSelect.addEventListener('change', toggleVehicleOther);
         toggleVehicleOther();
     }
 
-    // Toggle "other" input for Color
     const colorSelect = document.querySelector('#id_color');
     const colorOtherWrapper = document.getElementById('color-other-wrapper');
     const colorOtherInput = document.getElementById('color_other');
-
     function toggleColorOther() {
         if (colorSelect && colorOtherWrapper) {
             if (colorSelect.value === 'other') {
@@ -265,43 +274,54 @@
             }
         }
     }
-
     if (colorSelect) {
         colorSelect.addEventListener('change', toggleColorOther);
         toggleColorOther();
     }
 
-    // Show/hide COR for students
-    const classificationRadios = document.querySelectorAll('input[name="classification"]');
+    // Show/hide COR based on classification (we need to read classification from the server/draft; we'll use the applicant's classification stored in the draft)
+    // Since this page doesn't have classification radio, we'll read from the data attribute or a hidden field. We'll add a hidden element.
+    // We'll extract classification from the application object passed via template.
+    const applicantClassification = "{{ application.applicant.classification }}";
     const corGroup = document.getElementById('cor-upload-group');
-    function toggleCOR() {
-        const selected = document.querySelector('input[name="classification"]:checked');
-        if (selected && selected.value === 'student') {
-            corGroup.style.display = 'block';
-            corGroup.querySelector('input').required = true;
-        } else {
-            corGroup.style.display = 'none';
-            corGroup.querySelector('input').required = false;
-        }
+    if (applicantClassification === 'student') {
+        corGroup.style.display = 'block';
+        document.getElementById('id_cor').required = true;
     }
-    classificationRadios.forEach(r => r.addEventListener('change', toggleCOR));
-    toggleCOR();
 
-    // Show/hide Authorization Letter for non-owner
+    // Show/hide Auth Letter based on ownership radio
     const isOwnerRadios = document.querySelectorAll('input[name="is_owner"]');
     const authGroup = document.getElementById('auth-upload-group');
     function toggleAuth() {
         const selected = document.querySelector('input[name="is_owner"]:checked');
-        // RadioSelect values: Django renders True/False as strings "True"/"False"
         if (selected && selected.value === 'False') {
             authGroup.style.display = 'block';
-            authGroup.querySelector('input').required = true;
+            document.getElementById('id_auth_letter').required = true;
         } else {
             authGroup.style.display = 'none';
-            authGroup.querySelector('input').required = false;
+            document.getElementById('id_auth_letter').required = false;
         }
     }
     isOwnerRadios.forEach(r => r.addEventListener('change', toggleAuth));
     toggleAuth();
+
+    // File name display helpers
+    function setupFileDisplay(inputId, nameSpanId) {
+        const input = document.getElementById(inputId);
+        const span = document.getElementById(nameSpanId);
+        if (input && span) {
+            input.addEventListener('change', () => {
+                if (input.files.length > 0) {
+                    span.textContent = input.files[0].name;
+                } else {
+                    span.textContent = '';
+                }
+            });
+        }
+    }
+    setupFileDisplay('id_or_cr', 'or-cr-name');
+    setupFileDisplay('id_drivers_license', 'drivers-name');
+    setupFileDisplay('id_cor', 'cor-name');
+    setupFileDisplay('id_auth_letter', 'auth-name');
 </script>
 {% endblock %}

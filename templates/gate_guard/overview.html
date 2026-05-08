@@ -4,7 +4,7 @@
 {% block title %}GateGuard Overview{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/gate_guard/style2.css' %}">
+<link rel="stylesheet" href="{% static 'css/gate_guard/all.css' %}">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 {% endblock %}
 
@@ -85,8 +85,8 @@
         </thead>
         <tbody>
             {% for log in live_logs %}
-            <tr>
-                <td class="plate">{{ log.plate_number }}</td>
+            <tr><td><span class="plate-box">{{ log.plate_number }}</span></td>
+                
                 <td>
                     {% if log.action == 'entry' %}
                         <span class="badge entry">Entry</span>

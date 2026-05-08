@@ -4,7 +4,7 @@
 {% block title %}Application Submitted{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/sticker_portal/form.css' %}">
+<link rel="stylesheet" href="{% static 'css/sticker_portal/all2.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -25,11 +25,9 @@
         <div class="application-card" style="text-align: center;">
             <i data-lucide="check-circle" style="width: 64px; height: 64px; color: #10B981;"></i>
             <h2>Application Submitted!</h2>
-            <p>Your schedule:</p>
-            <h3 style="color: var(--primary);">{{ schedule|date:"F j, Y, g:i A" }}</h3>
-            <div class="alert alert-warning" style="margin: 24px auto; max-width: 400px;">
-                <p><strong>Please proceed at the exact time.</strong></p>
-                <p><strong>Bring ₱50.00 for the sticker fee.</strong></p>
+            <p>Your application has been received successfully.</p>
+            <div class="alert alert-info" style="margin: 24px auto; max-width: 400px; background: var(--primary-light); border-left-color: var(--primary); color: var(--primary);">
+                <p>You will be notified of your appointment date via email.</p>
             </div>
             <a href="{% url 'sticker_portal:my_applications' %}" class="btn-primary">My Applications</a>
         </div>

@@ -11,12 +11,12 @@ from django.db.models import Count
 import calendar
 import json
 from django.http import JsonResponse
-from django.views.decorators.http import require_POST
 from .models import StickerApplication, Vehicle, Document, AvailableDate
 from .forms import (
     StickerAdminProfileForm,
     VehicleForm,
     StickerApplicationForm,
+    DocumentUploadForm,
 )
 from gate_guard.forms import RFIDRegistrationForm
 from gate_guard.models import PendingRFIDRegistration, RFIDTag
@@ -183,7 +183,6 @@ def appointment_management(request):
                 })
         weeks.append(week_data)
 
-    # Range picker boundaries
     first_day = date(year, month, 1)
     last_day = date(year, month, calendar.monthrange(year, month)[1])
 
@@ -232,168 +231,154 @@ def toggle_available_date(request):
 
 
 # ----------------------------------------------------------------------
-# Applicant Views (draft‑confirm‑submit flow)
+# Applicant Views – three‑step wizard (draft‑confirm‑submit)
 # ----------------------------------------------------------------------
+
 @login_required
 @user_passes_test(is_applicant, login_url='/accounts/login/applicant/')
-def apply(request):
-    if request.method == 'POST':
-        vehicle_form = VehicleForm(request.POST)
-        app_form = StickerApplicationForm(request.POST, user=request.user)
+def apply_personal(request, app_id=None):
+    """Step 1: Personal details. Creates or updates a draft."""
+    if app_id:
+        application = get_object_or_404(
+            StickerApplication, id=app_id, applicant=request.user, status='draft'
+        )
+        initial_app = {
+            'full_name': application.full_name,
+            'college_department': application.college_department,
+            'student_id': application.student_id,
+            'classification': request.user.classification,
+        }
+        app_form = StickerApplicationForm(initial=initial_app, user=request.user)
+    else:
+        application = None
+        app_form = StickerApplicationForm(user=request.user)
 
-        if vehicle_form.is_valid() and app_form.is_valid():
+    if request.method == 'POST':
+        app_form = StickerApplicationForm(request.POST, user=request.user)
+        if app_form.is_valid():
+            if app_id:
+                application = get_object_or_404(
+                    StickerApplication, id=app_id, applicant=request.user, status='draft'
+                )
+            else:
+                application = StickerApplication(applicant=request.user)
+            application.full_name = app_form.cleaned_data['full_name']
+            application.college_department = app_form.cleaned_data['college_department']
+            application.student_id = app_form.cleaned_data['student_id']
+            application.status = 'draft'
+            application.expiry_date = timezone.now().date() + timedelta(days=365)
+            application.save()
+            messages.success(request, 'Personal details saved. Please provide vehicle information.')
+            return redirect('sticker_portal:apply_vehicle', app_id=application.id)
+
+    context = {
+        'app_form': app_form,
+        'application': application,
+    }
+    return render(request, 'sticker_portal/application_form_personal.html', context)
+
+
+@login_required
+@user_passes_test(is_applicant, login_url='/accounts/login/applicant/')
+def apply_vehicle(request, app_id):
+    """Step 2: Vehicle info + documents. Draft must already exist."""
+    application = get_object_or_404(
+        StickerApplication, id=app_id, applicant=request.user, status='draft'
+    )
+
+    try:
+        vehicle = application.vehicle
+        vehicle_form = VehicleForm(instance=vehicle)
+    except Vehicle.DoesNotExist:
+        vehicle = None
+        vehicle_form = VehicleForm()
+
+    doc_form = DocumentUploadForm()
+
+    if request.method == 'POST':
+        if vehicle:
+            vehicle_form = VehicleForm(request.POST, instance=vehicle)
+        else:
+            vehicle_form = VehicleForm(request.POST)
+        doc_form = DocumentUploadForm(request.POST, request.FILES)
+
+        if vehicle_form.is_valid() and doc_form.is_valid():
             vehicle = vehicle_form.save(commit=False)
+            if vehicle.type_of_vehicle == 'other':
+                vehicle.type_of_vehicle = request.POST.get('vehicle_type_other', 'other')
+            if vehicle.color == 'other':
+                vehicle.color = request.POST.get('color_other', 'other')
             vehicle.owner = request.user
             vehicle.save()
 
-            application = app_form.save(commit=False)
-            application.applicant = request.user
             application.vehicle = vehicle
-            application.status = 'draft'
-            application.submitted_at = timezone.now()
-            application.expiry_date = timezone.now().date() + timedelta(days=365)
             application.save()
 
-            return redirect('sticker_portal:schedule_appointment', app_id=application.id)
-        else:
-            messages.error(request, 'Please correct the errors below.')
-    else:
-        vehicle_form = VehicleForm()
-        app_form = StickerApplicationForm(user=request.user)
+            # Remove old documents if re-uploading
+            application.documents.all().delete()
 
-    context = {
-        'vehicle_form': vehicle_form,
-        'app_form': app_form,
-    }
-    return render(request, 'sticker_portal/application_form.html', context)
+            # OR/CR
+            if 'or_cr' in request.FILES:
+                application.documents.filter(document_type='or_cr').delete()
+                Document.objects.create(
+                    application=application,
+                    document_type='or_cr',
+                    file=request.FILES['or_cr']
+                )
+            # Driver's License
+            if 'drivers_license' in request.FILES:
+                application.documents.filter(document_type='drivers_license').delete()
+                Document.objects.create(
+                    application=application,
+                    document_type='drivers_license',
+                    file=request.FILES['drivers_license']
+                )
+            # COR (student only)
+            if application.applicant.classification == 'student' and 'cor' in request.FILES:
+                application.documents.filter(document_type='cor').delete()
+                Document.objects.create(
+                    application=application,
+                    document_type='cor',
+                    file=request.FILES['cor']
+                )
+            # Authorization letter (non-owner only)
+            if not vehicle_form.cleaned_data.get('is_owner', True) and 'auth_letter' in request.FILES:
+                application.documents.filter(document_type='auth_letter').delete()
+                Document.objects.create(
+                    application=application,
+                    document_type='auth_letter',
+                    file=request.FILES['auth_letter']
+                )
 
-
-@login_required
-@user_passes_test(is_applicant, login_url='/accounts/login/applicant/')
-def schedule_appointment(request, app_id):
-    application = get_object_or_404(StickerApplication, id=app_id, applicant=request.user, status='draft')
-    today = date.today()
-    month = today.month   # always current month
-    year = today.year     # always current year
-
-    cal = calendar.Calendar(firstweekday=6)  # Sunday start
-    month_days = cal.monthdayscalendar(year, month)
-
-    # 1. Get active dates from the admin table (as date objects)
-    active_date_objs = AvailableDate.objects.filter(
-        date__year=year, date__month=month, is_active=True
-    ).values_list('date', flat=True)   # returns list of date objects
-
-    # 2. Build a set of date strings that are selectable (future + active)
-    selectable_dates = set()
-    for d in active_date_objs:
-        if d >= today:
-            selectable_dates.add(d.isoformat())
-
-    # 3. Build the calendar weeks for the template
-    weeks = []
-    for week in month_days:
-        week_data = []
-        for day in week:
-            if day == 0:
-                week_data.append(None)
-            else:
-                d = date(year, month, day)
-                week_data.append({
-                    'day': day,
-                    'date': d.isoformat(),
-                    'is_today': d == today,
-                    'is_selectable': d.isoformat() in selectable_dates,
-                })
-        weeks.append(week_data)
-
-    # 4. Time slot definitions (unchanged)
-    TIME_SLOTS = [
-        "08:00 AM", "08:30 AM", "09:00 AM", "09:30 AM",
-        "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
-        "12:00 PM", "12:30 PM", "01:00 PM", "01:30 PM",
-        "02:00 PM", "02:30 PM", "03:00 PM", "03:30 PM",
-        "04:00 PM", "04:30 PM", "05:00 PM",
-    ]
-    MAX_SLOTS = 20
-
-    selected_date = request.GET.get('date')
-    slots_data = None
-    if selected_date:
-        try:
-            sel_date = datetime.strptime(selected_date, "%Y-%m-%d").date()
-        except ValueError:
-            selected_date = None
-        else:
-            slots_data = []
-            for slot_str in TIME_SLOTS:
-                slot_time = datetime.strptime(slot_str, "%I:%M %p").time()
-                slot_dt = timezone.make_aware(datetime.combine(sel_date, slot_time))
-                booked = StickerApplication.objects.filter(
-                    scheduled_datetime=slot_dt,
-                    status__in=['pending', 'approved', 'issued']
-                ).count()
-                available = max(MAX_SLOTS - booked, 0)
-                percentage = (available / MAX_SLOTS) * 100
-                slots_data.append({
-                    'time': slot_str,
-                    'datetime': slot_dt.isoformat(),
-                    'available': available,
-                    'percentage': percentage,
-                    'max': MAX_SLOTS,
-                })
-
-    if request.method == 'POST':
-        chosen_datetime = request.POST.get('chosen_datetime')
-        if chosen_datetime:
-            try:
-                dt = datetime.fromisoformat(chosen_datetime)
-                if dt < timezone.now():
-                    messages.error(request, "Cannot select a past date/time.")
-                else:
-                    booked = StickerApplication.objects.filter(
-                        scheduled_datetime=dt,
-                        status__in=['pending', 'approved', 'issued']
-                    ).count()
-                    if booked >= MAX_SLOTS:
-                        messages.error(request, "This slot is no longer available.")
-                    else:
-                        application.scheduled_datetime = dt
-                        application.save()
-                        return redirect('sticker_portal:confirm_application', app_id=application.id)
-            except (ValueError, TypeError):
-                messages.error(request, "Invalid date/time.")
-        else:
-            messages.error(request, "Please select a time slot.")
+            messages.success(request, 'Vehicle information saved. Please review your application.')
+            return redirect('sticker_portal:confirm_application', app_id=application.id)
 
     context = {
         'application': application,
-        'weeks': weeks,
-        'month_name': calendar.month_name[month],
-        'year': year,
-        'month': month,
-        'selected_date': selected_date,
-        'slots': slots_data,
+        'vehicle_form': vehicle_form,
+        'doc_form': doc_form,
     }
-    return render(request, 'sticker_portal/schedule_appointment.html', context)
+    return render(request, 'sticker_portal/application_form_vehicle.html', context)
+
 
 @login_required
 @user_passes_test(is_applicant, login_url='/accounts/login/applicant/')
 def confirm_application(request, app_id):
-    application = get_object_or_404(StickerApplication, id=app_id, applicant=request.user, status='draft')
+    application = get_object_or_404(
+        StickerApplication, id=app_id, applicant=request.user, status='draft'
+    )
 
     if request.method == 'POST':
         application.status = 'pending'
         application.submitted_at = timezone.now()
         application.save()
-        messages.success(request, 'Your application has been submitted.')
+        messages.success(request, 'Your application has been submitted. You will receive an appointment date later.')
         return redirect('sticker_portal:application_success', app_id=application.id)
 
     documents = application.documents.all()
     return render(request, 'sticker_portal/application_confirm.html', {
         'application': application,
         'documents': documents,
-        'schedule': application.scheduled_datetime,
     })
 
 
@@ -403,7 +388,6 @@ def application_success(request, app_id):
     application = get_object_or_404(StickerApplication, id=app_id, applicant=request.user)
     return render(request, 'sticker_portal/application_success.html', {
         'application': application,
-        'schedule': application.scheduled_datetime,
     })
 
 
@@ -412,6 +396,15 @@ def application_success(request, app_id):
 def my_applications(request):
     applications = StickerApplication.objects.filter(applicant=request.user).order_by('-submitted_at')
     return render(request, 'sticker_portal/my_applications.html', {'applications': applications})
+
+
+@require_POST
+@login_required
+def delete_draft(request, app_id):
+    application = get_object_or_404(StickerApplication, id=app_id, applicant=request.user, status='draft')
+    application.delete()
+    messages.success(request, 'Draft application deleted.')
+    return redirect('sticker_portal:my_applications')
 
 
 # ----------------------------------------------------------------------
@@ -449,7 +442,7 @@ def sticker_register_rfid(request):
             vehicle, _ = Vehicle.objects.get_or_create(
                 plate_number=data['plate_number'],
                 defaults={
-                    'model': data['vehicle_model'],
+                    'type_of_vehicle': data['vehicle_model'],  # now a choice field (two_wheels, four_wheels, other)
                     'color': data['vehicle_color'],
                     'owner': user,
                     'is_owner': data['is_owner'],
@@ -487,11 +480,3 @@ def sticker_register_rfid(request):
         'form': form,
         'pending_uid': pending_uid,
     })
-
-@require_POST
-@login_required
-def delete_draft(request, app_id):
-    application = get_object_or_404(StickerApplication, id=app_id, applicant=request.user, status='draft')
-    application.delete()
-    messages.success(request, 'Draft application deleted.')
-    return redirect('sticker_portal:my_applications')

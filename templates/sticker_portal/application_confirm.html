@@ -4,7 +4,7 @@
 {% block title %}Confirm Application{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/sticker_portal/form.css' %}">
+<link rel="stylesheet" href="{% static 'css/sticker_portal/all2.css' %}">
 <style>
     .confirm-grid {
         display: flex;
@@ -38,23 +38,34 @@
         font-weight: 600;
         color: var(--text-dark);
     }
-    .schedule-highlight {
-        background: var(--primary-light);
-        border-radius: 12px;
-        padding: 20px;
-        text-align: center;
-        margin: 20px 0;
-    }
-    .schedule-highlight i {
-        color: var(--primary-orange);
-        margin-right: 8px;
-    }
-    .action-buttons {
+    .document-item {
         display: flex;
-        gap: 16px;
-        justify-content: center;
-        margin-top: 32px;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        background: var(--bg-input);
+        border-radius: var(--r-sm);
+        border: 1px solid var(--border-light);
+        margin-bottom: 8px;
     }
+    .document-item svg {
+        width: 16px; height: 16px;
+        color: var(--primary);
+        flex-shrink: 0;
+    }
+    .document-item span {
+        flex: 1;
+        font-size: 0.82rem;
+        font-weight: 500;
+        color: var(--text-body);
+    }
+    .view-link {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--primary);
+        text-decoration: none;
+    }
+    .view-link:hover { text-decoration: underline; }
 </style>
 {% endblock %}
 
@@ -74,46 +85,73 @@
 
     <div class="app-wrapper">
         <div class="application-card">
-            <h2 class="form-title">Please review your application</h2>
-            <p class="form-subtitle">Check all details before submitting. You won't be able to edit afterwards.</p>
+            <!-- Stepper: Steps 1 & 2 completed, Step 3 active -->
+            <div class="stepper">
+                <!-- Step 1: Personal Details (clickable to edit) -->
+                <a href="{% url 'sticker_portal:apply_edit' application.id %}" class="step completed clickable" style="text-decoration:none;">
+                    <span class="circle"><i data-lucide="check" style="width:16px;height:16px;"></i></span>
+                    <span class="label">Personal Details</span>
+                </a>
+                <div class="connector completed"></div>
+                <!-- Step 2: Vehicle & Docs (clickable to edit) -->
+                <a href="{% url 'sticker_portal:apply_vehicle' application.id %}" class="step completed clickable" style="text-decoration:none;">
+                    <span class="circle"><i data-lucide="check" style="width:16px;height:16px;"></i></span>
+                    <span class="label">Vehicle &amp; Docs</span>
+                </a>
+                <div class="connector completed"></div>
+                <!-- Step 3: Confirm (active) -->
+                <div class="step active">
+                    <span class="circle">3</span>
+                    <span class="label">Confirm</span>
+                </div>
+            </div>
+
+            <p class="form-subtitle">Review your information before submitting. You will be notified of your appointment date later.</p>
 
             <div class="confirm-grid">
-                <!-- Applicant -->
+                <!-- Applicant Card -->
                 <div class="confirm-card">
                     <h3><i data-lucide="user"></i> Applicant</h3>
-                    <p><span>Name</span> <strong>{{ application.applicant.get_full_name }}</strong></p>
-                    <p><span>ID</span> <strong>{{ application.applicant.student_id|default:application.applicant.employee_id }}</strong></p>
+                    <p><span>Name</span> <strong>{{ application.full_name }}</strong></p>
+                    <p><span>ID</span> <strong>{{ application.student_id }}</strong></p>
                     <p><span>Classification</span> <strong>{{ application.applicant.get_classification_display }}</strong></p>
-                    <p><span>College/Dept</span> <strong>{{ application.applicant.college_department }}</strong></p>
-                    <p><span>Contact</span> <strong>{{ application.applicant.contact_number }}</strong></p>
+                    <p><span>College/Dept</span> <strong>{{ application.college_department }}</strong></p>
                 </div>
 
-                <!-- Vehicle -->
+                <!-- Vehicle Card -->
                 <div class="confirm-card">
                     <h3><i data-lucide="car"></i> Vehicle</h3>
                     <p><span>Plate</span> <strong>{{ application.vehicle.plate_number }}</strong></p>
-                    <p><span>Model</span> <strong>{{ application.vehicle.model }}</strong></p>
-                    <p><span>Color</span> <strong>{{ application.vehicle.color }}</strong></p>
+                    <p><span>Type</span> <strong>{{ application.vehicle.get_type_of_vehicle_display }}</strong></p>
+                    <p><span>Color</span> <strong>{{ application.vehicle.get_color_display }}</strong></p>
+                    <p><span>Ownership</span> <strong>{% if application.vehicle.is_owner %}Registered in your name{% else %}Not owner{% endif %}</strong></p>
+                </div>
+
+                <!-- Documents Card -->
+                <div class="confirm-card">
+                    <h3><i data-lucide="file-text"></i> Documents</h3>
+                    {% if documents %}
+                        {% for doc in documents %}
+                        <div class="document-item">
+                            <i data-lucide="{% if doc.document_type == 'or_cr' %}file-text{% elif doc.document_type == 'drivers_license' %}id-card{% elif doc.document_type == 'cor' %}graduation-cap{% else %}file-signature{% endif %}"></i>
+                            <span>{{ doc.get_document_type_display }}</span>
+                            <a href="{{ doc.file.url }}" target="_blank" class="view-link">View</a>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p style="color: var(--text-muted); font-size: 0.8rem;">No documents uploaded.</p>
+                    {% endif %}
                 </div>
             </div>
 
-            <!-- Schedule highlight -->
-            <div class="schedule-highlight">
-                <i data-lucide="calendar"></i>
-                <strong>Your schedule:</strong> {{ schedule|date:"F j, Y, g:i A" }}
-            </div>
-
-            <div class="alert alert-info" style="margin-top: 16px;">
-                <i data-lucide="info"></i> Please arrive at the exact time. Bring <strong>₱50.00</strong> for the sticker fee and pay at the same day of your scheduled appointment.
-            </div>
-
-            <div class="action-buttons">
-                <a href="{% url 'sticker_portal:schedule_appointment' application.id %}" class="btn-secondary" style="text-decoration: none;">
-                    <i data-lucide="arrow-left"></i> Back
+            <div class="action-buttons" style="display: flex; gap: 16px; justify-content: center; margin-top: 32px;">
+                <a href="{% url 'sticker_portal:apply_vehicle' application.id %}" class="btn-secondary"
+                   style="padding: 12px 24px; font-size: 0.92rem; display: inline-flex; align-items: center; justify-content: center; text-decoration: none;">
+                    <i data-lucide="arrow-left"></i> Edit
                 </a>
-                <form method="post">
+                <form method="post" style="display: inline;">
                     {% csrf_token %}
-                    <button type="submit" class="btn-primary">
+                    <button type="submit" class="btn-primary" style="padding: 12px 24px; font-size: 0.92rem;">
                         <i data-lucide="check"></i> Confirm & Submit
                     </button>
                 </form>

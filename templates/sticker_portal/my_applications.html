@@ -4,7 +4,7 @@
 {% block title %}My Applications{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/sticker_portal/form.css' %}">
+<link rel="stylesheet" href="{% static 'css/sticker_portal/all2.css' %}">
 <style>
     .applications-container {
         display: flex;
@@ -41,12 +41,6 @@
         font-weight: 700;
         text-transform: uppercase;
     }
-    .status-draft { background: #E0E7FF; color: #3730A3; }
-    .status-scheduled { background: #FEF3C7; color: #92400E; }
-    .status-approved { background: #D1FAE5; color: #065F46; }
-    .status-rejected { background: #FEE2E2; color: #991B1B; }
-    .status-issued { background: #DBEAFE; color: #1E40AF; }
-    .status-expired { background: #F3F4F6; color: #6B7280; }
 
     .app-details {
         display: grid;
@@ -76,21 +70,22 @@
         align-items: center;
         justify-content: flex-end;
     }
-    .btn-confirm {
-        padding: 8px 18px;
-        background: var(--primary-orange);
-        color: white;
-        border-radius: 8px;
-        text-decoration: none;
-        font-weight: 600;
-        font-size: 0.85rem;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-    }
-    .btn-confirm:hover {
-        background: var(--orange-dark);
-    }
+        .btn-confirm {
+            padding: 8px 18px;
+            background: var(--primary);          /* navy */
+            color: white;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.15s;
+        }
+        .btn-confirm:hover {
+            background: var(--primary-hover);    /* slightly lighter navy */
+        }
     .btn-delete {
         background: none;
         border: 1px solid #FCA5A5;
@@ -135,6 +130,15 @@
 
     <div class="app-wrapper">
         <div class="application-card">
+            {% if messages %}
+            <div class="messages" style="margin-bottom: 20px;">
+                {% for message in messages %}
+                <div class="alert {% if message.tags == 'error' %}alert-error{% else %}alert-success{% endif %}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
             <h2>My Sticker Applications</h2>
 
             {% if applications %}

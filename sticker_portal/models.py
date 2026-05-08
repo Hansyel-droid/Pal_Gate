@@ -3,18 +3,36 @@ from django.conf import settings
 from django.core.validators import FileExtensionValidator
 from django.utils import timezone
 
+
 class Vehicle(models.Model):
     """Vehicle information linked to a sticker application."""
+    TYPE_CHOICES = (
+        ('two_wheels', 'Two Wheels'),
+        ('four_wheels', 'Four Wheels'),
+        ('other', 'Other (specify)'),
+    )
+    COLOR_CHOICES = (
+        ('red', 'Red'),
+        ('blue', 'Blue'),
+        ('green', 'Green'),
+        ('yellow', 'Yellow'),
+        ('black', 'Black'),
+        ('white', 'White'),
+        ('silver', 'Silver'),
+        ('gray', 'Gray'),
+        ('other', 'Other (specify)'),
+    )
+    
     plate_number = models.CharField(max_length=20, unique=True)
-    model = models.CharField(max_length=100)
-    color = models.CharField(max_length=50)
+    type_of_vehicle = models.CharField(max_length=20, choices=TYPE_CHOICES, default='four_wheels')
+    color = models.CharField(max_length=20, choices=COLOR_CHOICES, default='silver')
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='vehicles')
     is_owner = models.BooleanField(default=True, help_text="Is the vehicle registered in applicant's name?")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.plate_number} - {self.model}"
+        return f"{self.plate_number} - {self.get_type_of_vehicle_display()}"
 
 
 class StickerApplication(models.Model):
@@ -28,9 +46,13 @@ class StickerApplication(models.Model):
         ('expired', 'Expired'),
     )
 
+
+    full_name = models.CharField(max_length=150, blank=True)
+    college_department = models.CharField(max_length=100, blank=True)
+    student_id = models.CharField(max_length=50, blank=True)
     scheduled_datetime = models.DateTimeField(null=True, blank=True)
     applicant = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='applications')
-    vehicle = models.OneToOneField(Vehicle, on_delete=models.CASCADE, related_name='application')
+    vehicle = models.OneToOneField(Vehicle, on_delete=models.CASCADE, related_name='application', null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     expiry_date = models.DateField()
     approved_at = models.DateTimeField(null=True, blank=True)
@@ -75,6 +97,7 @@ class Document(models.Model):
 
     def __str__(self):
         return f"{self.get_document_type_display()} - {self.application.id}"
+
 
 class AvailableDate(models.Model):
     date = models.DateField(unique=True)

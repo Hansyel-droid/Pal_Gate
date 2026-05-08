@@ -4,7 +4,7 @@
 {% block title %}PalSU Sticker - Administrative Overview{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/sticker_portal/admin.css' %}">
+<link rel="stylesheet" href="{% static 'css/sticker_portal/all2.css' %}">
 {% endblock %}
 
 {% block breadcrumb %}Dashboard / Overview{% endblock %}
@@ -17,7 +17,7 @@
     </div>
     <div class="header-actions">
         <button class="btn-report">Generate Report</button>
-        <a href="{% url 'gate_guard:register_rfid' %}" class="btn-report">
+        <a href="{% url 'sticker_portal:sticker_register_rfid' %}" class="btn-report">
             <i data-lucide="plus-circle"></i> Register RFID
         </a>
     </div>

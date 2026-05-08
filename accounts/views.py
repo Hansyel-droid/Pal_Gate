@@ -41,3 +41,12 @@ def applicant_login(request):
         else:
             messages.error(request, 'Invalid credentials or not an applicant.')
     return render(request, 'accounts/applicant_login.html')
+
+def custom_logout(request):
+    """Log out the user and clear leftover messages."""
+    if request.user.is_authenticated:
+        # Remove all messages from the session so they don't bleed into the login page
+        storage = messages.get_messages(request)
+        storage.used = True   # mark all messages as used
+    auth_logout(request)
+    return redirect('accounts:login_selection')   # or wherever you want to land

@@ -1,0 +1,137 @@
+{% extends 'base_applicant.html' %}
+{% load static %}
+
+{% block title %}Personal Details{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/sticker_portal/all2.css' %}">
+<style>
+    .error-text {
+        color: #DC2626;
+        font-size: 0.75rem;
+        margin-top: 4px;
+        display: block;
+    }
+    .form-input.error {
+        border-color: #DC2626;
+    }
+    .required-star {
+        color: #DC2626;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="top-bar">
+        <div class="top-bar-left">
+            <span class="portal-label">Sticker Portal</span>
+            <span class="separator">/</span>
+            <span class="page-label">Personal Details</span>
+        </div>
+        <form action="{% url 'accounts:logout' %}" method="post" style="display: inline;">
+            {% csrf_token %}
+            <button type="submit" class="sign-out-btn">
+                <i data-lucide="log-out"></i> Sign Out
+            </button>
+        </form>
+    </div>
+
+    <div class="app-wrapper">
+        <div class="application-card">
+            <div class="form-header">
+                <h1 class="form-title">Vehicle Sticker Application</h1>
+                <p class="form-subtitle">Step 1 of 3 • Personal Information</p>
+            </div>
+
+            {% if app_form.errors %}
+            <div class="alert alert-error" style="margin-bottom: 20px; padding: 12px; background: #FEF2F2; border-left: 4px solid #DC2626; color: #991B1B;">
+                <strong>Please correct the errors below.</strong>
+            </div>
+            {% endif %}
+
+            <!-- Stepper: step 1 active -->
+            <div class="stepper">
+                <div class="step active">
+                    <span class="circle">1</span>
+                    <span class="label">Personal Details</span>
+                </div>
+                <div class="connector"></div>
+                <div class="step">
+                    <span class="circle">2</span>
+                    <span class="label">Vehicle &amp; Docs</span>
+                </div>
+                <div class="connector"></div>
+                <div class="step">
+                    <span class="circle">3</span>
+                    <span class="label">Confirm</span>
+                </div>
+            </div>
+
+            <form method="post" id="personalForm">
+                {% csrf_token %}
+
+                <section class="form-section">
+                    <div class="section-header">
+                        <i data-lucide="user" class="section-icon"></i>
+                        <h2 class="section-title">Your Profile</h2>
+                    </div>
+                    <div class="form-grid">
+                        <div class="field-group full-width">
+                            <label>FULL NAME <span class="required-star">*</span></label>
+                            {{ app_form.full_name }}
+                            {% for error in app_form.full_name.errors %}
+                                <span class="error-text">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        <div class="field-group">
+                            <label>COLLEGE/DEPARTMENT</label>
+                            {{ app_form.college_department }}
+                            {% for error in app_form.college_department.errors %}
+                                <span class="error-text">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        <div class="field-group">
+                            <label>STUDENT/EMPLOYEE ID</label>
+                            {{ app_form.student_id }}
+                            {% for error in app_form.student_id.errors %}
+                                <span class="error-text">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        <div class="field-group full-width">
+                            <label>CLASSIFICATION <span class="required-star">*</span></label>
+                            <div class="radio-group">
+                                {% for radio in app_form.classification %}
+                                <label class="radio-label">
+                                    {{ radio.tag }} {{ radio.choice_label }}
+                                </label>
+                                {% endfor %}
+                            </div>
+                            {% for error in app_form.classification.errors %}
+                                <span class="error-text">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </section>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">
+                        Continue <i data-lucide="arrow-right"></i>
+                    </button>
+                </div>
+            </form>
+
+            <footer class="form-footer">
+                <span>© 2024 University Sticker Services. All rights reserved.</span>
+            </footer>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    lucide.createIcons();
+</script>
+{% endblock %}

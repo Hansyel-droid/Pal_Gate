@@ -4,7 +4,7 @@
 {% block title %}Appointment Management{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/sticker_portal/admin.css' %}">
+<link rel="stylesheet" href="{% static 'css/sticker_portal/all2.css' %}">
 <style>
     .appointment-calendar {
         background: var(--bg-white);
@@ -41,8 +41,8 @@
         position: relative;
     }
     .day-cell:hover { background: var(--primary-light); }
-    .day-cell.selected { background: var(--primary-orange); color: white; }
-    .day-cell.today { border: 2px solid var(--primary-orange); }
+    .day-cell.selected { background: var(--primary); color: white; }
+    .day-cell.today { border: 2px solid var(--primary); }
     .day-cell.past { opacity: 0.4; pointer-events: none; }
     .day-cell .date-num { font-weight: 700; display: block; }
     .apps-section {

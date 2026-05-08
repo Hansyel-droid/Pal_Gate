@@ -240,15 +240,26 @@ def export_logs_csv(request):
     response['Content-Disposition'] = 'attachment; filename="gate_logs.csv"'
     writer = csv.writer(response)
     writer.writerow([
-        'Timestamp', 'Plate Number', 'Action', 'Gate',
+        'Timestamp', 'Plate Number', 'Sticker ID', 'Action', 'Gate',
         'Driver Name', 'Vehicle Model', 'Color'
     ])
-    logs = GateLog.objects.all().values_list(
-        'timestamp', 'plate_number', 'action', 'gate',
-        'driver_name', 'vehicle_model', 'vehicle_color'
-    )
+    logs = GateLog.objects.select_related(
+        'rfid_tag__sticker_application'
+    ).all().order_by('-timestamp')
     for log in logs:
-        writer.writerow(log)
+        sticker_id = ''
+        if log.rfid_tag and log.rfid_tag.sticker_application:
+            sticker_id = f"PSU-{log.rfid_tag.sticker_application.id:04d}"
+        writer.writerow([
+            log.timestamp,
+            log.plate_number,
+            sticker_id,
+            log.action,
+            log.gate,
+            log.driver_name,
+            log.vehicle_model,
+            log.vehicle_color,
+        ])
     return response
 
 
