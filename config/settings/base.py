@@ -50,6 +50,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'gate_guard.context_processors.system_config',
+                'sticker_portal.context_processors.registration_status',
             ],
         },
     },

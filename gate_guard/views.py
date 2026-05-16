@@ -135,6 +135,7 @@ def incident_report(request, log_id):
         'plate_number': log.plate_number or 'N/A',
         'model': log.vehicle_model or 'N/A',
         'color': log.vehicle_color or 'N/A',
+        'sticker_id': '',
     }
     driver_info = {
         'name': log.driver_name or 'Unknown',
@@ -142,29 +143,52 @@ def incident_report(request, log_id):
         'contact': '',
     }
 
+    # 1. Enrich from RFID tag (most accurate)
     if log.rfid_tag and log.rfid_tag.sticker_application:
         app = log.rfid_tag.sticker_application
-        applicant = app.applicant
         vehicle = app.vehicle
         vehicle_info.update({
             'plate_number': vehicle.plate_number,
-            'model': vehicle.model,
-            'color': vehicle.color,
+            'model': vehicle.get_type_of_vehicle_display(),
+            'color': vehicle.get_color_display(),
             'sticker_id': f'PSU-{app.id:04d}',
         })
         driver_info.update({
-            'name': applicant.get_full_name(),
-            'affiliation': applicant.get_classification_display() or 'N/A',
-            'contact': applicant.contact_number or 'N/A',
+            'name': app.full_name or app.applicant.get_full_name(),
+            'affiliation': app.applicant.get_classification_display() or 'N/A',
+            'contact': app.applicant.contact_number or 'N/A',
         })
+    else:
+        # 2. Fallback: look up by plate number (for logs without RFID tag)
+        plate = log.plate_number.strip() if log.plate_number else None
+        if plate:
+            try:
+                vehicle = Vehicle.objects.get(plate_number__iexact=plate)
+                # Get the latest approved/issued application for this vehicle
+                application = StickerApplication.objects.filter(
+                    vehicle=vehicle,
+                    status__in=['approved', 'issued']
+                ).order_by('-submitted_at').first()
+                if application:
+                    vehicle_info.update({
+                        'plate_number': vehicle.plate_number,
+                        'model': vehicle.get_type_of_vehicle_display(),
+                        'color': vehicle.get_color_display(),
+                        'sticker_id': f'PSU-{application.id:04d}',
+                    })
+                    applicant = application.applicant
+                    driver_info.update({
+                        'name': application.full_name or applicant.get_full_name(),
+                        'affiliation': applicant.get_classification_display() or 'N/A',
+                        'contact': applicant.contact_number or 'N/A',
+                    })
+            except Vehicle.DoesNotExist:
+                pass   # no matching vehicle – keep the log's raw data
 
     context = {
         'log': log,
         'vehicle_info': vehicle_info,
         'driver_info': driver_info,
-        'primary_image': 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=600',
-        'side_image': 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&q=80&w=200',
-        'plate_zoom': 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&q=80&w=200',
     }
     return render(request, 'gate_guard/incident_report.html', context)
 
@@ -399,17 +423,6 @@ def toggle_admin_mode(request):
         return redirect(referer)
     return redirect('sticker_portal:dashboard')
 
-
-# Gate toggle – still for security officers
-@login_required
-@user_passes_test(is_security_officer, login_url='/accounts/login/')
-def toggle_gate(request):
-    config = SystemConfig.load()
-    config.gate_open = not config.gate_open
-    config.save()
-    status = 'OPEN' if config.gate_open else 'CLOSED'
-    messages.success(request, f'Gate is now {status}.')
-    return redirect('gate_guard:overview')
 
 @login_required
 @user_passes_test(is_security_officer, login_url='/accounts/login/')

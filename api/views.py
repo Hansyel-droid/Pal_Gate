@@ -3,7 +3,7 @@ from datetime import timedelta
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
-from gate_guard.models import RFIDTag, GateLog, PendingRFIDRegistration, SystemConfig, GatePhoto
+from gate_guard.models import RFIDTag, GateLog, PendingRFIDRegistration, SystemConfig
 from django.views.decorators.http import require_POST
 
 

@@ -122,6 +122,12 @@
                 </div>
             </form>
 
+            {% if not registration_open %}
+            <div class="alert alert-error" style="margin-bottom:20px;">
+                Registration is currently closed. You cannot submit or edit applications at this time.
+            </div>
+            {% endif %}
+
             <footer class="form-footer">
                 <span>© 2024 University Sticker Services. All rights reserved.</span>
             </footer>

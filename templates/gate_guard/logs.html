@@ -69,7 +69,6 @@
                 <th>NAME</th>
                 <th>GATE</th>
                 <th>TIME</th>
-                <th>PHOTO</th>
             </tr>
         </thead>
             <tbody>
@@ -97,20 +96,10 @@
                     <td>{{ log.driver_name }}</td>
                     <td>{{ log.get_gate_display }}</td>
                     <td>{{ log.timestamp|date:"h:i A" }}</td>
-                    <td>
-                        {% with photo=log.photos.first %}
-                            {% if photo %}
-                                <img src="{{ photo.image.url }}" width="40" style="border-radius:4px; cursor:pointer;" 
-                                    onclick="event.stopPropagation(); window.open('{{ photo.image.url }}', '_blank');">
-                            {% else %}
-                                -
-                            {% endif %}
-                        {% endwith %}
-                    </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="7" style="text-align: center; padding: 40px;">No logs found.</td>
+                    <td colspan="6" style="text-align: center; padding: 40px;">No logs found.</td>
                 </tr>
                 {% endfor %}
             </tbody>

@@ -8,7 +8,6 @@ urlpatterns = [
     path('register-uid/', views.register_uid, name='register_uid'),
     path('admin-status/', views.admin_status, name='admin_status'),
     path('gate-status/', views.gate_status, name='gate_status'),
-    path('upload-photo/', views.upload_photo, name='upload_photo'),
     path('latest-pending-uid/', views.get_latest_pending_uid, name='get_latest_pending_uid'),
     path('hourly-traffic/', views.hourly_traffic_data, name='hourly_traffic_data'),
 ]

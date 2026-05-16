@@ -1,0 +1,94 @@
+<style>
+#erd-wrap { padding: 1rem 0; }
+#erd2 svg { width: 100%; height: auto; }
+#erd2 svg.erDiagram .divider path { stroke-opacity: 0.4; }
+#erd2 svg.erDiagram .row-rect-odd path,
+#erd2 svg.erDiagram .row-rect-odd rect,
+#erd2 svg.erDiagram .row-rect-even path,
+#erd2 svg.erDiagram .row-rect-even rect { stroke: none !important; }
+.erd-legend2 { display:flex; gap:20px; flex-wrap:wrap; margin-top:12px; font-size:12px; color:var(--color-text-secondary); }
+.erd-legend2 span { display:flex; align-items:center; gap:6px; }
+.erd-legend2 b { width:10px; height:10px; border-radius:2px; display:inline-block; }
+</style>
+<div id="erd-wrap">
+  <div id="erd2"></div>
+  <div class="erd-legend2">
+    <span><b style="background:#534AB7"></b> PK — primary key</span>
+    <span><b style="background:#1D9E75"></b> FK — foreign key</span>
+    <span><b style="background:#993C1D"></b> 1-to-1 — unique link</span>
+    <span>Hub table: RFIDTag bridges hardware to identity</span>
+  </div>
+</div>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+await document.fonts.ready;
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  fontFamily: '"Anthropic Sans", sans-serif',
+  themeVariables: {
+    darkMode: dark,
+    fontSize: '13px',
+    fontFamily: '"Anthropic Sans", sans-serif',
+    primaryColor: dark ? '#0C2A1F' : '#E1F5EE',
+    primaryBorderColor: dark ? '#1D9E75' : '#0F6E56',
+    primaryTextColor: dark ? '#9FE1CB' : '#04342C',
+    lineColor: dark ? '#888780' : '#5F5E5A',
+    textColor: dark ? '#c2c0b6' : '#3d3d3a',
+    attributeBackgroundColorEven: dark ? '#0a1f17' : '#F2FBF7',
+    attributeBackgroundColorOdd: dark ? '#122b20' : '#E1F5EE',
+  },
+  er: { diagramPadding: 40, layoutDirection: 'LR', minEntityWidth: 200, minEntityHeight: 44, entityPadding: 14, useMaxWidth: true }
+});
+const diagram = `erDiagram
+  User {
+    BigAutoField id PK
+    CharField full_name
+    CharField classification
+  }
+  Vehicle {
+    BigAutoField id PK
+    BigInt owner_id FK
+    CharField plate_number
+    CharField model
+    CharField color
+  }
+  StickerApplication {
+    BigAutoField id PK
+    BigInt applicant_id FK
+    BigInt vehicle_id FK
+    CharField status
+  }
+  RFIDTag {
+    BigAutoField id PK
+    BigInt sticker_application_id FK
+    CharField tag_id
+    BooleanField is_active
+    DateTimeField issued_at
+  }
+  User ||--o{ Vehicle : "owns"
+  User ||--o{ StickerApplication : "applies"
+  Vehicle ||--o{ StickerApplication : "registered via"
+  StickerApplication ||--|| RFIDTag : "linked to"
+`;
+const { svg } = await mermaid.render('erd2-svg', diagram);
+document.getElementById('erd2').innerHTML = svg;
+document.querySelectorAll('#erd2 svg.erDiagram .node').forEach(node => {
+  const firstPath = node.querySelector('path[d]');
+  if (!firstPath) return;
+  const d = firstPath.getAttribute('d');
+  const nums = d.match(/-?[\d.]+/g)?.map(Number);
+  if (!nums || nums.length < 8) return;
+  const xs = [nums[0],nums[2],nums[4],nums[6]], ys = [nums[1],nums[3],nums[5],nums[7]];
+  const x = Math.min(...xs), y = Math.min(...ys), w = Math.max(...xs)-x, h = Math.max(...ys)-y;
+  const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+  rect.setAttribute('x',x); rect.setAttribute('y',y);
+  rect.setAttribute('width',w); rect.setAttribute('height',h); rect.setAttribute('rx','8');
+  for (const a of ['fill','stroke','stroke-width','class','style']) {
+    if (firstPath.hasAttribute(a)) rect.setAttribute(a, firstPath.getAttribute(a));
+  }
+  firstPath.replaceWith(rect);
+});
+document.querySelectorAll('#erd2 svg.erDiagram .row-rect-odd path, #erd2 svg.erDiagram .row-rect-even path').forEach(p => p.setAttribute('stroke','none'));
+</script>

@@ -59,7 +59,6 @@ class PendingRFIDRegistration(models.Model):
 class SystemConfig(models.Model):
     """Singleton model to hold system-wide configuration."""
     admin_mode = models.BooleanField(default=False)
-    gate_open = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs):
         self.pk = 1  # force single row
@@ -70,10 +69,3 @@ class SystemConfig(models.Model):
         obj, created = cls.objects.get_or_create(pk=1)
         return obj
     
-class GatePhoto(models.Model):
-    gate_log = models.ForeignKey(GateLog, on_delete=models.CASCADE, related_name='photos')
-    image = models.ImageField(upload_to='gate_photos/%Y/%m/%d/')
-    uploaded_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Photo for log #{self.gate_log.id}"

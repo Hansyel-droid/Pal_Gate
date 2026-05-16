@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login
 from django.contrib import messages
+from django.contrib.auth import logout as auth_logout
 
 def login_selection(request):
     return render(request, 'accounts/login_selection.html')

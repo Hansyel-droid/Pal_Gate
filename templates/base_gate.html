@@ -32,15 +32,6 @@
                 <a href="{% url 'gate_guard:settings' %}" class="nav-item {% if request.resolver_match.url_name == 'settings' %}active{% endif %}">
                     <i data-lucide="settings"></i> Settings
                 </a>
-                <li style="list-style:none; margin-top: 10px;">
-                    <form method="post" action="{% url 'gate_guard:toggle_gate' %}" style="padding: 0 12px;">
-                        {% csrf_token %}
-                        <button type="submit" class="nav-item" style="width:100%; border:none; background:none; cursor:pointer;">
-                            <i data-lucide="{% if system_config.gate_open %}lock-open{% else %}lock{% endif %}"></i>
-                            Gate: {% if system_config.gate_open %}OPEN{% else %}CLOSED{% endif %}
-                        </button>
-                    </form>
-                </li>
             </nav>
             <div class="sidebar-footer">
                 <div class="user-profile">

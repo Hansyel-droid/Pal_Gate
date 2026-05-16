@@ -1,7 +1,7 @@
 {% extends 'base_sticker.html' %}
 {% load static %}
 
-{% block title %}Appointment Management{% endblock %}
+{% block title %}Applications{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/sticker_portal/all2.css' %}">
@@ -53,33 +53,52 @@
     }
     .apps-table { width: 100%; border-collapse: collapse; }
     .apps-table th, .apps-table td {
-        padding: 14px 12px;
+        padding: 10px 12px;
         text-align: left;
         border-bottom: 1px solid var(--border);
-        font-size: 0.85rem;
+        font-size: 0.82rem;
+        vertical-align: top;
     }
     .apps-table th { color: var(--text-muted); font-weight: 700; text-transform: uppercase; font-size: 0.7rem; }
     .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
+    .document-list { list-style: none; padding: 0; margin: 0; }
+    .document-list li { margin-bottom: 4px; }
+    .document-list a { font-size: 0.75rem; color: var(--primary); text-decoration: none; }
+    .document-list a:hover { text-decoration: underline; }
+    .search-bar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+    .search-bar input {
+        flex: 1;
+        max-width: 400px;
+    }
+    .search-bar button {
+        white-space: nowrap;
+    }
 </style>
 {% endblock %}
 
-{% block breadcrumb %}Appointment Management{% endblock %}
+{% block breadcrumb %}Applications{% endblock %}
 
 {% block content %}
 <div class="page-header">
     <div>
-        <h1 class="page-title">Appointment Management</h1>
+        <h1 class="page-title">Applications</h1>
         <p class="page-subtitle">Set available dates and review scheduled applications.</p>
     </div>
-    <!-- NEW: Date range picker for adding multiple available dates -->
     <div style="display: flex; align-items: center; gap: 10px;">
+        <!-- Add Schedule Range inputs now use schedule_start & schedule_end -->
         <input type="date" id="from-date" class="form-input"
                style="width: auto; padding: 8px 12px;"
-               min="{{ first_day_iso }}" max="{{ last_day_iso }}" value="{{ first_day_iso }}">
+               value="{{ schedule_start|default:first_day_iso }}">
         <span style="color: var(--text-muted);">to</span>
         <input type="date" id="to-date" class="form-input"
                style="width: auto; padding: 8px 12px;"
-               min="{{ first_day_iso }}" max="{{ last_day_iso }}" value="{{ last_day_iso }}">
+               value="{{ schedule_end|default:last_day_iso }}">
         <button type="button" class="btn-new" onclick="addScheduleRange()">
             <i data-lucide="plus"></i> Add Schedule Range
         </button>
@@ -90,11 +109,9 @@
 <div class="appointment-calendar">
     <div class="cal-header">
         <h3>{{ month_name }} {{ year }}</h3>
-        <!-- Hidden form for CSRF token used by toggle -->
         <form id="csrf-form" style="display: none;">{% csrf_token %}</form>
     </div>
     <div class="calendar-grid">
-        <!-- Day headers -->
         <div style="font-weight:700; text-align:center; padding:6px;">Sun</div>
         <div style="font-weight:700; text-align:center; padding:6px;">Mon</div>
         <div style="font-weight:700; text-align:center; padding:6px;">Tue</div>
@@ -128,43 +145,79 @@
 
 <!-- Applications List -->
 <div class="apps-section">
-    <h3 style="margin-bottom: 16px; font-weight: 700;">
-        Applications for {{ selected_date_obj|date:"F j, Y" }}
-    </h3>
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+        <h3 style="font-weight: 700; margin: 0;">
+            {% if search_query %}
+                Search results for "<strong>{{ search_query }}</strong>"
+            {% else %}
+                Applications for {{ selected_date_obj|date:"F j, Y" }}
+            {% endif %}
+        </h3>
+        <!-- Search Bar -->
+        <form method="get" class="search-bar" style="margin-bottom: 0;">
+            <input type="hidden" name="date" value="{{ selected_date }}">
+            <input type="text" name="search" class="form-input" placeholder="Search by name, ID, plate, sticker…" value="{{ search_query }}">
+            <button type="submit" class="btn-primary" style="padding: 8px 16px;">
+                <i data-lucide="search"></i> Search
+            </button>
+            {% if search_query %}
+                <a href="?date={{ selected_date }}" class="btn-secondary" style="padding: 8px 16px;">Clear</a>
+            {% endif %}
+        </form>
+    </div>
 
     {% if applications %}
     <div class="table-wrapper">
         <table class="apps-table">
             <thead>
                 <tr>
-                    <th>TIME</th>
+                    {% if show_time_column %}<th>TIME</th>{% endif %}
                     <th>APPLICANT</th>
                     <th>VEHICLE</th>
+                    <th>DOCUMENTS</th>
                     <th>STATUS</th>
+                    <th></th>
+                </tr>
             </thead>
             <tbody>
                 {% for app in applications %}
                 <tr>
-                    <td>{{ app.scheduled_datetime|date:"g:i A" }}</td>
+                    {% if show_time_column %}<td>{{ app.scheduled_datetime|date:"g:i A" }}</td>{% endif %}
                     <td>
                         <div>
-                            <span style="font-weight:600;">{{ app.applicant.get_full_name }}</span><br>
+                            <span style="font-weight:600;">{{ app.full_name|default:app.applicant.get_full_name }}</span><br>
                             <span style="font-size:0.7rem; color:var(--text-muted);">
-                                {{ app.applicant.student_id|default:app.applicant.employee_id }}
+                                {{ app.student_id|default:app.applicant.student_id|default:app.applicant.employee_id }}
+                            </span><br>
+                            <span style="font-size:0.7rem; color:var(--text-muted);">
+                                {{ app.applicant.get_classification_display }} — {{ app.college_department|default:app.applicant.college_department }}
                             </span>
                         </div>
                     </td>
-                    <td><span class="plate-badge">{{ app.vehicle.plate_number }}</span></td>
+                    <td>
+                        <span class="plate-badge">{{ app.vehicle.plate_number }}</span><br>
+                        <span style="font-size:0.7rem; color:var(--text-muted);">
+                            {{ app.vehicle.get_type_of_vehicle_display }} / {{ app.vehicle.get_color_display }}
+                        </span><br>
+                        <span style="font-family: var(--font-mono); font-size:0.65rem; color:var(--primary);">
+                            PSU-{{ app.id|stringformat:"04d" }}
+                        </span>
+                    </td>
+                    <td>
+                        <ul class="document-list">
+                            {% for doc in app.documents.all %}
+                            <li>
+                                <i data-lucide="{% if doc.document_type == 'or_cr' %}file-text{% elif doc.document_type == 'drivers_license' %}id-card{% elif doc.document_type == 'cor' %}graduation-cap{% else %}file-signature{% endif %}" style="width:12px;height:12px; margin-right:4px;"></i>
+                                <a href="{{ doc.file.url }}" target="_blank">{{ doc.get_document_type_display }}</a>
+                            </li>
+                            {% empty %}
+                            <span style="font-size:0.7rem; color:var(--text-muted);">No documents</span>
+                            {% endfor %}
+                        </ul>
+                    </td>
                     <td><span class="status-badge status-{{ app.status }}">{{ app.get_status_display }}</span></td>
                     <td>
-                        {% if app.status == 'pending' %}
-                        <form method="post" action="{% url 'sticker_portal:application_detail' app.id %}" style="display:inline;">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="approve">
-                        </form>
-                        {% else %}
-                        <span style="font-size:0.8rem;">—</span>
-                        {% endif %}
+                        <a href="{% url 'sticker_portal:application_detail' app.id %}" class="btn-primary" style="padding:6px 12px; font-size:0.75rem;">Review</a>
                     </td>
                 </tr>
                 {% endfor %}
@@ -173,7 +226,11 @@
     </div>
     {% else %}
     <div style="padding: 24px; text-align: center; color: var(--text-muted);">
-        No applications scheduled for this date.
+        {% if search_query %}
+            No applications matching "{{ search_query }}" found.
+        {% else %}
+            No applications scheduled for this date.
+        {% endif %}
     </div>
     {% endif %}
 </div>
@@ -181,10 +238,8 @@
 
 {% block extra_js %}
 <script>
-    // CSRF token from the hidden form
     const csrfToken = document.querySelector('#csrf-form input[name=csrfmiddlewaretoken]').value;
 
-    // NEW: Activate every date from from-date to to-date
     async function addScheduleRange() {
         const fromInput = document.getElementById('from-date');
         const toInput = document.getElementById('to-date');
@@ -199,7 +254,6 @@
             return;
         }
 
-        // Build an array of all dates in the range
         const dates = [];
         let current = new Date(fromDate);
         while (current <= toDate) {
@@ -216,7 +270,6 @@
                         'X-CSRFToken': csrfToken,
                         'Content-Type': 'application/x-www-form-urlencoded',
                     },
-                    // Send action=activate to only activate, never deactivate
                     body: 'date=' + encodeURIComponent(dateStr) + '&action=activate'
                 });
                 const data = await response.json();
@@ -226,47 +279,22 @@
             }
         }
 
-        if (successCount === dates.length) {
-            alert('All dates successfully activated.');
-        } else {
-            alert('Activated ' + successCount + ' out of ' + dates.length + ' dates.');
-        }
-        window.location.reload();   // refresh to show the updated calendar
+        alert('Activated ' + successCount + ' out of ' + dates.length + ' dates.');
+        window.location.reload();
     }
 
-    // NEW: function to add/activate a schedule date
-    async function addSchedule() {
-        const dateInput = document.getElementById('new-schedule-date');
-        if (!dateInput.value) {
-            alert('Please select a date.');
-            return;
-        }
-        try {
-            const response = await fetch("{% url 'sticker_portal:toggle_available_date' %}", {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': csrfToken,
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: 'date=' + encodeURIComponent(dateInput.value)
-            });
-            const data = await response.json();
-            if (data.success) {
-                // Reload the page so the calendar reflects the change
-                window.location.reload();
-            } else {
-                alert('Failed to add schedule. Please try again.');
-            }
-        } catch (error) {
-            console.error('Error adding schedule:', error);
-        }
-    }
-
-    // Handle day click: navigate to selected date (view applications)
     function handleDayClick(cell, dateStr) {
         if (cell.classList.contains('past')) return;
-        window.location.href = `?date=${dateStr}`;
+        window.location.href = `?date=${dateStr}{% if search_query %}&search={{ search_query }}{% endif %}`;
     }
 
+    // Auto‑set the “to” date 45 days after the “from” date
+    document.getElementById('from-date').addEventListener('change', function () {
+        const fromDate = new Date(this.value);
+        if (!isNaN(fromDate)) {
+            fromDate.setDate(fromDate.getDate() + 45);
+            document.getElementById('to-date').value = fromDate.toISOString().split('T')[0];
+        }
+    });
 </script>
 {% endblock %}

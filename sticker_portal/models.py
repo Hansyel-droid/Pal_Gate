@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 from django.core.validators import FileExtensionValidator
 from django.utils import timezone
+from datetime import date, timedelta   # <-- added
 
 
 class Vehicle(models.Model):
@@ -22,7 +23,7 @@ class Vehicle(models.Model):
         ('gray', 'Gray'),
         ('other', 'Other (specify)'),
     )
-    
+
     plate_number = models.CharField(max_length=20, unique=True)
     type_of_vehicle = models.CharField(max_length=20, choices=TYPE_CHOICES, default='four_wheels')
     color = models.CharField(max_length=20, choices=COLOR_CHOICES, default='silver')
@@ -38,14 +39,13 @@ class Vehicle(models.Model):
 class StickerApplication(models.Model):
     """Main sticker application record."""
     STATUS_CHOICES = (
-        ('draft', 'Draft'),  
+        ('draft', 'Draft'),
         ('pending', 'Scheduled'),
         ('approved', 'Approved'),
         ('rejected', 'Rejected'),
         ('issued', 'Sticker Issued'),
         ('expired', 'Expired'),
     )
-
 
     full_name = models.CharField(max_length=150, blank=True)
     college_department = models.CharField(max_length=100, blank=True)
@@ -105,3 +105,31 @@ class AvailableDate(models.Model):
 
     def __str__(self):
         return f"{self.date} {'Active' if self.is_active else 'Inactive'}"
+
+
+class RegistrationPeriod(models.Model):
+    """Stores the registration window dates. Only one row is used (singleton)."""
+    start_date = models.DateField()
+    end_date = models.DateField()
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def load(cls):
+        obj, created = cls.objects.get_or_create(
+            pk=1,
+            defaults={
+                'start_date': date.today(),
+                'end_date': date.today() + timedelta(days=30)
+            }
+        )
+        return obj
+
+    @classmethod
+    def is_open(cls):
+        """Return True if today is within the registration window."""
+        period = cls.load()
+        today = date.today()
+        return period.start_date <= today <= period.end_date

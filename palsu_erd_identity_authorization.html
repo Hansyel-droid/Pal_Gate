@@ -1,0 +1,105 @@
+<style>
+#erd-wrap { padding: 1rem 0; }
+#erd svg { width: 100%; height: auto; }
+#erd svg.erDiagram .divider path { stroke-opacity: 0.4; }
+#erd svg.erDiagram .row-rect-odd path,
+#erd svg.erDiagram .row-rect-odd rect,
+#erd svg.erDiagram .row-rect-even path,
+#erd svg.erDiagram .row-rect-even rect { stroke: none !important; }
+.erd-legend { display:flex; gap:20px; flex-wrap:wrap; margin-top:12px; font-size:12px; color:var(--color-text-secondary); }
+.erd-legend span { display:flex; align-items:center; gap:6px; }
+.erd-legend b { width:10px; height:10px; border-radius:2px; display:inline-block; }
+</style>
+<div id="erd-wrap">
+  <div id="erd"></div>
+  <div class="erd-legend">
+    <span><b style="background:#534AB7"></b> PK — primary key</span>
+    <span><b style="background:#1D9E75"></b> FK — foreign key</span>
+    <span>||—o{ one-to-many &nbsp;·&nbsp; ||—|| one-to-one</span>
+  </div>
+</div>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+await document.fonts.ready;
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  fontFamily: '"Anthropic Sans", sans-serif',
+  themeVariables: {
+    darkMode: dark,
+    fontSize: '13px',
+    fontFamily: '"Anthropic Sans", sans-serif',
+    primaryColor: dark ? '#2A2660' : '#EEEDFE',
+    primaryBorderColor: dark ? '#7F77DD' : '#534AB7',
+    primaryTextColor: dark ? '#CECBF6' : '#26215C',
+    lineColor: dark ? '#888780' : '#5F5E5A',
+    textColor: dark ? '#c2c0b6' : '#3d3d3a',
+    attributeBackgroundColorEven: dark ? '#1e1d2e' : '#F7F6FE',
+    attributeBackgroundColorOdd: dark ? '#26244a' : '#EEEDFE',
+  },
+  er: { diagramPadding: 30, layoutDirection: 'TB', minEntityWidth: 180, minEntityHeight: 40, entityPadding: 14, useMaxWidth: true }
+});
+const diagram = `erDiagram
+  User {
+    BigAutoField id PK
+    CharField first_name
+    CharField last_name
+    CharField classification
+    EmailField email
+    CharField contact_number
+    CharField user_type
+  }
+  StickerApplication {
+    BigAutoField id PK
+    BigInt applicant_id FK
+    BigInt vehicle_id FK
+    CharField status
+    CharField college_department
+    DateField expiry_date
+    BigInt approved_by_id FK
+  }
+  Document {
+    BigAutoField id PK
+    BigInt application_id FK
+    CharField document_type
+    FileField file
+  }
+  RFIDTag {
+    BigAutoField id PK
+    BigInt application_id FK
+    CharField tag_uid
+    BooleanField is_active
+  }
+  Vehicle {
+    BigAutoField id PK
+    CharField plate_number
+    CharField make
+    CharField model
+  }
+  User ||--o{ StickerApplication : "applies (applicant)"
+  User ||--o{ StickerApplication : "approves (approved_by)"
+  StickerApplication ||--o{ Document : "has documents"
+  StickerApplication ||--|| RFIDTag : "linked tag"
+  StickerApplication }o--|| Vehicle : "for vehicle"
+`;
+const { svg } = await mermaid.render('erd-svg', diagram);
+document.getElementById('erd').innerHTML = svg;
+document.querySelectorAll('#erd svg.erDiagram .node').forEach(node => {
+  const firstPath = node.querySelector('path[d]');
+  if (!firstPath) return;
+  const d = firstPath.getAttribute('d');
+  const nums = d.match(/-?[\d.]+/g)?.map(Number);
+  if (!nums || nums.length < 8) return;
+  const xs = [nums[0],nums[2],nums[4],nums[6]], ys = [nums[1],nums[3],nums[5],nums[7]];
+  const x = Math.min(...xs), y = Math.min(...ys), w = Math.max(...xs)-x, h = Math.max(...ys)-y;
+  const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+  rect.setAttribute('x',x); rect.setAttribute('y',y);
+  rect.setAttribute('width',w); rect.setAttribute('height',h); rect.setAttribute('rx','8');
+  for (const a of ['fill','stroke','stroke-width','class','style']) {
+    if (firstPath.hasAttribute(a)) rect.setAttribute(a, firstPath.getAttribute(a));
+  }
+  firstPath.replaceWith(rect);
+});
+document.querySelectorAll('#erd svg.erDiagram .row-rect-odd path, #erd svg.erDiagram .row-rect-even path').forEach(p => p.setAttribute('stroke','none'));
+</script>

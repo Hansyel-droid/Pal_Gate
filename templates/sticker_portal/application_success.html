@@ -26,9 +26,18 @@
             <i data-lucide="check-circle" style="width: 64px; height: 64px; color: #10B981;"></i>
             <h2>Application Submitted!</h2>
             <p>Your application has been received successfully.</p>
+
+            {% if application.scheduled_datetime %}
+            <div class="alert alert-success" style="margin: 24px auto; max-width: 400px; background: var(--primary-light); border-left-color: var(--primary); color: var(--primary);">
+                <p>Your appointment is:</p>
+                <p style="font-weight: 700; font-size: 1rem;">{{ application.scheduled_datetime|date:"F j, Y - g:i A" }}</p>
+            </div>
+            {% else %}
             <div class="alert alert-info" style="margin: 24px auto; max-width: 400px; background: var(--primary-light); border-left-color: var(--primary); color: var(--primary);">
                 <p>You will be notified of your appointment date via email.</p>
             </div>
+            {% endif %}
+
             <a href="{% url 'sticker_portal:my_applications' %}" class="btn-primary">My Applications</a>
         </div>
     </div>

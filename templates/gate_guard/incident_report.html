@@ -3,7 +3,6 @@
 
 {% block title %}Incident Report #{{ log.id }}{% endblock %}
 
-
 {% block content %}
 <header class="report-header">
     <div class="header-left">
@@ -18,101 +17,59 @@
     </div>
 </header>
 
-<div class="report-grid">
-    <section class="details-section">
-        <!-- Status Banner -->
-        <div class="status-banner {{ log.action }}">
-            {% if log.action == 'entry' %}
-                <i data-lucide="log-in"></i>
-                <span>AUTHORIZED ENTRY</span>
-            {% elif log.action == 'exit' %}
-                <i data-lucide="log-out"></i>
-                <span>AUTHORIZED EXIT</span>
-            {% else %}
-                <i data-lucide="ban"></i>
-                <span>ACCESS DENIED</span>
-            {% endif %}
-            <span class="timestamp">{{ log.timestamp|date:"M d, Y"|upper }} - {{ log.timestamp|time:"h:i:s A" }}</span>
-        </div>
-
-        <!-- Vehicle Information -->
-        <div class="info-group">
-            <label>VEHICLE INFORMATION</label>
-            <div class="info-card">
-                <div class="info-row"><span>Plate Number</span><strong>{{ vehicle_info.plate_number }}</strong></div>
-                <div class="info-row"><span>Vehicle Type</span><strong>{{ vehicle_info.color }} {{ vehicle_info.model }}</strong></div>
-                {% if vehicle_info.sticker_id %}
-                <div class="info-row"><span>Sticker ID</span><strong>{{ vehicle_info.sticker_id }}</strong></div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Driver Information -->
-        <div class="info-group">
-            <label>DRIVER INFORMATION</label>
-            <div class="info-card">
-                <div class="info-row"><span>Full Name</span><strong>{{ driver_info.name }}</strong></div>
-                {% if driver_info.affiliation %}
-                <div class="info-row"><span>Affiliation</span><strong>{{ driver_info.affiliation }}</strong></div>
-                {% endif %}
-                {% if driver_info.contact %}
-                <div class="info-row"><span>Contact</span><strong>{{ driver_info.contact }}</strong></div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Denial Reason if applicable -->
-        {% if log.action == 'denied' and log.reason_denied %}
-        <div class="info-group">
-            <label>DENIAL REASON</label>
-            <div class="info-card">
-                <div class="info-row"><span>Reason</span><strong>{{ log.reason_denied }}</strong></div>
-            </div>
-        </div>
+<div class="details-section">
+    <!-- Status Banner -->
+    <div class="status-banner {{ log.action }}">
+        {% if log.action == 'entry' %}
+            <i data-lucide="log-in"></i>
+            <span>AUTHORIZED ENTRY</span>
+        {% elif log.action == 'exit' %}
+            <i data-lucide="log-out"></i>
+            <span>AUTHORIZED EXIT</span>
+        {% else %}
+            <i data-lucide="ban"></i>
+            <span>ACCESS DENIED</span>
         {% endif %}
-    </section>
+        <span class="timestamp">{{ log.timestamp|date:"M d, Y"|upper }} - {{ log.timestamp|time:"h:i:s A" }}</span>
+    </div>
 
-    <section class="evidence-section">
-        <label>VISUAL EVIDENCE</label>
-        <div class="evidence-card">
-            {% with photos=log.photos.all %}
-                {% if photos %}
-                    <!-- Show the most recent photo as the main capture -->
-                    <div class="main-capture">
-                        <img src="{{ photos.last.image.url }}" alt="Primary Capture">
-                        <span class="img-label">CAM-01 (Main Entrance)</span>
-                    </div>
-                    <!-- Show additional photos in the grid -->
-                    <div class="capture-grid">
-                        {% for photo in photos %}
-                            <div class="sub-capture">
-                                <img src="{{ photo.image.url }}" alt="Gate Photo {{ forloop.counter }}">
-                                <span>PHOTO {{ forloop.counter }}</span>
-                            </div>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <!-- Fallback to placeholder images when no real photos exist -->
-                    <div class="main-capture">
-                        <img src="{{ primary_image }}" alt="Primary Capture">
-                        <span class="img-label">CAM-01 (Main Entrance)</span>
-                    </div>
-                    <div class="capture-grid">
-                        <div class="sub-capture">
-                            <img src="{{ side_image }}" alt="Side View">
-                            <span>CAM-02</span>
-                        </div>
-                        <div class="sub-capture">
-                            <img src="{{ plate_zoom }}" alt="Plate Zoom">
-                            <span>PLATE ZOOM</span>
-                        </div>
-                    </div>
-                {% endif %}
-            {% endwith %}
+    <!-- Vehicle Information -->
+    <div class="info-group">
+        <label>VEHICLE INFORMATION</label>
+        <div class="info-card">
+            <div class="info-row"><span>Plate Number</span><strong>{{ vehicle_info.plate_number }}</strong></div>
+            <div class="info-row"><span>Sticker ID</span><strong>{% if vehicle_info.sticker_id %}{{ vehicle_info.sticker_id }}{% else %}—{% endif %}</strong></div>
+            <div class="info-row"><span>Vehicle Type</span><strong>{{ vehicle_info.color }} {{ vehicle_info.model }}</strong></div>
         </div>
-        <a href="{% url 'gate_guard:download_incident_pdf' log.id %}" class="btn-full-report">
-            Download Full PDF Report
-        </a>
-    </section>
+    </div>
+
+    <!-- Driver Information -->
+    <div class="info-group">
+        <label>DRIVER INFORMATION</label>
+        <div class="info-card">
+            <div class="info-row"><span>Full Name</span><strong>{{ driver_info.name }}</strong></div>
+            {% if driver_info.affiliation %}
+            <div class="info-row"><span>Affiliation</span><strong>{{ driver_info.affiliation }}</strong></div>
+            {% endif %}
+            {% if driver_info.contact %}
+            <div class="info-row"><span>Contact</span><strong>{{ driver_info.contact }}</strong></div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Denial Reason if applicable -->
+    {% if log.action == 'denied' and log.reason_denied %}
+    <div class="info-group">
+        <label>DENIAL REASON</label>
+        <div class="info-card">
+            <div class="info-row"><span>Reason</span><strong>{{ log.reason_denied }}</strong></div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Download Button -->
+    <a href="{% url 'gate_guard:download_incident_pdf' log.id %}" class="btn-secondary" style="margin-top: 24px; display: inline-flex; align-items: center; gap: 6px;">
+        <i data-lucide="download"></i> Download PDF Report
+    </a>
 </div>
 {% endblock %}

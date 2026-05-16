@@ -15,7 +15,7 @@
         <h1 class="page-title">Application Review</h1>
         <p class="page-subtitle">{{ application.applicant.get_full_name }} - {{ application.vehicle.plate_number }}</p>
     </div>
-    <a href="{% url 'sticker_portal:pending_approvals' %}" class="btn-report">
+    <a href="{% url 'sticker_portal:appointment_management' %}" class="btn-report">
         <i data-lucide="arrow-left"></i> Back to List
     </a>
 </div>

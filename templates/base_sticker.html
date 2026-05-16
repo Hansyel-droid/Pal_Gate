@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="{% static 'js/lucide.min.js' %}"></script>
+    <link rel="stylesheet" href="{% static 'css/sticker_portal/sticker_portal.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
 <body class="{% if user.is_authenticated and user.text_size %}text-{{ user.text_size }}{% else %}text-medium{% endif %}">
@@ -27,7 +28,7 @@
                     <i data-lucide="layout-dashboard"></i> Dashboard
                 </a>
                 <a href="{% url 'sticker_portal:appointment_management' %}" class="nav-item {% if request.resolver_match.url_name == 'appointment_management' %}active{% endif %}">
-                    <i data-lucide="calendar-check-2"></i> Appointments
+                    <i data-lucide="clipboard-list"></i> Applications
                 </a>
                 <a href="{% url 'sticker_portal:sticker_register_rfid' %}" class="nav-item {% if request.resolver_match.url_name == 'sticker_register_rfid' %}active{% endif %}">
                     <i data-lucide="plus-circle"></i> Register RFID
@@ -72,6 +73,16 @@
                     </form>
                 </div>
             </div>
+
+            {% if messages %}
+            <div class="messages-container" style="padding: 0 var(--page-pad); margin-top: 12px;">
+                {% for message in messages %}
+                <div class="alert {% if message.tags == 'error' %}alert-error{% else %}alert-success{% endif %}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
 
             <!-- Page Content -->
             <div class="page-content">

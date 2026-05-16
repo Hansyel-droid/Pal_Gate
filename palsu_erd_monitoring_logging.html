@@ -1,0 +1,85 @@
+<style>
+#erd3 svg { width: 100%; height: auto; }
+#erd3 svg.erDiagram .divider path { stroke-opacity: 0.4; }
+#erd3 svg.erDiagram .row-rect-odd path,
+#erd3 svg.erDiagram .row-rect-odd rect,
+#erd3 svg.erDiagram .row-rect-even path,
+#erd3 svg.erDiagram .row-rect-even rect { stroke: none !important; }
+.leg3 { display:flex; gap:20px; flex-wrap:wrap; margin-top:12px; font-size:12px; color:var(--color-text-secondary); }
+.leg3 span { display:flex; align-items:center; gap:6px; }
+.leg3 b { width:10px; height:10px; border-radius:2px; display:inline-block; }
+</style>
+<div style="padding:1rem 0">
+  <div id="erd3"></div>
+  <div class="leg3">
+    <span><b style="background:#534AB7"></b> PK — primary key</span>
+    <span><b style="background:#1D9E75"></b> FK — foreign key</span>
+    <span>GateLog is the central hub of every scan event</span>
+  </div>
+</div>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+await document.fonts.ready;
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  fontFamily: '"Anthropic Sans", sans-serif',
+  themeVariables: {
+    darkMode: dark,
+    fontSize: '13px',
+    fontFamily: '"Anthropic Sans", sans-serif',
+    primaryColor: dark ? '#1A1430' : '#EEEDFE',
+    primaryBorderColor: dark ? '#7F77DD' : '#534AB7',
+    primaryTextColor: dark ? '#CECBF6' : '#26215C',
+    lineColor: dark ? '#888780' : '#5F5E5A',
+    textColor: dark ? '#c2c0b6' : '#3d3d3a',
+    attributeBackgroundColorEven: dark ? '#130f24' : '#F7F6FE',
+    attributeBackgroundColorOdd: dark ? '#1e1838' : '#EEEDFE',
+  },
+  er: { diagramPadding: 40, layoutDirection: 'TB', minEntityWidth: 210, minEntityHeight: 44, entityPadding: 14, useMaxWidth: true }
+});
+const diagram = `erDiagram
+  RFIDTag {
+    BigAutoField id PK
+    CharField tag_id
+  }
+  GateLog {
+    BigAutoField id PK
+    BigInt rfid_tag_id FK
+    CharField action
+    CharField gate
+    TextField reason_denied
+    DateTimeField timestamp
+    CharField plate_number
+  }
+  GatePhoto {
+    BigAutoField id PK
+    BigInt gate_log_id FK
+    ImageField image
+    DateTimeField uploaded_at
+  }
+  RFIDTag ||--o{ GateLog : "triggers"
+  GateLog ||--o{ GatePhoto : "captures"
+`;
+const { svg } = await mermaid.render('erd3-svg', diagram);
+document.getElementById('erd3').innerHTML = svg;
+document.querySelectorAll('#erd3 svg.erDiagram .node').forEach(node => {
+  const firstPath = node.querySelector('path[d]');
+  if (!firstPath) return;
+  const d = firstPath.getAttribute('d');
+  const nums = d.match(/-?[\d.]+/g)?.map(Number);
+  if (!nums || nums.length < 8) return;
+  const xs = [nums[0],nums[2],nums[4],nums[6]], ys = [nums[1],nums[3],nums[5],nums[7]];
+  const x = Math.min(...xs), y = Math.min(...ys), w = Math.max(...xs)-x, h = Math.max(...ys)-y;
+  const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+  rect.setAttribute('x',x); rect.setAttribute('y',y);
+  rect.setAttribute('width',w); rect.setAttribute('height',h); rect.setAttribute('rx','8');
+  for (const a of ['fill','stroke','stroke-width','class','style']) {
+    if (firstPath.hasAttribute(a)) rect.setAttribute(a, firstPath.getAttribute(a));
+  }
+  firstPath.replaceWith(rect);
+});
+document.querySelectorAll('#erd3 svg.erDiagram .row-rect-odd path, #erd3 svg.erDiagram .row-rect-even path')
+  .forEach(p => p.setAttribute('stroke','none'));
+</script>
