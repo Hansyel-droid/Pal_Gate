@@ -75,7 +75,7 @@ class StickerApplication(models.Model):
 
     def is_valid(self):
         """Check if the sticker is currently valid."""
-        return self.status == 'approved' and self.expiry_date >= timezone.now().date()
+        return self.status in ['approved', 'issued'] and self.expiry_date >= timezone.now().date()
 
 
 class Document(models.Model):

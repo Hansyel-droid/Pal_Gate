@@ -19,7 +19,6 @@ def scan(request):
     if not all(field in data for field in required_fields):
         return JsonResponse({'allowed': False, 'reason': 'Missing fields'}, status=400)
 
-    # auto-generate timestamp if empty or missing
     timestamp_str = data.get('timestamp', '')
     if not timestamp_str:
         timestamp = timezone.now()
@@ -79,9 +78,9 @@ def scan(request):
         if not data.get('plate_number'):
             data['plate_number'] = vehicle.plate_number
         if not data.get('vehicle_model'):
-            data['vehicle_model'] = vehicle.model
+            data['vehicle_model'] = vehicle.get_type_of_vehicle_display()  # ✅ fixed
         if not data.get('vehicle_color'):
-            data['vehicle_color'] = vehicle.color
+            data['vehicle_color'] = vehicle.get_color_display()              # ✅ consistent
 
     last_log = GateLog.objects.filter(rfid_tag=tag).order_by('-timestamp').first()
     action = 'exit' if last_log and last_log.action == 'entry' else 'entry'
@@ -100,7 +99,6 @@ def scan(request):
     tag.last_used = timezone.now()
     tag.save(update_fields=['last_used'])
 
-    # Return the action AND log_id so the ESP32 can display the appropriate message
     return JsonResponse({
         'allowed': True,
         'action': action,
