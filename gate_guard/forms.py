@@ -13,6 +13,8 @@ class OfficerProfileForm(forms.ModelForm):
         }
 
 
+from django import forms
+
 class RFIDRegistrationForm(forms.Form):
     rfid_uid = forms.CharField(
         max_length=100,
@@ -30,7 +32,11 @@ class RFIDRegistrationForm(forms.Form):
         widget=forms.EmailInput(attrs={'class': 'form-input'})
     )
     classification = forms.ChoiceField(
-        choices=[('student', 'Student'), ('faculty', 'Faculty/Staff')],
+        choices=[
+            ('student', 'Student'),
+            ('faculty', 'Faculty/Staff'),
+            ('parent', 'Parent'),
+        ],
         label='Classification',
         widget=forms.RadioSelect(attrs={'class': 'radio-group'})
     )
@@ -51,16 +57,35 @@ class RFIDRegistrationForm(forms.Form):
         label='Plate Number',
         widget=forms.TextInput(attrs={'class': 'form-input'})
     )
-    vehicle_model = forms.CharField(
-        max_length=100,
-        label='Vehicle Model',
-        widget=forms.TextInput(attrs={'class': 'form-input'})
+
+    # ---- Changed to dropdown ----
+    vehicle_model = forms.ChoiceField(
+        choices=[
+            ('two_wheels', 'Two Wheels'),
+            ('four_wheels', 'Four Wheels'),
+            ('other', 'Other (specify)'),
+        ],
+        label='Type of Vehicle',
+        widget=forms.Select(attrs={'class': 'form-input'})
     )
-    vehicle_color = forms.CharField(
-        max_length=50,
+
+    # ---- Changed to dropdown ----
+    vehicle_color = forms.ChoiceField(
+        choices=[
+            ('red', 'Red'),
+            ('blue', 'Blue'),
+            ('green', 'Green'),
+            ('yellow', 'Yellow'),
+            ('black', 'Black'),
+            ('white', 'White'),
+            ('silver', 'Silver'),
+            ('gray', 'Gray'),
+            ('other', 'Other (specify)'),
+        ],
         label='Vehicle Color',
-        widget=forms.TextInput(attrs={'class': 'form-input'})
+        widget=forms.Select(attrs={'class': 'form-input'})
     )
+
     is_owner = forms.BooleanField(
         required=False,
         initial=True,

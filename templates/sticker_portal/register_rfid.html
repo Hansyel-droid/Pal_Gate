@@ -12,22 +12,58 @@
         padding: 32px;
         max-width: 750px;
         margin: 0 auto;
-        box-shadow: 0 6px 20px rgba(0,0,0,0.06);
-        border: 1px solid var(--border);
+        box-shadow: 0 1px 4px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04);
+        border: 1px solid var(--border-light);
     }
     .form-row { display: flex; gap: 20px; margin-bottom: 22px; }
     .form-group { flex: 1; }
-    .form-group label { display: block; font-size: 0.7rem; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .form-input, input[type="text"], input[type="email"], input[type="date"] {
-        width: 100%; padding: 12px 14px; background: #F4F3F1; border: 2px solid transparent; border-radius: 10px; font-size: 0.95rem; color: var(--text-dark); transition: border 0.2s, background 0.2s; outline: none;
+    .form-group label {
+        display: block;
+        font-size: 0.6rem;
+        font-weight: 700;
+        letter-spacing: 1.8px;
+        text-transform: uppercase;
+        color: var(--text-label);
+        margin-bottom: 6px;
     }
-    .form-input:focus, input:focus { border-color: var(--primary-orange, #F2994A); background: white; box-shadow: 0 0 0 3px rgba(242,153,74,0.15); }
+    .form-input, input[type="text"], input[type="email"], input[type="date"], select {
+        width: 100%;
+        padding: 10px 13px;
+        background: var(--bg-input);
+        border: 1.5px solid transparent;
+        border-radius: var(--r-sm);
+        font-size: 0.87rem;
+        color: var(--text-dark);
+        transition: border-color 0.17s, background 0.17s, box-shadow 0.17s;
+        outline: none;
+        appearance: none;
+    }
+    .form-input:focus, input:focus, select:focus {
+        border-color: var(--primary);
+        background: #fff;
+        box-shadow: 0 0 0 3px rgba(26,32,53,0.08);
+    }
     .radio-group { display: flex; gap: 20px; margin-top: 6px; }
     .radio-label { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; }
-    .radio-label input { accent-color: var(--primary-orange, #F2994A); width: 16px; height: 16px; margin: 0; }
-    .checkbox { accent-color: var(--primary-orange, #F2994A); }
-    .btn-submit { background: var(--primary-orange, #F2994A); color: white; border: none; padding: 14px 28px; border-radius: 12px; font-weight: 700; font-size: 1rem; cursor: pointer; width: 100%; margin-top: 8px; box-shadow: 0 4px 8px rgba(242,153,74,0.2); }
-    .btn-submit:hover { background: var(--primary, #8B5A00); }
+    .radio-label input { accent-color: var(--primary); width: 16px; height: 16px; margin: 0; }
+    .checkbox { accent-color: var(--primary); }
+    .btn-submit {
+        width: 100%;
+        padding: 12px;
+        background: var(--primary);
+        color: #fff;
+        border: none;
+        border-radius: var(--r-md);
+        font-size: 0.92rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background 0.17s, box-shadow 0.17s;
+        margin-top: 8px;
+    }
+    .btn-submit:hover {
+        background: var(--primary-hover);
+        box-shadow: 0 4px 12px rgba(26,32,53,0.28);
+    }
     .messages { margin-bottom: 24px; }
     .alert { padding: 12px 16px; border-radius: 10px; font-size: 0.9rem; font-weight: 500; border-left: 4px solid; }
     .alert-success { background: #ECFDF5; color: #065F46; border-left-color: #10B981; }
@@ -64,18 +100,18 @@
         <div class="form-row">
             <div class="form-group">
                 <label for="id_rfid_uid">RFID UID</label>
-                <input type="text" name="rfid_uid" value="{{ form.rfid_uid.value|default:'' }}" class="form-input" maxlength="100" required id="id_rfid_uid" autocomplete="off">
+                {{ form.rfid_uid }}
             </div>
         </div>
 
         <div class="form-row">
             <div class="form-group">
                 <label for="id_driver_name">Driver Full Name</label>
-                <input type="text" name="driver_name" value="{{ form.driver_name.value|default:'' }}" class="form-input" maxlength="150" required id="id_driver_name" autocomplete="off">
+                {{ form.driver_name }}
             </div>
             <div class="form-group">
                 <label for="id_email">Email Address</label>
-                <input type="email" name="email" value="{{ form.email.value|default:'' }}" class="form-input" required id="id_email" autocomplete="off">
+                {{ form.email }}
             </div>
         </div>
 
@@ -83,24 +119,23 @@
             <div class="form-group">
                 <label>Classification</label>
                 <div class="radio-group">
+                    {% for radio in form.classification %}
                     <label class="radio-label">
-                        <input type="radio" name="classification" value="student" {% if form.classification.value == 'student' %}checked{% endif %}> Student
+                        {{ radio.tag }} {{ radio.choice_label }}
                     </label>
-                    <label class="radio-label">
-                        <input type="radio" name="classification" value="faculty" {% if form.classification.value == 'faculty' %}checked{% endif %}> Faculty/Staff
-                    </label>
+                    {% endfor %}
                 </div>
             </div>
             <div class="form-group">
                 <label for="id_college_department">College/Department</label>
-                <input type="text" name="college_department" value="{{ form.college_department.value|default:'' }}" class="form-input" maxlength="100" id="id_college_department" autocomplete="off">
+                {{ form.college_department }}
             </div>
         </div>
 
         <div class="form-row">
             <div class="form-group">
                 <label for="id_contact_number">Contact Number</label>
-                <input type="text" name="contact_number" value="{{ form.contact_number.value|default:'' }}" class="form-input" maxlength="15" id="id_contact_number" autocomplete="off">
+                {{ form.contact_number }}
             </div>
         </div>
 
@@ -109,22 +144,22 @@
         <div class="form-row">
             <div class="form-group">
                 <label for="id_plate_number">Plate Number</label>
-                <input type="text" name="plate_number" value="{{ form.plate_number.value|default:'' }}" class="form-input" maxlength="20" required id="id_plate_number" autocomplete="off">
+                {{ form.plate_number }}
             </div>
             <div class="form-group">
-                <label for="id_vehicle_model">Vehicle Model</label>
-                <input type="text" name="vehicle_model" value="{{ form.vehicle_model.value|default:'' }}" class="form-input" maxlength="100" required id="id_vehicle_model" autocomplete="off">
+                <label for="id_vehicle_model">Type of Vehicle</label>
+                {{ form.vehicle_model }}
             </div>
         </div>
 
         <div class="form-row">
             <div class="form-group">
                 <label for="id_vehicle_color">Vehicle Color</label>
-                <input type="text" name="vehicle_color" value="{{ form.vehicle_color.value|default:'' }}" class="form-input" maxlength="50" required id="id_vehicle_color" autocomplete="off">
+                {{ form.vehicle_color }}
             </div>
             <div class="form-group">
                 <label for="id_is_owner" style="display: flex; align-items: center; gap: 8px;">
-                    <input type="checkbox" name="is_owner" class="checkbox" id="id_is_owner" {% if form.is_owner.value %}checked{% endif %}> Registered in driver's name
+                    {{ form.is_owner }} Registered in driver's name
                 </label>
             </div>
         </div>
@@ -132,7 +167,7 @@
         <div class="form-row">
             <div class="form-group">
                 <label for="id_expiry_date">Sticker Expiry Date</label>
-                <input type="date" name="expiry_date" value="{{ form.expiry_date.value|default:'' }}" class="form-input" required id="id_expiry_date" autocomplete="off">
+                {{ form.expiry_date }}
             </div>
             <div class="form-group"></div>
         </div>

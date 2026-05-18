@@ -70,17 +70,16 @@ def scan(request):
             'log_id': denied_log.id
         })
 
-    # Enrich empty fields from database
-    if tag.sticker_application:
-        vehicle = tag.sticker_application.vehicle
-        if not data.get('driver_name'):
-            data['driver_name'] = tag.sticker_application.applicant.get_full_name()
-        if not data.get('plate_number'):
-            data['plate_number'] = vehicle.plate_number
-        if not data.get('vehicle_model'):
-            data['vehicle_model'] = vehicle.get_type_of_vehicle_display()  # ✅ fixed
-        if not data.get('vehicle_color'):
-            data['vehicle_color'] = vehicle.get_color_display()              # ✅ consistent
+    # Enrich empty fields
+    vehicle = tag.sticker_application.vehicle
+    if not data.get('driver_name'):
+        data['driver_name'] = tag.sticker_application.applicant.get_full_name()
+    if not data.get('plate_number'):
+        data['plate_number'] = vehicle.plate_number
+    if not data.get('vehicle_model'):
+        data['vehicle_model'] = vehicle.get_type_of_vehicle_display()
+    if not data.get('vehicle_color'):
+        data['vehicle_color'] = vehicle.get_color_display()
 
     last_log = GateLog.objects.filter(rfid_tag=tag).order_by('-timestamp').first()
     action = 'exit' if last_log and last_log.action == 'entry' else 'entry'
@@ -102,9 +101,10 @@ def scan(request):
     return JsonResponse({
         'allowed': True,
         'action': action,
-        'log_id': entry_log.id
+        'log_id': entry_log.id,
+        'vehicle_type': data['vehicle_model'],     # ← returns "Four Wheels"
+        'vehicle_color': data['vehicle_color'],     # ← returns "Silver"
     })
-
 
 @csrf_exempt
 @require_POST
