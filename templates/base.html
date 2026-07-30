@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}PalSU Gate System{% endblock %}</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+
+    <style>
+        /* ── Token System ───────────────────────────── */
+        :root {
+            --navy:        #0A1628;
+            --navy-mid:    #1B3A6B;
+            --navy-light:  #2A5298;
+            --gold:        #C9A84C;
+            --gold-light:  #E8C96A;
+            --content-bg:  #F0F4FA;
+            --card-bg:     #FFFFFF;
+            --text-main:   #1A2340;
+            --text-muted:  #6B7A99;
+            --border:      #DDE3EF;
+            --danger:      #E63946;
+            --success:     #2D9E6B;
+            --warning:     #E89C2F;
+            --info:        #2A7FC1;
+            --sidebar-w:   240px;
+        }
+
+        /* ── Base ───────────────────────────────────── */
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--content-bg);
+            color: var(--text-main);
+            margin: 0;
+            min-height: 100vh;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 600;
+        }
+
+        /* ── Top Bar ────────────────────────────────── */
+        .topbar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 56px;
+            background: var(--navy);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            z-index: 1000;
+            border-bottom: 2px solid var(--gold);
+        }
+
+        .topbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 700;
+            font-size: 1rem;
+            color: #fff;
+            letter-spacing: 0.02em;
+        }
+
+        .topbar-brand .brand-icon {
+            width: 30px;
+            height: 30px;
+            background: var(--gold);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--navy);
+            font-size: 1rem;
+        }
+
+        .topbar-brand .brand-sub {
+            font-size: 0.65rem;
+            font-weight: 400;
+            color: #7A9BBF;
+            display: block;
+            line-height: 1;
+            margin-top: 1px;
+        }
+
+        .topbar-user {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .topbar-user .user-info {
+            text-align: right;
+        }
+
+        .topbar-user .user-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #fff;
+            line-height: 1.2;
+        }
+
+        .topbar-user .user-role {
+            font-size: 0.7rem;
+            color: var(--gold);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .topbar-user .avatar {
+            width: 34px;
+            height: 34px;
+            background: var(--navy-mid);
+            border: 2px solid var(--gold);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--gold);
+            font-size: 0.9rem;
+        }
+
+        .btn-logout {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.2);
+            color: rgba(255,255,255,0.7);
+            font-size: 0.78rem;
+            padding: 4px 10px;
+            border-radius: 4px;
+            text-decoration: none;
+            transition: all 0.15s;
+        }
+
+        .btn-logout:hover {
+            border-color: var(--gold);
+            color: var(--gold);
+        }
+
+        /* ── Sidebar ────────────────────────────────── */
+        .sidebar {
+            position: fixed;
+            top: 56px;
+            left: 0;
+            bottom: 0;
+            width: var(--sidebar-w);
+            background: var(--navy);
+            overflow-y: auto;
+            z-index: 900;
+            padding-bottom: 24px;
+        }
+
+        .sidebar-section {
+            padding: 20px 0 4px;
+        }
+
+        .sidebar-label {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #4A6A9A;
+            padding: 0 20px 6px;
+        }
+
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 20px;
+            color: #8AAAD0;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.15s;
+            border-left: 3px solid transparent;
+            position: relative;
+        }
+
+        .sidebar-link:hover {
+            color: #fff;
+            background: rgba(255,255,255,0.05);
+            border-left-color: rgba(201,168,76,0.4);
+        }
+
+        .sidebar-link.active {
+            color: var(--gold);
+            background: rgba(201,168,76,0.08);
+            border-left-color: var(--gold);
+        }
+
+        .sidebar-link i {
+            font-size: 1rem;
+            width: 18px;
+            text-align: center;
+        }
+
+        /* ── Main Content ───────────────────────────── */
+        .main-content {
+            margin-left: var(--sidebar-w);
+            margin-top: 56px;
+            padding: 28px 32px;
+            min-height: calc(100vh - 56px);
+        }
+
+        .main-content.no-sidebar {
+            margin-left: 0;
+        }
+
+        /* ── Page Header ────────────────────────────── */
+        .page-header {
+            margin-bottom: 24px;
+        }
+
+        .page-header h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin: 0 0 4px;
+        }
+
+        .page-header .page-sub {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* ── Cards ──────────────────────────────────── */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 1px 4px rgba(10,22,40,0.06);
+        }
+
+        .card-header {
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border);
+            padding: 14px 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        /* ── Stat Cards ─────────────────────────────── */
+        .stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            border-top: 3px solid var(--gold);
+            padding: 20px;
+            box-shadow: 0 1px 4px rgba(10,22,40,0.06);
+        }
+
+        .stat-card .stat-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .stat-card .stat-value {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-main);
+            line-height: 1;
+        }
+
+        .stat-card .stat-icon {
+            color: var(--gold);
+            font-size: 1.4rem;
+        }
+
+        .stat-card.danger  { border-top-color: var(--danger); }
+        .stat-card.success { border-top-color: var(--success); }
+        .stat-card.info    { border-top-color: var(--info); }
+        .stat-card.warning { border-top-color: var(--warning); }
+
+        .stat-card.danger  .stat-icon { color: var(--danger); }
+        .stat-card.success .stat-icon { color: var(--success); }
+        .stat-card.info    .stat-icon { color: var(--info); }
+        .stat-card.warning .stat-icon { color: var(--warning); }
+
+        /* ── Tables ─────────────────────────────────── */
+        .table {
+            font-size: 0.85rem;
+        }
+
+        .table thead th {
+            background: #F8FAFD;
+            border-bottom: 2px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 10px 16px;
+        }
+
+        .table tbody td {
+            padding: 12px 16px;
+            border-color: var(--border);
+            vertical-align: middle;
+        }
+
+        .table tbody tr:hover {
+            background: #F8FAFD;
+        }
+
+        /* ── Badges ─────────────────────────────────── */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+        }
+
+        .badge-scheduled { background: #EBF4FF; color: var(--info); }
+        .badge-approved  { background: #E8F7F0; color: var(--success); }
+        .badge-rejected  { background: #FDECEA; color: var(--danger); }
+        .badge-issued    { background: #EEF0FF; color: #5B6AD0; }
+        .badge-draft     { background: #F3F4F6; color: #6B7280; }
+        .badge-expired   { background: #F3F4F6; color: #6B7280; }
+        .badge-entry     { background: #E8F7F0; color: var(--success); }
+        .badge-exit      { background: #FFF8E8; color: var(--warning); }
+        .badge-denied    { background: #FDECEA; color: var(--danger); }
+
+        /* ── Forms ──────────────────────────────────── */
+        .form-control, .form-select {
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.875rem;
+            color: var(--text-main);
+            padding: 8px 12px;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--navy-light);
+            box-shadow: 0 0 0 3px rgba(42,82,152,0.12);
+            outline: none;
+        }
+
+        .form-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 5px;
+        }
+
+        /* ── Buttons ────────────────────────────────── */
+        .btn {
+            font-size: 0.83rem;
+            font-weight: 600;
+            border-radius: 6px;
+            padding: 7px 16px;
+            transition: all 0.15s;
+        }
+
+        .btn-primary {
+            background: var(--navy-mid);
+            border-color: var(--navy-mid);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: var(--navy-light);
+            border-color: var(--navy-light);
+        }
+
+        .btn-gold {
+            background: var(--gold);
+            border-color: var(--gold);
+            color: var(--navy);
+            font-weight: 700;
+        }
+
+        .btn-gold:hover {
+            background: var(--gold-light);
+            border-color: var(--gold-light);
+            color: var(--navy);
+        }
+
+        .btn-success {
+            background: var(--success);
+            border-color: var(--success);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            border-color: var(--danger);
+        }
+
+        .btn-outline-secondary {
+            border-color: var(--border);
+            color: var(--text-muted);
+        }
+
+        .btn-outline-secondary:hover {
+            background: var(--content-bg);
+            color: var(--text-main);
+        }
+
+        /* ── Alerts ─────────────────────────────────── */
+        .alert {
+            border-radius: 8px;
+            font-size: 0.875rem;
+            border: none;
+            padding: 12px 16px;
+        }
+
+        .alert-success {
+            background: #E8F7F0;
+            color: #1A6B47;
+            border-left: 4px solid var(--success);
+        }
+
+        .alert-danger {
+            background: #FDECEA;
+            color: #9B2335;
+            border-left: 4px solid var(--danger);
+        }
+
+        .alert-warning {
+            background: #FFF8E8;
+            color: #8A5A00;
+            border-left: 4px solid var(--warning);
+        }
+
+        .alert-info {
+            background: #EBF4FF;
+            color: #1A4F8A;
+            border-left: 4px solid var(--info);
+        }
+
+        /* ── Progress Bar (Wizard) ──────────────────── */
+        .wizard-steps {
+            display: flex;
+            align-items: center;
+            margin-bottom: 28px;
+        }
+
+        .wizard-step {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            flex: 1;
+        }
+
+        .wizard-step .step-num {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            flex-shrink: 0;
+            background: #fff;
+            color: var(--text-muted);
+        }
+
+        .wizard-step.active .step-num {
+            background: var(--navy-mid);
+            border-color: var(--navy-mid);
+            color: #fff;
+        }
+
+        .wizard-step.active {
+            color: var(--navy-mid);
+        }
+
+        .wizard-step.done .step-num {
+            background: var(--success);
+            border-color: var(--success);
+            color: #fff;
+        }
+
+        .wizard-step.done {
+            color: var(--success);
+        }
+
+        .wizard-connector {
+            flex: 1;
+            height: 2px;
+            background: var(--border);
+            margin: 0 8px;
+        }
+
+        /* ── Misc ───────────────────────────────────── */
+        .section-divider {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 20px 0;
+        }
+
+        .text-muted { color: var(--text-muted) !important; }
+
+        code {
+            background: #EEF2FF;
+            color: #4338CA;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.82rem;
+        }
+
+        /* ── Responsive ─────────────────────────────── */
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); }
+            .main-content { margin-left: 0; padding: 20px 16px; }
+        }
+    </style>
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<a href="#main-content"
+   style="position:absolute; top:-40px; left:0; background:var(--gold);
+          color:var(--navy); padding:8px; z-index:9999; font-weight:700;
+          transition:top 0.1s;"
+   onfocus="this.style.top='0'"
+   onblur="this.style.top='-40px'">
+    Skip to main content
+</a>
+
+<!-- Top Bar -->
+<header class="topbar">
+    <div class="topbar-brand">
+        <div class="brand-icon">
+            <i class="bi bi-shield-lock-fill"></i>
+        </div>
+        <div>
+            PalSU Gate System
+            <span class="brand-sub">Palawan State University</span>
+        </div>
+    </div>
+
+    {% if user.is_authenticated %}
+    <div class="topbar-user">
+        <div class="user-info">
+            <div class="user-name">{{ user.get_full_name|default:user.username }}</div>
+            <div class="user-role">{{ user.get_role_display }}</div>
+        </div>
+        <div class="avatar">
+            <i class="bi bi-person-fill"></i>
+        </div>
+        <a href="{% url 'logout' %}" class="btn-logout">
+            <i class="bi bi-box-arrow-right"></i> Logout
+        </a>
+    </div>
+    {% endif %}
+</header>
+
+<!-- Sidebar -->
+{% if user.is_authenticated %}
+<nav class="sidebar">
+    {% if user.role == 'applicant' %}
+        <div class="sidebar-section">
+            <div class="sidebar-label">Applicant</div>
+            <a href="{% url 'applicant_home' %}" class="sidebar-link {% if request.resolver_match.url_name == 'applicant_home' %}active{% endif %}">
+                <i class="bi bi-house-fill"></i> Home
+            </a>
+            <a href="{% url 'apply_step1' %}" class="sidebar-link {% if 'apply_step' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="bi bi-file-earmark-plus"></i> Apply for Sticker
+            </a>
+            <a href="{% url 'my_applications' %}" class="sidebar-link {% if request.resolver_match.url_name == 'my_applications' %}active{% endif %}">
+                <i class="bi bi-collection"></i> My Applications
+            </a>
+        </div>
+
+    {% elif user.role == 'admin' %}
+        <div class="sidebar-section">
+            <div class="sidebar-label">Overview</div>
+            <a href="{% url 'admin_dashboard' %}" class="sidebar-link {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-label">Management</div>
+            <a href="{% url 'registration_window' %}" class="sidebar-link {% if request.resolver_match.url_name == 'registration_window' %}active{% endif %}">
+                <i class="bi bi-calendar-range"></i> Registration Window
+            </a>
+            <a href="{% url 'appointment_dates' %}" class="sidebar-link {% if request.resolver_match.url_name == 'appointment_dates' %}active{% endif %}">
+                <i class="bi bi-calendar3"></i> Appointment Dates
+            </a>
+            <a href="{% url 'application_list' %}" class="sidebar-link {% if request.resolver_match.url_name == 'application_list' %}active{% endif %}">
+                <i class="bi bi-folder2-open"></i> Applications
+            </a>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-label">Issuance</div>
+            <a href="{% url 'sticker_station' %}" class="sidebar-link {% if 'sticker' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="bi bi-patch-check"></i> Sticker Station
+            </a>
+            <a href="{% url 'quick_register' %}" class="sidebar-link {% if request.resolver_match.url_name == 'quick_register' %}active{% endif %}">
+                <i class="bi bi-lightning-charge"></i> Quick Register
+            </a>
+        </div>
+
+    {% elif user.role == 'security' %}
+        <div class="sidebar-section">
+            <div class="sidebar-label">Gate Monitor</div>
+            <a href="{% url 'gate_live' %}" class="sidebar-link {% if request.resolver_match.url_name == 'gate_live' %}active{% endif %}">
+                <i class="bi bi-activity"></i> Live Overview
+            </a>
+            <a href="{% url 'gate_logs' %}" class="sidebar-link {% if request.resolver_match.url_name == 'gate_logs' %}active{% endif %}">
+                <i class="bi bi-journal-text"></i> Gate Logs
+            </a>
+            <a href="{% url 'time_tracker' %}" class="sidebar-link {% if request.resolver_match.url_name == 'time_tracker' %}active{% endif %}">
+                <i class="bi bi-clock-history"></i> Time Tracker
+            </a>
+        </div>
+    {% endif %}
+</nav>
+{% endif %}
+
+<!-- Messages -->
+{% if messages %}
+<div style="position:fixed; top:64px; right:16px; z-index:1100; width:340px;">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} d-flex align-items-start gap-2 mb-2 shadow-sm"
+         style="animation: slideIn 0.2s ease;">
+        {% if message.tags == 'success' %}<i class="bi bi-check-circle-fill mt-1"></i>
+        {% elif message.tags == 'error' or message.tags == 'danger' %}<i class="bi bi-x-circle-fill mt-1"></i>
+        {% elif message.tags == 'warning' %}<i class="bi bi-exclamation-triangle-fill mt-1"></i>
+        {% else %}<i class="bi bi-info-circle-fill mt-1"></i>{% endif %}
+        <div style="flex:1;">{{ message }}</div>
+        <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="alert"
+                style="font-size:0.65rem;"></button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Main Content -->
+<main id="main-content" class="main-content {% if not user.is_authenticated %}no-sidebar{% endif %}">
+    {% block content %}{% endblock %}
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<style>
+    @keyframes slideIn {
+        from { opacity: 0; transform: translateX(20px); }
+        to   { opacity: 1; transform: translateX(0); }
+    }
+</style>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}Account Locked{% endblock %}
+
+{% block content %}
+<div style="min-height:calc(100vh - 56px); display:flex; align-items:center;
+            justify-content:center; padding:40px 16px;">
+    <div style="width:100%; max-width:420px;">
+        <div class="card">
+            <div class="card-body" style="padding:36px; text-align:center;">
+                <i class="bi bi-shield-lock-fill"
+                   style="font-size:2.5rem; color:var(--danger);
+                          display:block; margin-bottom:16px;"></i>
+                <h5 style="font-weight:700; margin-bottom:8px; color:var(--danger);">
+                    Account Locked
+                </h5>
+                <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:24px;">
+                    Too many failed login attempts. Your account has been
+                    temporarily locked for <strong>30 minutes</strong>.
+                    <br><br>
+                    If you believe this is an error, contact the system administrator.
+                </p>
+                <a href="{% url 'login' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Login
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

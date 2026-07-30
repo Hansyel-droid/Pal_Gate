@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block title %}Sign In — PalSU Gate System{% endblock %}
+
+{% block content %}
+<div style="min-height:calc(100vh - 56px); display:flex; align-items:center;
+            justify-content:center; padding: 40px 16px;">
+    <div style="width:100%; max-width:420px;">
+
+        <!-- Logo block -->
+        <div class="text-center mb-4">
+            <div style="width:60px; height:60px; background:var(--navy);
+                        border-radius:12px; display:flex; align-items:center;
+                        justify-content:center; margin:0 auto 16px;
+                        border: 2px solid var(--gold);">
+                <i class="bi bi-shield-lock-fill" style="font-size:1.6rem; color:var(--gold);"></i>
+            </div>
+            <h1 style="font-size:1.3rem; font-weight:700; color:var(--text-main); margin:0;">
+                PalSU Gate System
+            </h1>
+            <p style="font-size:0.82rem; color:var(--text-muted); margin:4px 0 0;">
+                Palawan State University — Vehicle Management
+            </p>
+        </div>
+
+        <div class="card">
+            <div class="card-body" style="padding:28px;">
+                <h5 style="font-size:1rem; margin-bottom:20px; color:var(--text-main);">
+                    Sign in to your account
+                </h5>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Username</label>
+                        <input type="text" name="username" class="form-control"
+                               required autofocus placeholder="Enter your username">
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label">Password</label>
+                        <input type="password" name="password" class="form-control"
+                               required placeholder="Enter your password">
+                    </div>
+                    <div class="text-end mb-3">
+                        <a href="{% url 'password_reset' %}"
+                           style="font-size:0.82rem; color:var(--text-muted);">
+                            Forgot your password?
+                        </a>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100"
+                            style="padding:10px;">
+                        Sign In <i class="bi bi-arrow-right ms-1"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <p class="text-center mt-3" style="font-size:0.83rem; color:var(--text-muted);">
+            New applicant?
+            <a href="{% url 'register' %}"
+               style="color:var(--navy-mid); font-weight:600;">
+                Create an account
+            </a>
+        </p>
+
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+{% block title %}Application Detail{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-file-earmark-text text-primary"></i> Application Detail</h2>
+    <a href="{% url 'application_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to List
+    </a>
+</div>
+
+<!-- Status Banner -->
+<div class="alert
+    {% if application.status == 'approved' %}alert-success
+    {% elif application.status == 'rejected' %}alert-danger
+    {% elif application.status == 'issued' %}alert-primary
+    {% elif application.status == 'scheduled' %}alert-info
+    {% else %}alert-secondary{% endif %}">
+    <strong>Status: {{ application.get_status_display }}</strong>
+    {% if application.status == 'rejected' and application.rejection_reason %}
+        — Reason: {{ application.rejection_reason }}
+    {% endif %}
+</div>
+
+<div class="row">
+    <!-- Left Column -->
+    <div class="col-md-6">
+        <!-- Personal Details -->
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-white fw-bold">
+                <i class="bi bi-person-fill text-primary"></i> Personal Details
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-bordered mb-0">
+                    <tr><th>Full Name</th><td>{{ application.full_name }}</td></tr>
+                    <tr><th>Classification</th><td>{{ application.get_classification_display }}</td></tr>
+                    <tr><th>ID Number</th><td>{{ application.id_number }}</td></tr>
+                    <tr><th>College/Dept</th><td>{{ application.college_department }}</td></tr>
+                    <tr><th>Applicant Account</th><td>{{ application.applicant.username }}</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Vehicle Details -->
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-white fw-bold">
+                <i class="bi bi-car-front-fill text-primary"></i> Vehicle Details
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-bordered mb-0">
+                    <tr><th>Plate Number</th><td><strong>{{ application.plate_number }}</strong></td></tr>
+                    <tr><th>Vehicle Type</th><td>{{ application.get_vehicle_type_display }}</td></tr>
+                    <tr><th>Color</th><td>{{ application.get_vehicle_color_display }}</td></tr>
+                    <tr><th>Owner</th><td>{% if application.is_owner %}Yes{% else %}No{% endif %}</td></tr>
+                    {% if application.sticker_id %}
+                    <tr><th>Sticker ID</th><td><code>{{ application.sticker_id }}</code></td></tr>
+                    {% endif %}
+                    {% if application.rfid_uid %}
+                    <tr><th>RFID UID</th><td><code>{{ application.rfid_uid }}</code></td></tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column -->
+    <div class="col-md-6">
+        <!-- Documents -->
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-white fw-bold">
+                <i class="bi bi-file-earmark-fill text-primary"></i> Documents
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>OR/CR</span>
+                        {% if application.or_cr %}
+                            <a href="{{ application.or_cr.url }}" target="_blank"
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> View
+                            </a>
+                        {% else %}
+                            <span class="text-muted">Not uploaded</span>
+                        {% endif %}
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Driver's License</span>
+                        {% if application.drivers_license %}
+                            <a href="{{ application.drivers_license.url }}" target="_blank"
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> View
+                            </a>
+                        {% else %}
+                            <span class="text-muted">Not uploaded</span>
+                        {% endif %}
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>COR</span>
+                        {% if application.cor %}
+                            <a href="{{ application.cor.url }}" target="_blank"
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> View
+                            </a>
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Authorization Letter</span>
+                        {% if application.authorization_letter %}
+                            <a href="{{ application.authorization_letter.url }}" target="_blank"
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> View
+                            </a>
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Appointment -->
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-white fw-bold">
+                <i class="bi bi-calendar-check text-primary"></i> Appointment
+            </div>
+            <div class="card-body">
+                {% if appointment %}
+                    <p class="mb-1">
+                        <strong>Date:</strong> {{ appointment.slot.date|date:"F d, Y" }}
+                        ({{ appointment.slot.date|date:"l" }})
+                    </p>
+                    <p><strong>Time:</strong> {{ appointment.time }}</p>
+                {% else %}
+                    <p class="text-muted">No appointment assigned yet.</p>
+                {% endif %}
+
+                <!-- Manual appointment assignment -->
+                <hr>
+                <p class="fw-bold small">Manually Set / Change Appointment:</p>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="set_appointment">
+                    <div class="mb-2">
+                        <label class="form-label small">Date</label>
+                        <select name="slot_id" class="form-select form-select-sm">
+                            <option value="">— Select Date —</option>
+                            {% for slot in available_slots %}
+                                <option value="{{ slot.pk }}">
+                                    {{ slot.date|date:"M d, Y" }} ({{ slot.slots_remaining }} slots left)
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Time</label>
+                        <select name="time" class="form-select form-select-sm">
+                            <option value="">— Select Time —</option>
+                            {% for value, label in time_choices %}
+                                <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-calendar-plus"></i> Set Appointment
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Action Buttons -->
+{% if application.status == 'scheduled' %}
+<div class="card shadow-sm">
+    <div class="card-body d-flex gap-3">
+        <!-- Approve -->
+        <form method="post" action="{% url 'approve_application' application.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success"
+                    onclick="return confirm('Approve this application?')">
+                <i class="bi bi-check-circle"></i> Approve
+            </button>
+        </form>
+
+        <!-- Reject -->
+        <button class="btn btn-danger" data-bs-toggle="collapse"
+                data-bs-target="#rejectForm">
+            <i class="bi bi-x-circle"></i> Reject
+        </button>
+    </div>
+
+    <!-- Rejection reason form (hidden until Reject is clicked) -->
+    <div class="collapse px-3 pb-3" id="rejectForm">
+        <form method="post" action="{% url 'reject_application' application.pk %}">
+            {% csrf_token %}
+            <div class="mb-2">
+                <label class="form-label">Reason for Rejection</label>
+                <textarea name="rejection_reason" class="form-control" rows="2"
+                          placeholder="Optional: explain why this application is rejected"></textarea>
+            </div>
+            <button type="submit" class="btn btn-danger">
+                Confirm Rejection
+            </button>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+{% if application.status == 'approved' %}
+<div class="alert alert-success d-flex justify-content-between align-items-center">
+    <span>
+        <i class="bi bi-check-circle-fill"></i>
+        This application is approved and ready for sticker issuance.
+    </span>
+    <a href="{% url 'issue_sticker' application.pk %}"
+       class="btn btn-primary">
+        <i class="bi bi-patch-check"></i> Go to Sticker Station
+    </a>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(python manage.py cleanup_temp_files; python manage.py expire_stickers)",
+      "PowerShell(python \"C:\\\\Users\\\\ADMIN\\\\.claude\\\\jobs\\\\c9f795c4\\\\tmp\\\\smoke.py\")",
+      "Read(//c/Users/ADMIN/.claude/jobs/c9f795c4/tmp/**)",
+      "Bash(python -)",
+      "PowerShell(python manage.py shell -c \"from accounts.models import User; from applications.models import StickerApplication as S; from gate.models import GateLog, AuditLog; print\\('smoke users left:', User.objects.filter\\(username__startswith='_smoke'\\).count\\(\\)\\); print\\('smoke apps left:', S.objects.filter\\(plate_number__startswith='SMK'\\).count\\(\\) + S.objects.filter\\(plate_number__startswith='PGN'\\).count\\(\\)\\); print\\('totals -> users:', User.objects.count\\(\\), 'apps:', S.objects.count\\(\\), 'gatelogs:', GateLog.objects.count\\(\\), 'auditlogs:', AuditLog.objects.count\\(\\)\\)\")",
+      "PowerShell(python manage.py check --deploy 2>&1 | Select-Object -Last 30; python manage.py check; python manage.py makemigrations --check --dry-run)",
+      "PowerShell(python manage.py check)",
+      "PowerShell($env:PYTHONUNBUFFERED='1'; python manage.py runserver 0.0.0.0:8000 --noreload)",
+      "Bash(sed -n '1,60p' \"C:\\\\Users\\\\ADMIN\\\\AppData\\\\Roaming\\\\Python\\\\Python314\\\\site-packages\\\\django\\\\template\\\\context.py\")",
+      "Bash(\"C:\\\\Program Files\\\\Python314\\\\python.exe\" -m pip index versions django)",
+      "WebFetch(domain:code.djangoproject.com)",
+      "Bash(\"C:\\\\Program Files\\\\Python314\\\\python.exe\" -m pip show django)",
+      "Bash(\"C:\\\\Program Files\\\\Python314\\\\python.exe\" -m pip install \"Django==5.2.16\")",
+      "Bash(\"C:\\\\Program Files\\\\Python314\\\\python.exe\" manage.py check)",
+      "Bash(taskkill //F //IM python.exe //FI \"WINDOWTITLE eq *manage.py*\")",
+      "Bash(pkill -f \"manage.py runserver\")",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
+    ]
+  }
+}

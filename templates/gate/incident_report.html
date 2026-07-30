@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+{% block title %}Incident Report{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-file-earmark-text text-primary"></i> Incident Report</h2>
+    <div class="d-flex gap-2">
+        <a href="{% url 'gate_logs' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Logs
+        </a>
+        <a href="{% url 'incident_pdf' log.pk %}" class="btn btn-danger">
+            <i class="bi bi-file-pdf"></i> Download PDF
+        </a>
+    </div>
+</div>
+
+<!-- Status Banner -->
+{% if log.action == 'entry' %}
+    <div class="alert alert-success fs-5">
+        <i class="bi bi-arrow-right-circle-fill"></i>
+        <strong>Authorised Entry</strong>
+    </div>
+{% elif log.action == 'exit' %}
+    <div class="alert alert-warning fs-5">
+        <i class="bi bi-arrow-left-circle-fill"></i>
+        <strong>Authorised Exit</strong>
+    </div>
+{% else %}
+    <div class="alert alert-danger fs-5">
+        <i class="bi bi-x-circle-fill"></i>
+        <strong>Access Denied</strong>
+        {% if log.denial_reason %}
+            — {{ log.denial_reason }}
+        {% endif %}
+    </div>
+{% endif %}
+
+<div class="row">
+    <!-- Log Details -->
+    <div class="col-md-6">
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-white fw-bold">
+                <i class="bi bi-clock text-primary"></i> Event Details
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-bordered mb-0">
+                    <tr>
+                        <th>Timestamp</th>
+                        <td>{{ log.timestamp|date:"F d, Y" }}
+                            at {{ log.timestamp|date:"H:i:s" }}</td>
+                    </tr>
+                    <tr><th>Gate Location</th><td>{{ log.gate_location }}</td></tr>
+                    <tr><th>RFID UID</th><td><code>{{ log.rfid_uid }}</code></td></tr>
+                    <tr><th>Action</th><td>{{ log.get_action_display }}</td></tr>
+                    {% if log.denial_reason %}
+                    <tr>
+                        <th>Denial Reason</th>
+                        <td class="text-danger">{{ log.denial_reason }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vehicle and Driver Info -->
+    <div class="col-md-6">
+        {% if application %}
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-white fw-bold">
+                <i class="bi bi-car-front-fill text-primary"></i> Vehicle Information
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-bordered mb-0">
+                    <tr>
+                        <th>Plate Number</th>
+                        <td><strong>{{ application.plate_number }}</strong></td>
+                    </tr>
+                    <tr>
+                        <th>Sticker ID</th>
+                        <td>
+                            {% if application.sticker_id %}
+                                <code>{{ application.sticker_id }}</code>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Vehicle Type</th>
+                        <td>{{ application.get_vehicle_type_display }}</td>
+                    </tr>
+                    <tr>
+                        <th>Color</th>
+                        <td>{{ application.get_vehicle_color_display }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <div class="card shadow-sm">
+            <div class="card-header bg-white fw-bold">
+                <i class="bi bi-person-fill text-primary"></i> Driver Information
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-bordered mb-0">
+                    <tr><th>Name</th><td>{{ application.full_name }}</td></tr>
+                    <tr>
+                        <th>Classification</th>
+                        <td>{{ application.get_classification_display }}</td>
+                    </tr>
+                    <tr><th>ID Number</th><td>{{ application.id_number }}</td></tr>
+                    <tr>
+                        <th>College/Dept</th>
+                        <td>{{ application.college_department }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle"></i>
+            No registered vehicle found for RFID UID
+            <code>{{ log.rfid_uid }}</code>.
+            This tag is not linked to any sticker application.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

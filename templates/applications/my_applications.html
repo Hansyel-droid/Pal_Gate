@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% block title %}My Applications{% endblock %}
+
+{% block content %}
+<h2><i class="bi bi-list-ul text-primary"></i> My Applications</h2>
+
+{% if page_obj.paginator.count %}
+<div class="table-responsive mt-4">
+    <table class="table table-hover table-bordered">
+        <thead class="table-dark">
+            <tr>
+                <th>Plate Number</th>
+                <th>Vehicle Type</th>
+                <th>Status</th>
+                <th>Appointment</th>
+                <th>Submitted</th>
+                <th>Sticker ID</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for app in page_obj %}
+            <tr>
+                <td>{{ app.plate_number }}</td>
+                <td>{{ app.get_vehicle_type_display }}</td>
+                <td>
+                    {% if app.status == 'draft' %}
+                        <span class="badge bg-secondary">Draft</span>
+                    {% elif app.status == 'scheduled' %}
+                        <span class="badge bg-info">Scheduled</span>
+                    {% elif app.status == 'approved' %}
+                        <span class="badge bg-success">Approved</span>
+                    {% elif app.status == 'rejected' %}
+                        <span class="badge bg-danger">Rejected</span>
+                    {% elif app.status == 'issued' %}
+                        <span class="badge bg-primary">Sticker Issued</span>
+                    {% elif app.status == 'expired' %}
+                        <span class="badge bg-dark">Expired</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if app.appointment %}
+                        {{ app.appointment.slot.date|date:"M d, Y" }}
+                        at {{ app.appointment.time }}
+                    {% else %}
+                        <span class="text-muted">Not yet assigned</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if app.submitted_at %}
+                        {{ app.submitted_at|date:"M d, Y" }}
+                    {% else %}
+                        <span class="text-muted">—</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if app.sticker_id %}
+                        <code>{{ app.sticker_id }}</code>
+                    {% else %}
+                        <span class="text-muted">—</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<nav class="mt-3">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                Previous
+            </a>
+        </li>
+        {% endif %}
+        <li class="page-item disabled">
+            <span class="page-link">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+        </li>
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                Next
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="alert alert-info mt-4">
+    <i class="bi bi-info-circle"></i>
+    You have no applications yet.
+    <a href="{% url 'apply_step1' %}">Start your first application</a>.
+</div>
+{% endif %}
+{% endblock %}

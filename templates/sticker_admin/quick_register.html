@@ -1,0 +1,231 @@
+{% extends 'base.html' %}
+{% block title %}Quick Register{% endblock %}
+
+{% block extra_css %}
+<style>
+    .req-badge {
+        display: inline-block;
+        background: #FDECEA;
+        color: var(--danger);
+        font-size: 0.6rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-left: 6px;
+        vertical-align: middle;
+    }
+    .rfid-input {
+        font-family: 'DM Sans', monospace;
+        font-size: 1.1rem;
+        letter-spacing: 0.05em;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-3">
+    <div class="page-header mb-0">
+        <h2><i class="bi bi-lightning-charge" style="color:var(--gold);"></i> Quick Register</h2>
+        <p class="page-sub">
+            Walk-in and emergency registration — creates the record and issues
+            the sticker in one step, bypassing the application queue.
+        </p>
+    </div>
+    <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back
+    </a>
+</div>
+
+<div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    This bypasses document verification. Confirm the OR/CR and driver's
+    license in person before issuing the sticker. Every quick registration
+    is written to the audit log.
+</div>
+
+<form method="post" autocomplete="off">
+    {% csrf_token %}
+    <div class="row g-3">
+
+        <!-- Left: Personal Details -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    <i class="bi bi-person-fill" style="color:var(--navy-mid);"></i>
+                    Personal Details
+                </div>
+                <div class="card-body" style="padding:24px;">
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Full Name <span class="req-badge">Required</span>
+                        </label>
+                        <input type="text" name="full_name" class="form-control"
+                               value="{{ form_data.full_name|default:'' }}"
+                               placeholder="Juan dela Cruz" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            ID Number <span class="req-badge">Required</span>
+                        </label>
+                        <input type="text" name="id_number" class="form-control"
+                               value="{{ form_data.id_number|default:'' }}"
+                               placeholder="20-1234-567" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            College / Department <span class="req-badge">Required</span>
+                        </label>
+                        <input type="text" name="college_department" class="form-control"
+                               value="{{ form_data.college_department|default:'' }}"
+                               placeholder="College of Sciences" required>
+                    </div>
+
+                    <div class="mb-0">
+                        <label class="form-label">
+                            Classification <span class="req-badge">Required</span>
+                        </label>
+                        <select name="classification" class="form-select" required>
+                            <option value="">Select classification...</option>
+                            {% for value, label in classification_choices %}
+                            <option value="{{ value }}"
+                                {% if form_data.classification == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <hr class="section-divider">
+                    <p class="text-muted small mb-0">
+                        <i class="bi bi-info-circle"></i>
+                        An applicant account is created automatically from the ID
+                        number. It has no password — it exists only to own this
+                        record, so the holder cannot sign in to the portal with it.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Vehicle + RFID -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm mb-3">
+                <div class="card-header">
+                    <i class="bi bi-car-front-fill" style="color:var(--navy-mid);"></i>
+                    Vehicle Details
+                </div>
+                <div class="card-body" style="padding:24px;">
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Plate Number <span class="req-badge">Required</span>
+                        </label>
+                        <input type="text" name="plate_number" class="form-control"
+                               value="{{ form_data.plate_number|default:'' }}"
+                               placeholder="ABC 1234"
+                               style="text-transform:uppercase;" required>
+                    </div>
+
+                    <div class="row g-3 mb-0">
+                        <div class="col-sm-6">
+                            <label class="form-label">
+                                Vehicle Type <span class="req-badge">Required</span>
+                            </label>
+                            <select name="vehicle_type" class="form-select" required>
+                                <option value="">Select type...</option>
+                                {% for value, label in vehicle_type_choices %}
+                                <option value="{{ value }}"
+                                    {% if form_data.vehicle_type == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label">
+                                Vehicle Color <span class="req-badge">Required</span>
+                            </label>
+                            <select name="vehicle_color" class="form-select" required>
+                                <option value="">Select color...</option>
+                                {% for value, label in color_choices %}
+                                <option value="{{ value }}"
+                                    {% if form_data.vehicle_color == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <i class="bi bi-wifi" style="color:var(--success);"></i>
+                    RFID Tag Assignment
+                </div>
+                <div class="card-body" style="padding:24px;">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        Scan the tag on the registration scanner, or type the UID
+                        manually. The field auto-fills within 3 seconds of a scan.
+                    </div>
+
+                    <label class="form-label">
+                        RFID Tag UID <span class="req-badge">Required</span>
+                    </label>
+                    <div class="input-group">
+                        <input type="text" name="rfid_uid" id="rfid_uid"
+                               class="form-control rfid-input"
+                               value="{{ form_data.rfid_uid|default:'' }}"
+                               placeholder="Scan or type RFID UID..."
+                               required autocomplete="off">
+                        <button type="button" class="btn btn-outline-secondary"
+                                onclick="document.getElementById('rfid_uid').value = ''">
+                            <i class="bi bi-x"></i> Clear
+                        </button>
+                    </div>
+                    <div class="form-text" id="scan_status">
+                        <i class="bi bi-circle text-secondary"></i> Waiting for scan...
+                    </div>
+
+                    <hr class="section-divider">
+
+                    <button type="submit" class="btn btn-gold btn-lg w-100"
+                            onclick="return confirm('Register this vehicle and issue the sticker now?')">
+                        <i class="bi bi-patch-check-fill"></i> Register &amp; Issue Sticker
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Poll for a newly scanned RFID tag every 3 seconds
+    let lastUid = '';
+
+    function pollForRFID() {
+        fetch('/api/latest-pending-uid/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.uid && data.uid !== lastUid) {
+                    document.getElementById('rfid_uid').value = data.uid;
+                    lastUid = data.uid;
+                    document.getElementById('scan_status').innerHTML =
+                        '<i class="bi bi-check-circle text-success"></i> Tag scanned: ' + data.uid;
+                }
+            })
+            .catch(() => {
+                // API not ready yet, silently ignore
+            });
+    }
+
+    setInterval(pollForRFID, 3000);
+</script>
+{% endblock %}

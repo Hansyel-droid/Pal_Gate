@@ -1,0 +1,12 @@
+.env
+db.sqlite3
+media/
+!media/.gitkeep
+logs/
+staticfiles/
+backups/
+__pycache__/
+*.pyc
+venv/
+.venv/
+*.egg-info/

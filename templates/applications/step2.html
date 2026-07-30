@@ -1,0 +1,238 @@
+{% extends 'base.html' %}
+{% block title %}Apply — Step 2{% endblock %}
+
+{% block content %}
+<div class="page-header text-center" style="margin-bottom:32px;">
+    <h2>Vehicle Sticker Application</h2>
+    <p class="page-sub">Upload your documents. Only PDF, JPG, JPEG, PNG accepted.</p>
+</div>
+
+<!-- Wizard Steps -->
+<div style="max-width:600px; margin:0 auto 32px;">
+    <div class="wizard-steps">
+        <div class="wizard-step done">
+            <div class="step-num"><i class="bi bi-check" style="font-size:0.8rem;"></i></div>
+            <span>Personal Details</span>
+        </div>
+        <div class="wizard-connector" style="background:var(--success);"></div>
+        <div class="wizard-step active">
+            <div class="step-num">2</div>
+            <span>Vehicle & Documents</span>
+        </div>
+        <div class="wizard-connector"></div>
+        <div class="wizard-step">
+            <div class="step-num">3</div>
+            <span>Review & Confirm</span>
+        </div>
+    </div>
+</div>
+
+<!-- Two-column layout on wide screens -->
+<div style="max-width:860px; margin:0 auto;">
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <div class="row g-4">
+
+            <!-- Left column: Vehicle info -->
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <i class="bi bi-car-front-fill me-2"
+                           style="color:var(--gold);"></i>
+                        Vehicle Information
+                    </div>
+                    <div class="card-body" style="padding:24px;">
+                        <div class="mb-3">
+                            <label class="form-label">Plate Number *</label>
+                            {{ form.plate_number }}
+                            {% if form.plate_number.errors %}
+                                <div style="font-size:0.78rem; color:var(--danger); margin-top:4px;">
+                                    {{ form.plate_number.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Vehicle Type *</label>
+                            {{ form.vehicle_type }}
+                            {% if form.vehicle_type.errors %}
+                                <div style="font-size:0.78rem; color:var(--danger); margin-top:4px;">
+                                    {{ form.vehicle_type.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Color *</label>
+                            {{ form.vehicle_color }}
+                            {% if form.vehicle_color.errors %}
+                                <div style="font-size:0.78rem; color:var(--danger); margin-top:4px;">
+                                    {{ form.vehicle_color.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Are you the vehicle owner? *</label>
+                            {{ form.is_owner }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right column: Documents -->
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <i class="bi bi-file-earmark-arrow-up me-2"
+                           style="color:var(--gold);"></i>
+                        Document Uploads
+                    </div>
+                    <div class="card-body" style="padding:24px;">
+
+                        <div style="background:#F8FAFD; border:1px solid var(--border);
+                                    border-radius:6px; padding:10px 14px;
+                                    font-size:0.8rem; color:var(--text-muted);
+                                    margin-bottom:18px;">
+                            <i class="bi bi-info-circle me-1"
+                               style="color:var(--info);"></i>
+                            PDF, JPG, JPEG, or PNG only.
+                            Max one file per field.
+                        </div>
+
+                        <!-- OR/CR -->
+                        <div class="mb-3">
+                            <label class="form-label">
+                                OR/CR
+                                <span class="status-badge badge-rejected ms-1"
+                                      style="font-size:0.68rem;">Required</span>
+                            </label>
+                            {{ form.or_cr }}
+                            {% if form.or_cr.errors %}
+                                <div style="font-size:0.78rem; color:var(--danger); margin-top:4px;">
+                                    {{ form.or_cr.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Driver's License -->
+                        <div class="mb-3">
+                            <label class="form-label">
+                                Driver's License
+                                <span class="status-badge badge-rejected ms-1"
+                                      style="font-size:0.68rem;">Required</span>
+                            </label>
+                            {{ form.drivers_license }}
+                            {% if form.drivers_license.errors %}
+                                <div style="font-size:0.78rem; color:var(--danger); margin-top:4px;">
+                                    {{ form.drivers_license.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- COR -->
+                        <div class="mb-3" id="cor_wrapper">
+                            <label class="form-label">
+                                COR
+                                <span class="status-badge badge-scheduled ms-1"
+                                      style="font-size:0.68rem;">Students only</span>
+                            </label>
+                            {{ form.cor }}
+                            <div id="cor_hint"
+                                 style="font-size:0.78rem; color:var(--text-muted);
+                                        margin-top:4px;"></div>
+                            {% if form.cor.errors %}
+                                <div style="font-size:0.78rem; color:var(--danger); margin-top:4px;">
+                                    {{ form.cor.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Authorization Letter -->
+                        <div class="mb-2" id="auth_wrapper">
+                            <label class="form-label">
+                                Authorization Letter
+                                <span class="status-badge badge-draft ms-1"
+                                      style="font-size:0.68rem;">Non-owners only</span>
+                            </label>
+                            {{ form.authorization_letter }}
+                            <div id="auth_hint"
+                                 style="font-size:0.78rem; color:var(--text-muted);
+                                        margin-top:4px;"></div>
+                            {% if form.authorization_letter.errors %}
+                                <div style="font-size:0.78rem; color:var(--danger); margin-top:4px;">
+                                    {{ form.authorization_letter.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Non-field errors -->
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger mt-3">
+            {% for error in form.non_field_errors %}
+                <div>{{ error }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Navigation -->
+        <div class="d-flex justify-content-between mt-4">
+            <a href="{% url 'apply_step1' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Back
+            </a>
+            <button type="submit" class="btn btn-primary" style="min-width:160px;">
+                Next: Review
+                <i class="bi bi-arrow-right ms-2"></i>
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const classification = "{{ step1_data.classification|default:'' }}";
+    const isOwnerSelect = document.getElementById('id_is_owner');
+    const corInput = document.getElementById('id_cor');
+    const authInput = document.getElementById('id_authorization_letter');
+    const corHint = document.getElementById('cor_hint');
+    const authHint = document.getElementById('auth_hint');
+
+    function updateCorField() {
+        if (classification === 'student') {
+            corInput.disabled = false;
+            corInput.required = true;
+            corInput.style.opacity = '1';
+            corHint.textContent = '';
+        } else {
+            corInput.disabled = true;
+            corInput.required = false;
+            corInput.value = '';
+            corInput.style.opacity = '0.4';
+            corHint.textContent = 'Not required for your classification.';
+        }
+    }
+
+    function updateAuthField() {
+        if (isOwnerSelect.value === 'yes') {
+            authInput.disabled = true;
+            authInput.required = false;
+            authInput.value = '';
+            authInput.style.opacity = '0.4';
+            authHint.textContent = 'Not required — you are the vehicle owner.';
+        } else {
+            authInput.disabled = false;
+            authInput.required = true;
+            authInput.style.opacity = '1';
+            authHint.textContent = '';
+        }
+    }
+
+    updateCorField();
+    updateAuthField();
+    isOwnerSelect.addEventListener('change', updateAuthField);
+</script>
+{% endblock %}

@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+{% block title %}Apply — Step 3: Review{% endblock %}
+
+{% block content %}
+<div class="page-header text-center" style="margin-bottom:32px;">
+    <h2>Review & Confirm</h2>
+    <p class="page-sub">Check everything carefully. Click Submit when ready.</p>
+</div>
+
+<!-- Wizard Steps -->
+<div style="max-width:600px; margin:0 auto 32px;">
+    <div class="wizard-steps">
+        <div class="wizard-step done">
+            <div class="step-num"><i class="bi bi-check" style="font-size:0.8rem;"></i></div>
+            <span>Personal Details</span>
+        </div>
+        <div class="wizard-connector" style="background:var(--success);"></div>
+        <div class="wizard-step done">
+            <div class="step-num"><i class="bi bi-check" style="font-size:0.8rem;"></i></div>
+            <span>Vehicle & Documents</span>
+        </div>
+        <div class="wizard-connector" style="background:var(--success);"></div>
+        <div class="wizard-step active">
+            <div class="step-num">3</div>
+            <span>Review & Confirm</span>
+        </div>
+    </div>
+</div>
+
+<div style="max-width:860px; margin:0 auto;">
+
+    <div class="row g-4 mb-4">
+
+        <!-- Personal Details -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <i class="bi bi-person-fill me-2" style="color:var(--gold);"></i>
+                    Personal Details
+                </div>
+                <div class="card-body" style="padding:0;">
+                    <table class="table table-sm mb-0" style="font-size:0.85rem;">
+                        <tr>
+                            <th style="width:45%; padding:12px 16px;
+                                       color:var(--text-muted); font-weight:500;
+                                       background:#FAFBFD;">
+                                Full Name
+                            </th>
+                            <td style="padding:12px 16px; font-weight:600;">
+                                {{ step1.full_name }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th style="padding:12px 16px; color:var(--text-muted);
+                                       font-weight:500; background:#FAFBFD;">
+                                Classification
+                            </th>
+                            <td style="padding:12px 16px;">
+                                {{ step1.classification|capfirst }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th style="padding:12px 16px; color:var(--text-muted);
+                                       font-weight:500; background:#FAFBFD;">
+                                ID Number
+                            </th>
+                            <td style="padding:12px 16px;">
+                                {{ step1.id_number }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th style="padding:12px 16px; color:var(--text-muted);
+                                       font-weight:500; background:#FAFBFD;">
+                                College / Dept
+                            </th>
+                            <td style="padding:12px 16px;">
+                                {{ step1.college_department }}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vehicle Details -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <i class="bi bi-car-front-fill me-2" style="color:var(--gold);"></i>
+                    Vehicle Details
+                </div>
+                <div class="card-body" style="padding:0;">
+                    <table class="table table-sm mb-0" style="font-size:0.85rem;">
+                        <tr>
+                            <th style="width:45%; padding:12px 16px;
+                                       color:var(--text-muted); font-weight:500;
+                                       background:#FAFBFD;">
+                                Plate Number
+                            </th>
+                            <td style="padding:12px 16px;">
+                                <code>{{ step2.plate_number }}</code>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th style="padding:12px 16px; color:var(--text-muted);
+                                       font-weight:500; background:#FAFBFD;">
+                                Vehicle Type
+                            </th>
+                            <td style="padding:12px 16px;">
+                                {{ step2.vehicle_type|capfirst }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th style="padding:12px 16px; color:var(--text-muted);
+                                       font-weight:500; background:#FAFBFD;">
+                                Color
+                            </th>
+                            <td style="padding:12px 16px;">
+                                {{ step2.vehicle_color|capfirst }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th style="padding:12px 16px; color:var(--text-muted);
+                                       font-weight:500; background:#FAFBFD;">
+                                Owner
+                            </th>
+                            <td style="padding:12px 16px;">
+                                {% if step2.is_owner == 'yes' %}Yes{% else %}No{% endif %}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Documents -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="bi bi-file-earmark-check me-2" style="color:var(--gold);"></i>
+            Uploaded Documents
+        </div>
+        <div class="card-body" style="padding:20px;">
+            <div class="row g-3">
+                {% for label, filename in files_info.items %}
+                {% if filename %}
+                <div class="col-sm-6 col-lg-3">
+                    <div style="background:#F0F7F4; border:1px solid #C3E6D8;
+                                border-radius:8px; padding:14px 16px;
+                                display:flex; align-items:flex-start; gap:10px;">
+                        <i class="bi bi-file-earmark-check-fill"
+                           style="color:var(--success); font-size:1.4rem; flex-shrink:0;
+                                  margin-top:2px;"></i>
+                        <div>
+                            <div style="font-size:0.7rem; font-weight:700;
+                                        text-transform:uppercase; letter-spacing:0.06em;
+                                        color:var(--success); margin-bottom:3px;">
+                                {{ label }}
+                            </div>
+                            <div style="font-size:0.8rem; color:var(--text-main);
+                                        word-break:break-all;">
+                                {{ filename }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Appointment note -->
+    <div class="alert alert-info mb-4">
+        <i class="bi bi-calendar-check me-2"></i>
+        <strong>Appointment will be auto-assigned</strong> immediately after you
+        submit, based on the next available inspection date.
+    </div>
+
+    <!-- Submit -->
+    <form method="post">
+        {% csrf_token %}
+        <div class="d-flex justify-content-between align-items-center">
+            <button type="submit" name="go_back"
+                    class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Go Back & Edit
+            </button>
+            <button type="submit" class="btn btn-gold"
+                    style="padding:10px 32px; font-size:0.95rem;">
+                <i class="bi bi-send-fill me-2"></i>
+                Submit Application
+            </button>
+        </div>
+    </form>
+
+</div>
+{% endblock %}

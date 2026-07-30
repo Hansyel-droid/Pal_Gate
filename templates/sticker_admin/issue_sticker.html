@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% block title %}Issue Sticker{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-patch-check text-success"></i> Issue Sticker</h2>
+    <a href="{% url 'sticker_station' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back
+    </a>
+</div>
+
+<div class="row">
+    <!-- Applicant Info -->
+    <div class="col-md-5">
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-white fw-bold">
+                <i class="bi bi-person-fill text-primary"></i> Applicant
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-bordered mb-0">
+                    <tr><th>Name</th><td>{{ application.full_name }}</td></tr>
+                    <tr><th>ID Number</th><td>{{ application.id_number }}</td></tr>
+                    <tr><th>Classification</th><td>{{ application.get_classification_display }}</td></tr>
+                    <tr><th>College/Dept</th><td>{{ application.college_department }}</td></tr>
+                </table>
+            </div>
+        </div>
+        <div class="card shadow-sm">
+            <div class="card-header bg-white fw-bold">
+                <i class="bi bi-car-front-fill text-primary"></i> Vehicle
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-bordered mb-0">
+                    <tr><th>Plate</th><td><strong>{{ application.plate_number }}</strong></td></tr>
+                    <tr><th>Type</th><td>{{ application.get_vehicle_type_display }}</td></tr>
+                    <tr><th>Color</th><td>{{ application.get_vehicle_color_display }}</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Issue Sticker Form -->
+    <div class="col-md-7">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white fw-bold">
+                <i class="bi bi-wifi text-success"></i> RFID Tag Assignment
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    Scan the RFID tag using the registration scanner,
+                    or type the UID manually below.
+                    The field will auto-fill every 3 seconds if a new tag is scanned.
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">RFID Tag UID *</label>
+                        <div class="input-group">
+                            <input type="text" name="rfid_uid" id="rfid_uid"
+                                   class="form-control form-control-lg"
+                                   placeholder="Scan or type RFID UID..."
+                                   required autocomplete="off">
+                            <button type="button" class="btn btn-outline-secondary"
+                                    onclick="document.getElementById('rfid_uid').value = ''">
+                                <i class="bi bi-x"></i> Clear
+                            </button>
+                        </div>
+                        <div class="form-text" id="scan_status">
+                            <i class="bi bi-circle text-secondary"></i> Waiting for scan...
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-success btn-lg w-100"
+                            onclick="return confirm('Issue sticker for {{ application.full_name }}?')">
+                        <i class="bi bi-patch-check-fill"></i> Issue Sticker
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Poll for a new RFID tag every 3 seconds
+    let lastUid = '';
+
+    function pollForRFID() {
+        fetch('/api/latest-pending-uid/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.uid && data.uid !== lastUid) {
+                    document.getElementById('rfid_uid').value = data.uid;
+                    lastUid = data.uid;
+                    document.getElementById('scan_status').innerHTML =
+                        '<i class="bi bi-check-circle text-success"></i> Tag scanned: ' + data.uid;
+                }
+            })
+            .catch(() => {
+                // API not ready yet, silently ignore
+            });
+    }
+
+    // Start polling every 3 seconds
+    setInterval(pollForRFID, 3000);
+</script>
+{% endblock %}

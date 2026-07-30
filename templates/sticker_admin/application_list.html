@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% block title %}All Applications{% endblock %}
+
+{% block content %}
+<h2><i class="bi bi-folder2-open text-primary"></i> All Applications</h2>
+
+<!-- Search and Filter -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-2">
+            <div class="col-md-6">
+                <input type="text" name="q" class="form-control"
+                       placeholder="Search by name, ID, plate number, sticker ID..."
+                       value="{{ query }}">
+            </div>
+            <div class="col-md-3">
+                <select name="status" class="form-select">
+                    <option value="">All Statuses</option>
+                    {% for value, label in status_choices %}
+                        <option value="{{ value }}"
+                            {% if status_filter == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i> Search
+                </button>
+            </div>
+            <div class="col-md-1">
+                <a href="{% url 'application_list' %}" class="btn btn-outline-secondary w-100">
+                    Clear
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Applications Table -->
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>Name</th>
+                    <th>ID Number</th>
+                    <th>Plate</th>
+                    <th>Classification</th>
+                    <th>Status</th>
+                    <th>Appointment</th>
+                    <th>Submitted</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for app in applications %}
+                <tr>
+                    <td>{{ app.full_name }}</td>
+                    <td>{{ app.id_number }}</td>
+                    <td><strong>{{ app.plate_number }}</strong></td>
+                    <td>{{ app.get_classification_display }}</td>
+                    <td>
+                        {% if app.status == 'draft' %}
+                            <span class="badge bg-secondary">Draft</span>
+                        {% elif app.status == 'scheduled' %}
+                            <span class="badge bg-info">Scheduled</span>
+                        {% elif app.status == 'approved' %}
+                            <span class="badge bg-success">Approved</span>
+                        {% elif app.status == 'rejected' %}
+                            <span class="badge bg-danger">Rejected</span>
+                        {% elif app.status == 'issued' %}
+                            <span class="badge bg-primary">Issued</span>
+                        {% elif app.status == 'expired' %}
+                            <span class="badge bg-dark">Expired</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if app.appointment %}
+                            {{ app.appointment.slot.date|date:"M d" }}
+                            at {{ app.appointment.time }}
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-muted small">
+                        {{ app.submitted_at|date:"M d, Y"|default:"—" }}
+                    </td>
+                    <td>
+                        <a href="{% url 'application_detail' app.pk %}"
+                           class="btn btn-sm btn-outline-primary">
+                            View
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-4">
+                        No applications found.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

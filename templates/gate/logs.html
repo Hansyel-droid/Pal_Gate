@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+{% load mask_filters %}
+{% block title %}Gate Logs{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="bi bi-journal-text text-primary"></i> Gate Logs</h2>
+    <a href="{% url 'export_csv' %}?q={{ query }}&action={{ action_filter }}&date_from={{ date_from }}&date_to={{ date_to }}"
+       class="btn btn-success">
+        <i class="bi bi-download"></i> Export CSV
+    </a>
+</div>
+
+<!-- Filters -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-2">
+            <div class="col-md-3">
+                <input type="text" name="q" class="form-control"
+                       placeholder="Plate or driver name..."
+                       value="{{ query }}">
+            </div>
+            <div class="col-md-2">
+                <select name="action" class="form-select">
+                    <option value="">All Actions</option>
+                    <option value="entry" {% if action_filter == 'entry' %}selected{% endif %}>Entry</option>
+                    <option value="exit" {% if action_filter == 'exit' %}selected{% endif %}>Exit</option>
+                    <option value="denied" {% if action_filter == 'denied' %}selected{% endif %}>Denied</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="gate" class="form-select">
+                    <option value="">All Gates</option>
+                    {% for gate in gate_locations %}
+                        <option value="{{ gate }}"
+                            {% if gate_filter == gate %}selected{% endif %}>
+                            {{ gate }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="date_from" class="form-control"
+                       value="{{ date_from }}" placeholder="From">
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="date_to" class="form-control"
+                       value="{{ date_to }}" placeholder="To">
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i>
+                </button>
+            </div>
+        </form>
+        <div class="mt-2 text-muted small">
+            Showing {{ page_obj.paginator.count }} result(s).
+            <a href="{% url 'gate_logs' %}">Clear filters</a>
+        </div>
+    </div>
+</div>
+
+<!-- Logs Table -->
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Plate</th>
+                    <th>Sticker ID</th>
+                    <th>Driver</th>
+                    <th>Action</th>
+                    <th>Gate</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in page_obj %}
+                <tr>
+                    <td class="text-muted small">
+                        {{ log.timestamp|date:"M d, Y H:i:s" }}
+                    </td>
+                    <td>
+                        {% if log.application %}
+                            <strong>{{ log.application.plate_number|mask_plate }}</strong>
+                        {% else %}
+                            <span class="text-muted small">{{ log.rfid_uid|mask_rfid }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if log.application.sticker_id %}
+                            <code>{{ log.application.sticker_id|mask_sticker_id }}</code>
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if log.application %}
+                            {{ log.application.full_name|mask_name }}
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if log.action == 'entry' %}
+                            <span class="badge bg-success">Entry</span>
+                        {% elif log.action == 'exit' %}
+                            <span class="badge bg-warning text-dark">Exit</span>
+                        {% else %}
+                            <span class="badge bg-danger">Denied</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ log.gate_location }}</td>
+                    <td>
+                        <a href="{% url 'incident_report' log.pk %}"
+                           class="btn btn-sm btn-outline-primary">
+                            Report
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-4">
+                        No logs found.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<nav class="mt-3">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link"
+               href="?page={{ page_obj.previous_page_number }}&q={{ query }}&action={{ action_filter }}&date_from={{ date_from }}&date_to={{ date_to }}">
+                Previous
+            </a>
+        </li>
+        {% endif %}
+        <li class="page-item disabled">
+            <span class="page-link">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+        </li>
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link"
+               href="?page={{ page_obj.next_page_number }}&q={{ query }}&action={{ action_filter }}&date_from={{ date_from }}&date_to={{ date_to }}">
+                Next
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

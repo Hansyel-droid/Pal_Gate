@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard — Admin{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Dashboard</h2>
+    <p class="page-sub">
+        Welcome back, {{ user.get_full_name|default:user.username }} —
+        {{ now|date:"l, F d, Y" }}
+    </p>
+</div>
+
+<!-- Stat Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-4">
+        <div class="stat-card warning">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-label">Pending Review</div>
+                    <div class="stat-value">{{ stats.pending }}</div>
+                </div>
+                <i class="bi bi-hourglass-split stat-icon"></i>
+            </div>
+            <div style="margin-top:10px;">
+                <a href="{% url 'application_list' %}?status=scheduled"
+                   style="font-size:0.78rem; color:var(--warning); font-weight:600;">
+                    View all <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-4">
+        <div class="stat-card success">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-label">Approved Today</div>
+                    <div class="stat-value">{{ stats.approved_today }}</div>
+                </div>
+                <i class="bi bi-check-circle stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-4">
+        <div class="stat-card info">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-label">Waiting for Claim</div>
+                    <div class="stat-value">{{ stats.waiting_claim }}</div>
+                </div>
+                <i class="bi bi-person-check stat-icon"></i>
+            </div>
+            <div style="margin-top:10px;">
+                <a href="{% url 'sticker_station' %}"
+                   style="font-size:0.78rem; color:var(--info); font-weight:600;">
+                    Go to station <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-4">
+        <div class="stat-card danger">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-label">Rejected</div>
+                    <div class="stat-value">{{ stats.rejected }}</div>
+                </div>
+                <i class="bi bi-x-circle stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-4">
+        <div class="stat-card danger">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-label">High Priority (3+ days)</div>
+                    <div class="stat-value">{{ stats.high_priority }}</div>
+                </div>
+                <i class="bi bi-exclamation-triangle stat-icon"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-4">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-label">Stickers Issued</div>
+                    <div class="stat-value">{{ stats.issued }}</div>
+                </div>
+                <i class="bi bi-patch-check stat-icon"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-clock-history me-2"
+                 style="color:var(--gold);"></i>Recent Activity</span>
+        <a href="{% url 'application_list' %}"
+           style="font-size:0.78rem; color:var(--navy-mid); font-weight:600;">
+            View all <i class="bi bi-arrow-right"></i>
+        </a>
+    </div>
+    <table class="table mb-0">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Plate</th>
+                <th>Status</th>
+                <th>Last Updated</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for app in recent %}
+            <tr>
+                <td style="font-weight:500;">{{ app.full_name }}</td>
+                <td><code>{{ app.plate_number }}</code></td>
+                <td>
+                    <span class="status-badge badge-{{ app.status }}">
+                        {{ app.get_status_display }}
+                    </span>
+                </td>
+                <td style="color:var(--text-muted);">
+                    {{ app.updated_at|date:"M d, Y H:i" }}
+                </td>
+                <td>
+                    <a href="{% url 'application_detail' app.pk %}"
+                       class="btn btn-outline-secondary btn-sm">
+                        View
+                    </a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="text-center text-muted py-4">
+                    No recent activity yet.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
