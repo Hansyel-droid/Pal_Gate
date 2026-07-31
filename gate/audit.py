@@ -1,11 +1,20 @@
+from django.conf import settings
 from .models import AuditLog
 
 
 def get_client_ip(request):
-    """Extract real IP from request, handling proxies."""
-    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-    if x_forwarded_for:
-        return x_forwarded_for.split(',')[0].strip()
+    """
+    Extract the client IP from the request.
+
+    X-Forwarded-For is only honored when TRUST_X_FORWARDED_FOR is enabled —
+    with no reverse proxy in front of Django, that header can be set to
+    anything by the client, and trusting it would let anyone forge their
+    IP in the audit log.
+    """
+    if getattr(settings, 'TRUST_X_FORWARDED_FOR', False):
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            return x_forwarded_for.split(',')[0].strip()
     return request.META.get('REMOTE_ADDR')
 
 

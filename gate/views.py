@@ -1,6 +1,7 @@
 import csv
 import io
 from datetime import timedelta
+from xml.sax.saxutils import escape
 
 from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse
@@ -9,6 +10,7 @@ from django.db.models import Q
 
 from accounts.mixins import role_required
 from .models import GateLog
+from .masking import mask_plate, mask_name
 from applications.models import StickerApplication
 
 from reportlab.lib.pagesizes import A4
@@ -17,10 +19,22 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import getSampleStyleSheet
 
 
+def csv_safe(value):
+    """
+    Neutralize CSV formula injection: Excel/Sheets treat a cell starting with
+    =, +, -, or @ as a formula. Prefix those with a leading apostrophe so
+    they're always read back as plain text.
+    """
+    text = '' if value is None else str(value)
+    if text[:1] in ('=', '+', '-', '@'):
+        return "'" + text
+    return text
+
+
 @role_required('security')
 def gate_live(request):
-    today = timezone.now().date()
-    now = timezone.now()
+    today = timezone.localdate()
+    now = timezone.localtime()
     last_24h = now - timedelta(hours=24)
 
     # Today's counts
@@ -29,19 +43,28 @@ def gate_live(request):
     entries_today = today_logs.filter(action='entry').count()
     exits_today = today_logs.filter(action='exit').count()
 
-    # Active passes = vehicles that entered but haven't exited
-    # We get all plates that have logs today and check their last action
-    active_passes = 0
-    plates_seen = today_logs.values_list(
-        'application__plate_number', flat=True
-    ).distinct()
-    for plate in plates_seen:
-        if plate:
-            last_log = GateLog.objects.filter(
-                application__plate_number=plate
-            ).order_by('-timestamp').first()
-            if last_log and last_log.action == 'entry':
-                active_passes += 1
+    # Active passes = vehicles that entered but haven't exited.
+    # One query for the plates seen today, one query for their latest logs
+    # (across all history, since a vehicle may have entered on a prior day)
+    # instead of a query per plate.
+    # order_by() clears GateLog's default `-timestamp` ordering — without
+    # it, Django silently adds timestamp to SELECT DISTINCT and this would
+    # yield one row per log instead of deduplicating by plate.
+    plates_seen = [
+        p for p in today_logs.order_by().values_list(
+            'application__plate_number', flat=True
+        ).distinct()
+        if p
+    ]
+    latest_by_plate = {}
+    for log in GateLog.objects.filter(
+        application__plate_number__in=plates_seen
+    ).select_related('application').order_by('application__plate_number', '-timestamp'):
+        plate = log.application.plate_number
+        latest_by_plate.setdefault(plate, log)
+    active_passes = sum(
+        1 for log in latest_by_plate.values() if log.action == 'entry'
+    )
 
     # Latest 20 logs
     latest_logs = GateLog.objects.select_related(
@@ -112,8 +135,11 @@ def gate_logs(request):
     if date_to:
         logs = logs.filter(timestamp__date__lte=date_to)
 
-    # Get unique gate locations for the filter dropdown
-    gate_locations = GateLog.objects.values_list(
+    # Get unique gate locations for the filter dropdown.
+    # order_by() clears GateLog's default `-timestamp` ordering — without
+    # it, Django silently adds timestamp to SELECT DISTINCT and this would
+    # list the same gate location once per log instead of deduplicating.
+    gate_locations = GateLog.objects.order_by().values_list(
         'gate_location', flat=True
     ).distinct()
 
@@ -131,7 +157,7 @@ def gate_logs(request):
         'date_from': date_from,
         'date_to': date_to,
         'gate_locations': gate_locations,
-        'total_count': logs.count(),
+        'total_count': paginator.count,
     })
 
 
@@ -182,14 +208,14 @@ def incident_pdf(request, pk):
         Paragraph(f"<b>Time:</b> {log.timestamp.strftime('%B %d, %Y at %I:%M %p')}", styles['Normal'])
     )
     story.append(
-        Paragraph(f"<b>Gate:</b> {log.gate_location}", styles['Normal'])
+        Paragraph(f"<b>Gate:</b> {escape(log.gate_location)}", styles['Normal'])
     )
     story.append(
-        Paragraph(f"<b>RFID UID:</b> {log.rfid_uid}", styles['Normal'])
+        Paragraph(f"<b>RFID UID:</b> {escape(log.rfid_uid)}", styles['Normal'])
     )
     if log.denial_reason:
         story.append(
-            Paragraph(f"<b>Denial Reason:</b> {log.denial_reason}", styles['Normal'])
+            Paragraph(f"<b>Denial Reason:</b> {escape(log.denial_reason)}", styles['Normal'])
         )
     story.append(Spacer(1, 12))
 
@@ -269,22 +295,25 @@ def export_csv(request):
     ])
 
     for log in logs:
-        writer.writerow([
+        # Masked the same way the logs page is — this file gets downloaded,
+        # emailed, and opened outside the system, so it carries the same
+        # over-exposure risk as the browsing page.
+        writer.writerow([csv_safe(v) for v in [
             log.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
-            log.application.plate_number if log.application else '—',
+            mask_plate(log.application.plate_number) if log.application else '—',
             log.application.sticker_id if log.application else '—',
-            log.application.full_name if log.application else '—',
+            mask_name(log.application.full_name) if log.application else '—',
             log.get_action_display(),
             log.gate_location,
             log.denial_reason,
-        ])
+        ]])
 
     return response
 
 
 @role_required('security')
 def time_tracker(request):
-    now = timezone.now()
+    now = timezone.localtime()
 
     # Rule 1: Inside for more than 12 hours = duration overstay
     OVERSTAY_HOURS = 12
@@ -296,17 +325,25 @@ def time_tracker(request):
 
     inside_vehicles = []
 
-    plates = GateLog.objects.filter(
+    # order_by() clears GateLog's default `-timestamp` ordering — without
+    # it, Django silently adds timestamp to SELECT DISTINCT so this would
+    # return the same plate once per entry log instead of deduplicating.
+    plates = list(GateLog.objects.filter(
         action='entry',
         application__isnull=False
-    ).values_list(
+    ).order_by().values_list(
         'application__plate_number', flat=True
-    ).distinct()
+    ).distinct())
+
+    # One query for the latest log per plate instead of one query per plate.
+    latest_by_plate = {}
+    for log in GateLog.objects.filter(
+        application__plate_number__in=plates
+    ).select_related('application').order_by('application__plate_number', '-timestamp'):
+        latest_by_plate.setdefault(log.application.plate_number, log)
 
     for plate in plates:
-        last_log = GateLog.objects.filter(
-            application__plate_number=plate
-        ).order_by('-timestamp').first()
+        last_log = latest_by_plate.get(plate)
 
         if last_log and last_log.action == 'entry':
             duration = now - last_log.timestamp

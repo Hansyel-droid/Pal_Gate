@@ -2,11 +2,13 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
 from .forms import RegisterForm, LoginForm
 from gate.audit import log_action
 
 
+@ratelimit(key='ip', rate='10/m', method='POST', block=True)
 def register_view(request):
     """Handles new applicant registration."""
     if request.user.is_authenticated:
@@ -67,6 +69,7 @@ def login_view(request):
     return render(request, 'accounts/login.html', {'form': form})
 
 
+@require_POST
 def logout_view(request):
     """Logs the user out."""
     username = request.user.username

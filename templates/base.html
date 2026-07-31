@@ -141,6 +141,8 @@
             border-radius: 4px;
             text-decoration: none;
             transition: all 0.15s;
+            font-family: inherit;
+            cursor: pointer;
         }
 
         .btn-logout:hover {
@@ -567,9 +569,12 @@
         <div class="avatar">
             <i class="bi bi-person-fill"></i>
         </div>
-        <a href="{% url 'logout' %}" class="btn-logout">
-            <i class="bi bi-box-arrow-right"></i> Logout
-        </a>
+        <form method="post" action="{% url 'logout' %}" style="margin:0;">
+            {% csrf_token %}
+            <button type="submit" class="btn-logout">
+                <i class="bi bi-box-arrow-right"></i> Logout
+            </button>
+        </form>
     </div>
     {% endif %}
 </header>

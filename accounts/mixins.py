@@ -1,3 +1,4 @@
+import functools
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect
 from django.contrib import messages
@@ -14,6 +15,7 @@ def role_required(role):
             ...
     """
     def decorator(view_func):
+        @functools.wraps(view_func)
         def wrapper(request, *args, **kwargs):
             # First check if they are logged in at all
             if not request.user.is_authenticated:

@@ -1,8 +1,9 @@
 def mask_plate(plate):
-    """ABC 1234 → ABC ***4"""
+    """ABC 1234 → ABC **34 (reveals only the last 2 characters)"""
     if not plate or len(plate) < 3:
         return '***'
-    return plate[:-3] + '***' if len(plate) > 3 else '***'
+    visible = plate[-2:]
+    return '*' * (len(plate) - 2) + visible if len(plate) > 2 else '***'
 
 
 def mask_rfid(uid):
@@ -25,10 +26,10 @@ def mask_sticker_id(sticker_id):
 
 
 def mask_name(name):
-    """Juan dela Cruz → Juan d***"""
+    """Juan dela Cruz → J*** d*** (only initials are shown)"""
     if not name:
         return '—'
     parts = name.split()
     if len(parts) == 1:
         return parts[0][0] + '***'
-    return parts[0] + ' ' + parts[1][0] + '***'
+    return parts[0][0] + '*** ' + parts[1][0] + '***'

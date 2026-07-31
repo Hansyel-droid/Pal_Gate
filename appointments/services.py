@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, time
+from django.db import transaction
 from .models import AppointmentSlot, Appointment
 from applications.models import RegistrationWindow
 
@@ -43,37 +44,40 @@ def assign_appointment(application):
         start_from = datetime.today().date() + timedelta(days=1)
 
     # Find all active slots that are after the registration window
-    # and still have capacity, ordered by date (earliest first)
-    available_slots = AppointmentSlot.objects.filter(
-        is_active=True,
-        date__gte=start_from,
-    ).order_by('date')
+    # and still have capacity, ordered by date (earliest first).
+    # select_for_update() locks each slot row as we check it, so a burst of
+    # concurrent submissions can't all read "not full yet" and overbook it.
+    with transaction.atomic():
+        available_slots = AppointmentSlot.objects.select_for_update().filter(
+            is_active=True,
+            date__gte=start_from,
+        ).order_by('date')
 
-    for slot in available_slots:
-        # Skip if this slot is already full
-        if slot.is_full():
-            continue
+        for slot in available_slots:
+            # Skip if this slot is already full
+            if slot.is_full():
+                continue
 
-        # Get available times for this slot
-        available_times = get_available_time_slots(slot)
-        if not available_times:
-            continue
+            # Get available times for this slot
+            available_times = get_available_time_slots(slot)
+            if not available_times:
+                continue
 
-        # Take the first available time
-        assigned_time = available_times[0]
+            # Take the first available time
+            assigned_time = available_times[0]
 
-        # Create the appointment
-        appointment = Appointment.objects.create(
-            application=application,
-            slot=slot,
-            time=assigned_time,
-        )
+            # Create the appointment
+            appointment = Appointment.objects.create(
+                application=application,
+                slot=slot,
+                time=assigned_time,
+            )
 
-        # Update the application status
-        application.status = 'scheduled'
-        application.save()
+            # Update the application status
+            application.status = 'scheduled'
+            application.save()
 
-        return appointment  # Success
+            return appointment  # Success
 
-    # If we reach here, no slots were available
-    return None
+        # If we reach here, no slots were available
+        return None

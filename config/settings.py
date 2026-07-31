@@ -4,7 +4,7 @@ from decouple import config, Csv
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config('SECRET_KEY')
-DEBUG = True
+DEBUG = config('DEBUG', default=False, cast=bool)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1,localhost', cast=Csv())
 
 INSTALLED_APPS = [
@@ -138,8 +138,17 @@ AXES_RESET_ON_SUCCESS = True
 AXES_LOCKOUT_TEMPLATE = 'accounts/lockout.html'
 AXES_VERBOSE = False
 
+# ── Reverse Proxy ────────────────────────────────────────────────────────────
+# There is no reverse proxy in front of Django yet (see DEPLOYMENT.md), so by
+# default we do NOT trust the X-Forwarded-For header — anyone could forge it
+# to spoof their IP in the audit log. Flip this only once a trusted proxy
+# (nginx, etc.) is actually terminating requests and setting that header itself.
+TRUST_X_FORWARDED_FOR = config('TRUST_X_FORWARDED_FOR', default=False, cast=bool)
+
 # ── API Keys ─────────────────────────────────────────────────────────────────
-API_KEYS = config('API_KEYS', default='palsu-gate-esp32-maingate-key-2025,palsu-gate-esp32-sidegate-key-2025', cast=Csv())
+# No insecure fallback on purpose: a missing .env value must fail loudly,
+# not silently fall back to a key that's sitting in source control history.
+API_KEYS = config('API_KEYS', cast=Csv())
 
 # ── Admin Branding ───────────────────────────────────────────────────────────
 ADMIN_SITE_HEADER = 'PalSU Gate System Administration'

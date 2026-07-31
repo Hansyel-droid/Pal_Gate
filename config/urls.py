@@ -1,14 +1,19 @@
 from django.contrib import admin
 from django.urls import path, include
-from django.conf import settings
-from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
+from django_ratelimit.decorators import ratelimit
 from accounts.views import dashboard_redirect
 
 # Admin branding
 admin.site.site_header = 'PalSU Gate System Administration'
 admin.site.site_title = 'PalSU Admin'
 admin.site.index_title = 'System Administration'
+
+# Password reset requests are rate-limited by IP — same pattern as login_view,
+# since these endpoints send email / enumerate accounts and had no limit before.
+password_reset_view = ratelimit(key='ip', rate='5/m', method='POST', block=True)(
+    auth_views.PasswordResetView.as_view(template_name='accounts/password_reset.html')
+)
 
 urlpatterns = [
     path('palsu-system-admin-2025/', admin.site.urls),
@@ -20,11 +25,7 @@ urlpatterns = [
     path('api/', include('api.urls')),
 
     # Password reset
-    path('accounts/password-reset/',
-         auth_views.PasswordResetView.as_view(
-             template_name='accounts/password_reset.html'
-         ),
-         name='password_reset'),
+    path('accounts/password-reset/', password_reset_view, name='password_reset'),
     path('accounts/password-reset/done/',
          auth_views.PasswordResetDoneView.as_view(
              template_name='accounts/password_reset_done.html'
@@ -42,6 +43,6 @@ urlpatterns = [
          name='password_reset_complete'),
 ]
 
-# Serve media files in all environments for local network deployment
-# In production with nginx, nginx handles /media/ instead
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Media files (applicant ID documents etc.) are NOT served here — see
+# applications.views.serve_document. Those files require auth + ownership
+# checks, so they can't be handed out by Django's generic static() helper.

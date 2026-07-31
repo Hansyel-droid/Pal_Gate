@@ -1,4 +1,5 @@
 import functools
+import secrets
 from django.conf import settings
 from django.http import JsonResponse
 
@@ -15,7 +16,13 @@ def require_api_key(view_func):
         api_key = request.headers.get('X-API-Key', '').strip()
         valid_keys = getattr(settings, 'API_KEYS', [])
 
-        if not api_key or api_key not in valid_keys:
+        # Constant-time comparison — a plain `in` check leaks timing
+        # information about how many characters of a guess were correct.
+        is_valid = bool(api_key) and any(
+            secrets.compare_digest(api_key, key) for key in valid_keys
+        )
+
+        if not is_valid:
             return JsonResponse(
                 {
                     'error': 'Unauthorized. Valid API key required.',

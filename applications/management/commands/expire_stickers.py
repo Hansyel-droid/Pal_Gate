@@ -15,11 +15,12 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         cutoff = timezone.now() - timedelta(days=VALIDITY_DAYS)
 
-        # submitted_at is null for records that were never submitted,
-        # and those are excluded automatically by this filter.
+        # issued_at is when the sticker was actually handed out — measuring
+        # from submitted_at would expire stickers based on when the
+        # application was filed, which can be weeks before pickup.
         expiring = StickerApplication.objects.filter(
             status='issued',
-            submitted_at__lt=cutoff
+            issued_at__lt=cutoff
         )
 
         count = 0
@@ -32,7 +33,7 @@ class Command(BaseCommand):
                 f'Sticker expired for {application.full_name} '
                 f'(Plate: {application.plate_number}, '
                 f'Sticker ID: {application.sticker_id}). '
-                f'Issued on {application.submitted_at:%Y-%m-%d}.',
+                f'Issued on {application.issued_at:%Y-%m-%d}.',
                 target_user=application.applicant.username,
                 extra_data={
                     'application_id': application.pk,

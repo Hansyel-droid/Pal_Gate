@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Q
 from accounts.models import User
 from .utils import upload_or_cr, upload_license, upload_cor, upload_auth
 
@@ -59,6 +60,10 @@ class StickerApplication(models.Model):
         ('parent', 'Parent'),
     ]
 
+    # Statuses that no longer "hold" a plate number — a rejected or expired
+    # application shouldn't permanently block that plate from being reused.
+    INACTIVE_STATUSES = ['rejected', 'expired']
+
     # Who submitted this application
     applicant = models.ForeignKey(
         User,
@@ -82,7 +87,10 @@ class StickerApplication(models.Model):
     )
 
     # --- Step 2: Vehicle Details ---
-    plate_number = models.CharField(max_length=20, unique=True)
+    # Not unique=True at the field level — uniqueness is only enforced among
+    # "active" applications (see Meta.constraints below), so a rejected or
+    # expired application doesn't permanently squat its plate number.
+    plate_number = models.CharField(max_length=20)
     vehicle_type = models.CharField(
         max_length=20,
         choices=VEHICLE_TYPE_CHOICES
@@ -131,6 +139,10 @@ class StickerApplication(models.Model):
 
     # --- Timestamps ---
     submitted_at = models.DateTimeField(null=True, blank=True)
+    # Set when status becomes 'issued' — the 365-day validity period is
+    # measured from here, not from submission (an applicant may wait weeks
+    # between submitting and actually picking up the sticker).
+    issued_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -139,3 +151,10 @@ class StickerApplication(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['plate_number'],
+                condition=~Q(status__in=['rejected', 'expired']),
+                name='unique_active_plate_number',
+            ),
+        ]

@@ -75,7 +75,7 @@
                     <li class="list-group-item d-flex justify-content-between">
                         <span>OR/CR</span>
                         {% if application.or_cr %}
-                            <a href="{{ application.or_cr.url }}" target="_blank"
+                            <a href="{% url 'serve_document' application.pk 'or_cr' %}" target="_blank"
                                class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-eye"></i> View
                             </a>
@@ -86,7 +86,7 @@
                     <li class="list-group-item d-flex justify-content-between">
                         <span>Driver's License</span>
                         {% if application.drivers_license %}
-                            <a href="{{ application.drivers_license.url }}" target="_blank"
+                            <a href="{% url 'serve_document' application.pk 'drivers_license' %}" target="_blank"
                                class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-eye"></i> View
                             </a>
@@ -97,7 +97,7 @@
                     <li class="list-group-item d-flex justify-content-between">
                         <span>COR</span>
                         {% if application.cor %}
-                            <a href="{{ application.cor.url }}" target="_blank"
+                            <a href="{% url 'serve_document' application.pk 'cor' %}" target="_blank"
                                class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-eye"></i> View
                             </a>
@@ -108,7 +108,7 @@
                     <li class="list-group-item d-flex justify-content-between">
                         <span>Authorization Letter</span>
                         {% if application.authorization_letter %}
-                            <a href="{{ application.authorization_letter.url }}" target="_blank"
+                            <a href="{% url 'serve_document' application.pk 'authorization_letter' %}" target="_blank"
                                class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-eye"></i> View
                             </a>

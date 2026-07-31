@@ -80,6 +80,8 @@ class AuditLog(models.Model):
         ('window_opened', 'Registration Window Opened'),
         ('window_closed', 'Registration Window Closed'),
         ('slot_created', 'Appointment Slot Created'),
+        ('slot_updated', 'Appointment Slot Updated'),
+        ('slot_deleted', 'Appointment Slot Deleted'),
     ]
 
     actor = models.ForeignKey(

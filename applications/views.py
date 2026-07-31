@@ -1,7 +1,12 @@
+import logging
 import os
 import shutil
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
+from django.db import transaction
+from django.http import FileResponse, Http404
 from django.utils import timezone
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
@@ -13,9 +18,13 @@ from .models import StickerApplication, RegistrationWindow
 from appointments.services import assign_appointment
 from gate.audit import log_action
 
+logger = logging.getLogger('django')
+
+DOCUMENT_FIELDS = {'or_cr', 'drivers_license', 'cor', 'authorization_letter'}
+
 
 def get_active_window():
-    today = timezone.now().date()
+    today = timezone.localdate()
     try:
         return RegistrationWindow.objects.filter(
             is_active=True,
@@ -162,91 +171,114 @@ def apply_step3(request):
             return redirect('apply_step2')
 
         # User clicked "Submit" — move temp files to real locations
-        try:
-            def get_temp_file(field_name):
-                """
-                Reads a temp file from storage and returns
-                a ContentFile ready to save to the model.
-                """
-                file_data = temp_files.get(field_name)
-                if not file_data:
-                    return None
-                path = file_data['path']
-                original_name = file_data['original_name']
-                if default_storage.exists(path):
-                    with default_storage.open(path) as f:
-                        content = f.read()
-                    return ContentFile(content, name=original_name)
+        def get_temp_file(field_name):
+            """
+            Reads a temp file from storage and returns
+            a ContentFile ready to save to the model.
+            """
+            file_data = temp_files.get(field_name)
+            if not file_data:
                 return None
+            path = file_data['path']
+            original_name = file_data['original_name']
+            if default_storage.exists(path):
+                with default_storage.open(path) as f:
+                    content = f.read()
+                return ContentFile(content, name=original_name)
+            return None
 
-            application = StickerApplication(
-                applicant=request.user,
-                full_name=step1['full_name'],
-                college_department=step1['college_department'],
-                id_number=step1['id_number'],
-                classification=step1['classification'],
-                plate_number=step2['plate_number'],
-                vehicle_type=step2['vehicle_type'],
-                vehicle_color=step2['vehicle_color'],
-                is_owner=(step2['is_owner'] == 'yes'),
-                status='draft',
-                submitted_at=timezone.now(),
-            )
+        # Attach the files from temp storage
+        or_cr_file = get_temp_file('or_cr')
+        license_file = get_temp_file('drivers_license')
+        cor_file = get_temp_file('cor')
+        auth_file = get_temp_file('authorization_letter')
 
-            # Attach the files from temp storage
-            or_cr_file = get_temp_file('or_cr')
-            license_file = get_temp_file('drivers_license')
-            cor_file = get_temp_file('cor')
-            auth_file = get_temp_file('authorization_letter')
-
-            if or_cr_file:
-                application.or_cr.save(or_cr_file.name, or_cr_file, save=False)
-            if license_file:
-                application.drivers_license.save(license_file.name, license_file, save=False)
-            if cor_file:
-                application.cor.save(cor_file.name, cor_file, save=False)
-            if auth_file:
-                application.authorization_letter.save(auth_file.name, auth_file, save=False)
-
-            application.save()
-            log_action(
+        # or_cr and drivers_license are always required. If a temp file
+        # went missing (e.g. cleaned up by the scheduled task while the
+        # applicant was on step 3), don't silently save a broken record —
+        # send them back to re-upload.
+        if not or_cr_file or not license_file:
+            messages.error(
                 request,
-                'app_submitted',
-                f'{request.user.get_full_name()} submitted application '
-                f'for plate {step2["plate_number"]}',
-                extra_data={'plate': step2['plate_number']}
+                'One or more of your required documents could not be found '
+                '(they may have expired). Please re-upload them.'
+            )
+            return redirect('apply_step2')
+
+        try:
+            with transaction.atomic():
+                application = StickerApplication(
+                    applicant=request.user,
+                    full_name=step1['full_name'],
+                    college_department=step1['college_department'],
+                    id_number=step1['id_number'],
+                    classification=step1['classification'],
+                    plate_number=step2['plate_number'],
+                    vehicle_type=step2['vehicle_type'],
+                    vehicle_color=step2['vehicle_color'],
+                    is_owner=(step2['is_owner'] == 'yes'),
+                    status='draft',
+                    submitted_at=timezone.now(),
+                )
+
+                application.or_cr.save(or_cr_file.name, or_cr_file, save=False)
+                application.drivers_license.save(license_file.name, license_file, save=False)
+                if cor_file:
+                    application.cor.save(cor_file.name, cor_file, save=False)
+                if auth_file:
+                    application.authorization_letter.save(auth_file.name, auth_file, save=False)
+
+                application.save()
+                log_action(
+                    request,
+                    'app_submitted',
+                    f'{request.user.get_full_name()} submitted application '
+                    f'for plate {step2["plate_number"]}',
+                    extra_data={'plate': step2['plate_number']}
+                )
+
+                # Auto-assign appointment — inside the same transaction, so
+                # if this fails the application (and its unique plate
+                # number) is never committed, and the applicant can retry
+                # cleanly instead of being stuck with a claimed plate.
+                appointment = assign_appointment(application)
+        except Exception:
+            logger.exception('Error submitting application for user %s', request.user.username)
+            messages.error(
+                request,
+                'Something went wrong submitting your application. '
+                'Please try again, or contact the office if this keeps happening.'
+            )
+            return render(request, 'applications/step3.html', {
+                'step': 3,
+                'step1': step1,
+                'step2': step2,
+                'files_info': files_info,
+            })
+
+        # Clean up temp files from storage (only after a successful commit)
+        for field_name, file_data in temp_files.items():
+            if file_data and default_storage.exists(file_data['path']):
+                default_storage.delete(file_data['path'])
+
+        # Clear session
+        for key in ['app_step1', 'app_step2', 'app_temp_files']:
+            request.session.pop(key, None)
+
+        if appointment:
+            messages.success(
+                request,
+                f'Application submitted! Your appointment is on '
+                f'{appointment.slot.date.strftime("%B %d, %Y")} at {appointment.time}.'
+            )
+        else:
+            messages.warning(
+                request,
+                'Application submitted! No appointment slots are available yet. '
+                'The administrator will assign one soon.'
             )
 
-            # Auto-assign appointment
-            appointment = assign_appointment(application)
-
-            # Clean up temp files from storage
-            username = request.user.username
-            for field_name, file_data in temp_files.items():
-                if file_data and default_storage.exists(file_data['path']):
-                    default_storage.delete(file_data['path'])
-
-            # Clear session
-            for key in ['app_step1', 'app_step2', 'app_temp_files']:
-                request.session.pop(key, None)
-
-            if appointment:
-                messages.success(
-                    request,
-                    f'Application submitted! Your appointment is on '
-                    f'{appointment.slot.date.strftime("%B %d, %Y")} at {appointment.time}.'
-                )
-            else:
-                messages.warning(
-                    request,
-                    'Application submitted! No appointment slots are available yet. '
-                    'The administrator will assign one soon.'
-                )
-
-            return redirect('my_applications')
-
-        except Exception as e:
-            messages.error(request, f'Error submitting application: {str(e)}')
+        return redirect('my_applications')
 
     return render(request, 'applications/step3.html', {
         'step': 3,
@@ -260,11 +292,36 @@ def apply_step3(request):
 def my_applications(request):
     applications = StickerApplication.objects.filter(
         applicant=request.user
-    ).order_by('-created_at')
+    ).select_related('appointment', 'appointment__slot').order_by('-created_at')
     paginator = Paginator(applications, 10)
     page_obj = paginator.get_page(request.GET.get('page', 1))
     return render(request, 'applications/my_applications.html', {
         'page_obj': page_obj,
     })
+
+
+@login_required
+def serve_document(request, pk, field_name):
+    """
+    Streams an applicant's uploaded ID/vehicle document.
+    These are government IDs, OR/CR, etc. — only the owning applicant or an
+    admin staff member may view them. Never served as a raw static file.
+    """
+    if field_name not in DOCUMENT_FIELDS:
+        raise Http404('Unknown document field.')
+
+    application = get_object_or_404(StickerApplication, pk=pk)
+
+    if request.user.role != 'admin' and request.user != application.applicant:
+        raise PermissionDenied('You do not have permission to view this document.')
+
+    file_field = getattr(application, field_name)
+    if not file_field:
+        raise Http404('No document uploaded for this field.')
+
+    return FileResponse(
+        file_field.open('rb'),
+        filename=file_field.name.rsplit('/', 1)[-1],
+    )
 
 

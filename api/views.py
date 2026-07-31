@@ -1,12 +1,15 @@
 import json
 from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 from django_ratelimit.decorators import ratelimit
 from .authentication import require_api_key
 
+from accounts.mixins import role_required
 from applications.models import StickerApplication
+from gate.audit import log_action
 from gate.models import GateLog, PendingRFID
 
 
@@ -63,6 +66,10 @@ def scan_tag(request):
             gate_location=gate,
             denial_reason='RFID tag not registered in system.'
         )
+        log_action(
+            request, 'gate_denied',
+            f'Denied at {gate}: RFID {uid} not registered.',
+        )
         return JsonResponse({
             'allowed': False,
             'action': 'denied',
@@ -77,6 +84,13 @@ def scan_tag(request):
             action='denied',
             gate_location=gate,
             denial_reason=f'Sticker status is "{application.get_status_display()}", not issued.'
+        )
+        log_action(
+            request, 'gate_denied',
+            f'Denied at {gate}: {application.full_name} '
+            f'(Plate: {application.plate_number}) — status is '
+            f'"{application.get_status_display()}", not issued.',
+            extra_data={'application_id': application.pk},
         )
         return JsonResponse({
             'allowed': False,
@@ -104,6 +118,12 @@ def scan_tag(request):
         application=application,
         action=action,
         gate_location=gate,
+    )
+    log_action(
+        request, f'gate_{action}',
+        f'{application.full_name} (Plate: {application.plate_number}) '
+        f'{action} at {gate}.',
+        extra_data={'application_id': application.pk},
     )
 
     return JsonResponse({
@@ -164,10 +184,15 @@ def register_uid(request):
     })
 
 
+@login_required
+@role_required('admin')
+@ratelimit(key='ip', rate='60/m', method='GET', block=True)
 @require_http_methods(['GET'])
 def latest_pending_uid(request):
     """
-    Called by the sticker station page every 3 seconds via JavaScript.
+    Called by the sticker station / issue-sticker pages every 3 seconds via
+    JavaScript, from an authenticated admin session (not ESP32 hardware) —
+    so this is protected by login + role instead of the API key.
     Returns the most recently scanned unclaimed UID.
 
     Returns:
@@ -185,10 +210,12 @@ def latest_pending_uid(request):
         return JsonResponse({'uid': None})
 
 
+@require_api_key
+@ratelimit(key='ip', rate='60/m', method='GET', block=True)
 @require_http_methods(['GET'])
 def gate_status(request):
     """
-    Returns the current gate status.
+    Called by the ESP32 hardware. Returns the current gate status.
     Kept simple for now — always returns open: true.
     Can be extended later to support manual gate control.
 

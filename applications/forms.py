@@ -27,6 +27,16 @@ class ApplicationStep2Form(forms.Form):
     """Step 2: Vehicle Details and Document Uploads"""
 
     ALLOWED_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png']
+    MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+
+    # Magic-byte signatures — checked against the file's actual bytes so a
+    # renamed .exe with a .pdf extension can't slip through.
+    FILE_SIGNATURES = {
+        'pdf': [b'%PDF'],
+        'jpg': [b'\xff\xd8\xff'],
+        'jpeg': [b'\xff\xd8\xff'],
+        'png': [b'\x89PNG\r\n\x1a\n'],
+    }
 
     plate_number = forms.CharField(
         max_length=20,
@@ -66,13 +76,36 @@ class ApplicationStep2Form(forms.Form):
     )
 
     def validate_file_extension(self, file):
-        """Check that the uploaded file is PDF, JPG, JPEG, or PNG."""
-        if file:
-            extension = file.name.split('.')[-1].lower()
-            if extension not in self.ALLOWED_EXTENSIONS:
-                raise forms.ValidationError(
-                    f'Only PDF, JPG, JPEG, PNG files are allowed. You uploaded: .{extension}'
-                )
+        """Check that the uploaded file is PDF, JPG, JPEG, or PNG — by both
+        extension and actual file content, and enforce a size cap."""
+        if not file:
+            return
+
+        extension = file.name.split('.')[-1].lower()
+        if extension not in self.ALLOWED_EXTENSIONS:
+            raise forms.ValidationError(
+                f'Only PDF, JPG, JPEG, PNG files are allowed. You uploaded: .{extension}'
+            )
+
+        if file.size > self.MAX_FILE_SIZE:
+            raise forms.ValidationError(
+                f'File is too large ({file.size // (1024 * 1024)}MB). '
+                f'Maximum allowed size is {self.MAX_FILE_SIZE // (1024 * 1024)}MB.'
+            )
+
+        signatures = self.FILE_SIGNATURES[extension]
+        header = file.read(16)
+        file.seek(0)
+        if not any(header.startswith(sig) for sig in signatures):
+            raise forms.ValidationError(
+                f'The file you uploaded does not look like a real .{extension} file. '
+                'Please upload an unmodified PDF, JPG, JPEG, or PNG.'
+            )
+
+    def clean_plate_number(self):
+        # Normalize so "abc 123", "ABC123", and "ABC 123 " are all treated
+        # as the same plate for the uniqueness check.
+        return self.cleaned_data['plate_number'].strip().upper()
 
     def clean(self):
         cleaned_data = super().clean()

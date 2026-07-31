@@ -7,4 +7,5 @@ urlpatterns = [
     path('step2/', views.apply_step2, name='apply_step2'),
     path('step3/', views.apply_step3, name='apply_step3'),
     path('my-applications/', views.my_applications, name='my_applications'),
+    path('documents/<int:pk>/<str:field_name>/', views.serve_document, name='serve_document'),
 ]
