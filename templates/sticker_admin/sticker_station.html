@@ -2,7 +2,7 @@
 {% block title %}Sticker Station{% endblock %}
 
 {% block content %}
-<h2><i class="bi bi-patch-check text-primary"></i> Sticker Station</h2>
+<h1><i class="bi bi-patch-check text-primary" aria-hidden="true"></i> Sticker Station</h1>
 <p class="text-muted">Search for an approved applicant to issue their sticker and RFID tag.</p>
 
 <!-- Search -->
@@ -16,7 +16,7 @@
             </div>
             <div class="col-md-3">
                 <button type="submit" class="btn btn-primary btn-lg w-100">
-                    <i class="bi bi-search"></i> Search
+                    <i class="bi bi-search" aria-hidden="true"></i> Search
                 </button>
             </div>
         </form>
@@ -32,14 +32,14 @@
             </div>
             <div class="card-body p-0">
                 <table class="table table-hover mb-0">
-                    <thead class="table-light">
+                    <thead>
                         <tr>
-                            <th>Name</th>
-                            <th>ID Number</th>
-                            <th>Plate</th>
-                            <th>Vehicle Type</th>
-                            <th>Appointment</th>
-                            <th></th>
+                            <th scope="col">Name</th>
+                            <th scope="col">ID Number</th>
+                            <th scope="col">Plate</th>
+                            <th scope="col">Vehicle Type</th>
+                            <th scope="col">Appointment</th>
+                            <th scope="col"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -60,7 +60,7 @@
                             <td>
                                 <a href="{% url 'issue_sticker' app.pk %}"
                                    class="btn btn-sm btn-success">
-                                    <i class="bi bi-patch-check"></i> Issue Sticker
+                                    <i class="bi bi-patch-check" aria-hidden="true"></i> Issue Sticker
                                 </a>
                             </td>
                         </tr>
@@ -71,7 +71,7 @@
         </div>
     {% else %}
         <div class="alert alert-warning">
-            <i class="bi bi-exclamation-triangle"></i>
+            <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
             No approved applications found for "<strong>{{ query }}</strong>".
             Only approved applications can be processed here.
         </div>

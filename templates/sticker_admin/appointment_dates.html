@@ -3,7 +3,7 @@
 
 {% block content %}
 <div class="page-header">
-    <h2>Appointment Dates</h2>
+    <h1>Appointment Dates</h1>
     <p class="page-sub">
         Activate inspection dates for applicants. Weekends are skipped automatically.
     </p>
@@ -43,7 +43,7 @@
     <div class="col-lg-4">
         <div class="card h-100">
             <div class="card-header">
-                <i class="bi bi-calendar-plus me-2" style="color:var(--gold);"></i>
+                <i class="bi bi-calendar-plus me-2" style="color:var(--gold);" aria-hidden="true"></i>
                 Activate Date Range
             </div>
             <div class="card-body" style="padding:20px;">
@@ -54,15 +54,15 @@
                     {% csrf_token %}
                     <input type="hidden" name="action" value="activate_range">
                     <div class="mb-3">
-                        <label class="form-label">From *</label>
-                        <input type="date" name="range_start" class="form-control" required>
+                        <label for="id_range_start" class="form-label">From *</label>
+                        <input id="id_range_start" type="date" name="range_start" class="form-control" required>
                     </div>
                     <div class="mb-4">
-                        <label class="form-label">To *</label>
-                        <input type="date" name="range_end" class="form-control" required>
+                        <label for="id_range_end" class="form-label">To *</label>
+                        <input id="id_range_end" type="date" name="range_end" class="form-control" required>
                     </div>
                     <button type="submit" class="btn btn-primary w-100">
-                        <i class="bi bi-plus-circle me-1"></i> Activate Dates
+                        <i class="bi bi-plus-circle me-1" aria-hidden="true"></i> Activate Dates
                     </button>
                 </form>
 
@@ -79,7 +79,7 @@
                         <input type="hidden" name="action" value="activate_all">
                         <button type="submit" class="btn btn-outline-secondary w-100"
                                 style="font-size:0.82rem; text-align:left;">
-                            <i class="bi bi-check-all me-2" style="color:var(--success);"></i>
+                            <i class="bi bi-check-all me-2" style="color:var(--success);" aria-hidden="true"></i>
                             Activate All Dates
                         </button>
                     </form>
@@ -89,7 +89,7 @@
                         <button type="submit" class="btn btn-outline-secondary w-100"
                                 style="font-size:0.82rem; text-align:left;"
                                 onclick="return confirm('Deactivate all dates?')">
-                            <i class="bi bi-dash-circle me-2" style="color:var(--warning);"></i>
+                            <i class="bi bi-dash-circle me-2" style="color:var(--warning);" aria-hidden="true"></i>
                             Deactivate All Dates
                         </button>
                     </form>
@@ -99,7 +99,7 @@
                         <button type="submit" class="btn btn-outline-secondary w-100"
                                 style="font-size:0.82rem; text-align:left;"
                                 onclick="return confirm('Delete all dates with no bookings?')">
-                            <i class="bi bi-trash me-2" style="color:var(--danger);"></i>
+                            <i class="bi bi-trash me-2" style="color:var(--danger);" aria-hidden="true"></i>
                             Delete All Empty Dates
                         </button>
                     </form>
@@ -113,7 +113,7 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span>
-                    <i class="bi bi-list-check me-2" style="color:var(--gold);"></i>
+                    <i class="bi bi-list-check me-2" style="color:var(--gold);" aria-hidden="true"></i>
                     Activated Dates
                     <span style="font-size:0.78rem; font-weight:400;
                                  color:var(--text-muted); margin-left:6px;">
@@ -129,7 +129,7 @@
                             class="btn btn-danger btn-sm"
                             style="display:none;"
                             onclick="return confirm('Delete selected dates?')">
-                        <i class="bi bi-trash me-1"></i>
+                        <i class="bi bi-trash me-1" aria-hidden="true"></i>
                         Delete Selected
                         (<span id="selected-count">0</span>)
                     </button>
@@ -141,16 +141,16 @@
                 <table class="table mb-0" id="slots-table">
                     <thead style="position:sticky; top:0; z-index:1;">
                         <tr>
-                            <th style="width:40px;">
+                            <th scope="col" style="width:40px;">
                                 <input type="checkbox" id="select-all"
                                        class="form-check-input"
                                        title="Select all">
                             </th>
-                            <th>Date</th>
-                            <th>Day</th>
-                            <th>Booked</th>
-                            <th>Status</th>
-                            <th>Actions</th>
+                            <th scope="col">Date</th>
+                            <th scope="col">Day</th>
+                            <th scope="col">Booked</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -186,7 +186,7 @@
                                     </span>
                                     {% if slot.is_full %}
                                         <span class="status-badge badge-rejected"
-                                              style="font-size:0.68rem; padding:2px 6px;">
+                                              style="font-size:0.72rem; padding:2px 6px;">
                                             Full
                                         </span>
                                     {% endif %}
@@ -211,9 +211,9 @@
                                                 style="font-size:0.75rem; padding:3px 8px;"
                                                 title="{% if slot.is_active %}Deactivate{% else %}Activate{% endif %}">
                                             {% if slot.is_active %}
-                                                <i class="bi bi-pause-fill"></i>
+                                                <i class="bi bi-pause-fill" aria-hidden="true"></i>
                                             {% else %}
-                                                <i class="bi bi-play-fill"></i>
+                                                <i class="bi bi-play-fill" aria-hidden="true"></i>
                                             {% endif %}
                                         </button>
                                     </form>
@@ -228,7 +228,7 @@
                                                 style="font-size:0.75rem; padding:3px 8px; color:var(--danger);"
                                                 title="Delete"
                                                 onclick="return confirm('Delete {{ slot.date }}?')">
-                                            <i class="bi bi-trash"></i>
+                                            <i class="bi bi-trash" aria-hidden="true"></i>
                                         </button>
                                     </form>
                                     {% else %}
@@ -236,7 +236,7 @@
                                             style="font-size:0.75rem; padding:3px 8px;
                                                    opacity:0.4; cursor:not-allowed;"
                                             disabled title="Has bookings — cannot delete">
-                                        <i class="bi bi-trash"></i>
+                                        <i class="bi bi-trash" aria-hidden="true"></i>
                                     </button>
                                     {% endif %}
                                 </div>
@@ -250,7 +250,7 @@
             <div style="padding:48px; text-align:center; color:var(--text-muted);">
                 <i class="bi bi-calendar-x"
                    style="font-size:2.5rem; display:block; margin-bottom:12px;
-                          color:var(--border);"></i>
+                          color:var(--border);" aria-hidden="true"></i>
                 No appointment dates activated yet.<br>
                 <span style="font-size:0.82rem;">
                     Use the form on the left to add dates.

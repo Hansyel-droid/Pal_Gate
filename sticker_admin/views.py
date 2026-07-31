@@ -371,7 +371,15 @@ def reject_application(request, pk):
             )
             return redirect('application_detail', pk=pk)
 
-        reason = request.POST.get('rejection_reason', '')
+        reason = request.POST.get('rejection_reason', '').strip()
+        if not reason:
+            messages.error(
+                request,
+                'Please explain why this application is being rejected — '
+                'the applicant only sees this reason, so it cannot be blank.'
+            )
+            return redirect('application_detail', pk=pk)
+
         application.status = 'rejected'
         application.rejection_reason = reason
         application.save()

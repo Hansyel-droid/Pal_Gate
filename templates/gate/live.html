@@ -1,129 +1,190 @@
 {% extends 'base.html' %}
 {% block title %}Live Gate Monitor{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* ── Header / scope control ─────────────────────── */
+    .gate-scope {
+        display: flex;
+        gap: 4px;
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 4px;
+    }
+    .gate-scope a {
+        padding: 6px 14px;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-decoration: none;
+    }
+    .gate-scope a[aria-current="page"] {
+        background: var(--navy-mid);
+        color: #fff;
+    }
+    .gate-scope a:hover:not([aria-current="page"]) {
+        background: var(--content-bg);
+    }
+
+    .live-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        background: #E8F7F0;
+        color: var(--success-ink);
+    }
+    .live-pill.stale {
+        background: #FDECEA;
+        color: var(--danger-ink);
+    }
+    .live-pill .dot {
+        width: 8px; height: 8px; border-radius: 50%;
+        background: currentColor;
+    }
+
+    /* ── Dominant latest-scan hero ──────────────────── */
+    .live-hero {
+        border-radius: 12px;
+        padding: 28px 32px;
+        margin-bottom: 16px;
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        box-shadow: 0 1px 4px rgba(10,22,40,0.06);
+    }
+    .live-hero-entry, .live-hero-exit {
+        background: var(--success-ink);
+        border-color: var(--success-ink);
+    }
+    .live-hero-denied {
+        background: var(--danger-ink);
+        border-color: var(--danger-ink);
+    }
+    .live-hero-entry .live-hero-plate,
+    .live-hero-entry .live-hero-name,
+    .live-hero-entry .live-hero-meta,
+    .live-hero-exit .live-hero-plate,
+    .live-hero-exit .live-hero-name,
+    .live-hero-exit .live-hero-meta,
+    .live-hero-denied .live-hero-plate,
+    .live-hero-denied .live-hero-name,
+    .live-hero-denied .live-hero-meta {
+        color: #fff;
+    }
+    .live-hero-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+    }
+    .live-hero-verdict {
+        font-size: 1.1rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        color: #fff;
+    }
+    .live-hero-action-badge {
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        background: rgba(255,255,255,0.2);
+        color: #fff;
+        padding: 3px 12px;
+        border-radius: 20px;
+    }
+    .live-hero-plate {
+        font-family: var(--font-id);
+        font-size: clamp(2.5rem, 7vw, 5rem);
+        font-weight: 600;
+        line-height: 1.05;
+        color: var(--text-main);
+    }
+    .live-hero-name {
+        font-size: 1.15rem;
+        font-weight: 500;
+        color: var(--text-main);
+        margin-bottom: 4px;
+    }
+    .live-hero-reason {
+        display: inline-block;
+        background: rgba(255,255,255,0.15);
+        color: #fff;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+    .live-hero-meta {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+    }
+    .live-hero-empty {
+        text-align: center;
+        color: var(--text-muted);
+        font-size: 1.1rem;
+        padding: 24px 0;
+    }
+
+    /* ── Reader status chips ─────────────────────────── */
+    .reader-status-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    .reader-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.85rem;
+        padding: 6px 14px;
+        border-radius: 20px;
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        color: var(--text-main);
+    }
+    .reader-chip-active   { color: var(--success-ink); }
+    .reader-chip-stale    { color: var(--warning-ink); }
+    .reader-chip-silent   { color: var(--neutral-ink); }
+    .reader-chip i { font-size: 0.55rem; }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2><i class="bi bi-camera-video text-primary"></i> Live Gate Monitor</h2>
-    <span class="badge bg-success fs-6">
-        <i class="bi bi-circle-fill"></i> Auto-refreshing every 5s
-    </span>
-</div>
-
-<!-- Stats Cards -->
-<div class="row g-3 mb-4">
-    <div class="col-6 col-md-3">
-        <div class="card bg-primary text-white shadow-sm">
-            <div class="card-body text-center">
-                <div class="small">Total Today</div>
-                <div class="fs-1 fw-bold">{{ total_today }}</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="card bg-success text-white shadow-sm">
-            <div class="card-body text-center">
-                <div class="small">Entries</div>
-                <div class="fs-1 fw-bold">{{ entries_today }}</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="card bg-warning text-white shadow-sm">
-            <div class="card-body text-center">
-                <div class="small">Exits</div>
-                <div class="fs-1 fw-bold">{{ exits_today }}</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="card bg-info text-white shadow-sm">
-            <div class="card-body text-center">
-                <div class="small">Active Passes</div>
-                <div class="fs-1 fw-bold">{{ active_passes }}</div>
-            </div>
-        </div>
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h1><i class="bi bi-camera-video text-primary" aria-hidden="true"></i> Live Gate Monitor</h1>
+    <div class="d-flex align-items-center gap-3">
+        <nav class="gate-scope" aria-label="Gate scope">
+            <a href="?" {% if not gate_filter %}aria-current="page"{% endif %}>All Gates</a>
+            {% for g in known_gates %}
+                <a href="?gate={{ g|urlencode }}" {% if gate_filter == g %}aria-current="page"{% endif %}>{{ g }}</a>
+            {% endfor %}
+        </nav>
+        <span class="live-pill" id="live-pill" role="status">
+            <span class="dot" aria-hidden="true"></span>
+            <span id="live-pill-text">Live · updated just now</span>
+        </span>
     </div>
 </div>
 
-<!-- Traffic Chart -->
-<div class="card shadow-sm mb-4">
+<div id="gate-live-region">
+    {% include 'gate/_live_fragment.html' %}
+</div>
+
+<!-- Hourly Traffic — a seated, after-the-fact summary. Not part of the 5s
+     live poll; refreshes only on a full page load or gate-scope change. -->
+<div class="card shadow-sm mt-4">
     <div class="card-header bg-white fw-bold">
-        <i class="bi bi-graph-up text-primary"></i> Hourly Traffic (Last 24 Hours)
+        <i class="bi bi-graph-up text-primary" aria-hidden="true"></i> Hourly Traffic (Last 24 Hours, All Gates)
     </div>
     <div class="card-body">
         <canvas id="trafficChart" height="80"></canvas>
-    </div>
-</div>
-
-<!-- Latest Logs -->
-<div class="card shadow-sm">
-    <div class="card-header bg-white fw-bold">
-        <i class="bi bi-list-ul text-primary"></i> Latest 20 Gate Events
-    </div>
-    <div class="card-body p-0">
-        <table class="table table-hover mb-0">
-            <thead class="table-dark">
-                <tr>
-                    <th>Time</th>
-                    <th>Plate</th>
-                    <th>Driver</th>
-                    <th>Action</th>
-                    <th>Gate</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for log in latest_logs %}
-                <tr>
-                    <td class="text-muted small">
-                        {{ log.timestamp|date:"H:i:s" }}
-                    </td>
-                    <td>
-                        {% if log.application %}
-                            <strong>{{ log.application.plate_number }}</strong>
-                        {% else %}
-                            <span class="text-muted">{{ log.rfid_uid }}</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if log.application %}
-                            {{ log.application.full_name }}
-                        {% else %}
-                            <span class="text-muted">Unknown</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if log.action == 'entry' %}
-                            <span class="badge bg-success">
-                                <i class="bi bi-arrow-right-circle"></i> Entry
-                            </span>
-                        {% elif log.action == 'exit' %}
-                            <span class="badge bg-warning text-dark">
-                                <i class="bi bi-arrow-left-circle"></i> Exit
-                            </span>
-                        {% else %}
-                            <span class="badge bg-danger">
-                                <i class="bi bi-x-circle"></i> Denied
-                            </span>
-                        {% endif %}
-                    </td>
-                    <td>{{ log.gate_location }}</td>
-                    <td>
-                        <a href="{% url 'incident_report' log.pk %}"
-                           class="btn btn-sm btn-outline-secondary">
-                            Details
-                        </a>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="6" class="text-center text-muted py-4">
-                        No gate events yet today.
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
     </div>
 </div>
 {% endblock %}
@@ -132,7 +193,6 @@
 <!-- Chart.js from CDN -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // Build the traffic chart from Django context data
     const labels = [{% for h in hourly_data %}"{{ h.label }}",{% endfor %}];
     const entries = [{% for h in hourly_data %}{{ h.entries }},{% endfor %}];
     const exits = [{% for h in hourly_data %}{{ h.exits }},{% endfor %}];
@@ -168,7 +228,38 @@
         }
     });
 
-    // Auto-refresh the entire page every 5 seconds
-    setTimeout(() => { location.reload(); }, 5000);
+    // Poll the live region every 5s and swap only its innerHTML — replaces
+    // the old location.reload(), which used to wipe scroll, focus, and
+    // screen-reader position twelve times a minute.
+    (function () {
+        const region = document.getElementById('gate-live-region');
+        const pill = document.getElementById('live-pill');
+        const pillText = document.getElementById('live-pill-text');
+        const params = new URLSearchParams(window.location.search);
+        params.set('partial', '1');
+        const pollUrl = window.location.pathname + '?' + params.toString();
+
+        function poll() {
+            fetch(pollUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function (res) {
+                    if (!res.ok) throw new Error('Request failed: ' + res.status);
+                    return res.text();
+                })
+                .then(function (html) {
+                    region.innerHTML = html;
+                    pill.classList.remove('stale');
+                    pillText.textContent = 'Live · updated just now';
+                })
+                .catch(function () {
+                    pill.classList.add('stale');
+                    pillText.textContent = 'Update failed — retrying…';
+                })
+                .finally(function () {
+                    setTimeout(poll, 5000);
+                });
+        }
+
+        setTimeout(poll, 5000);
+    })();
 </script>
 {% endblock %}

@@ -3,7 +3,7 @@
 
 {% block content %}
 <div class="page-header text-center" style="margin-bottom:32px;">
-    <h2>Review & Confirm</h2>
+    <h1>Review & Confirm</h1>
     <p class="page-sub">Check everything carefully. Click Submit when ready.</p>
 </div>
 
@@ -11,12 +11,12 @@
 <div style="max-width:600px; margin:0 auto 32px;">
     <div class="wizard-steps">
         <div class="wizard-step done">
-            <div class="step-num"><i class="bi bi-check" style="font-size:0.8rem;"></i></div>
+            <div class="step-num"><i class="bi bi-check" style="font-size:0.8rem;" aria-hidden="true"></i></div>
             <span>Personal Details</span>
         </div>
         <div class="wizard-connector" style="background:var(--success);"></div>
         <div class="wizard-step done">
-            <div class="step-num"><i class="bi bi-check" style="font-size:0.8rem;"></i></div>
+            <div class="step-num"><i class="bi bi-check" style="font-size:0.8rem;" aria-hidden="true"></i></div>
             <span>Vehicle & Documents</span>
         </div>
         <div class="wizard-connector" style="background:var(--success);"></div>
@@ -35,13 +35,13 @@
         <div class="col-md-6">
             <div class="card h-100">
                 <div class="card-header">
-                    <i class="bi bi-person-fill me-2" style="color:var(--gold);"></i>
+                    <i class="bi bi-person-fill me-2" style="color:var(--gold);" aria-hidden="true"></i>
                     Personal Details
                 </div>
                 <div class="card-body" style="padding:0;">
                     <table class="table table-sm mb-0" style="font-size:0.85rem;">
                         <tr>
-                            <th style="width:45%; padding:12px 16px;
+                            <th scope="row" style="width:45%; padding:12px 16px;
                                        color:var(--text-muted); font-weight:500;
                                        background:#FAFBFD;">
                                 Full Name
@@ -51,7 +51,7 @@
                             </td>
                         </tr>
                         <tr>
-                            <th style="padding:12px 16px; color:var(--text-muted);
+                            <th scope="row" style="padding:12px 16px; color:var(--text-muted);
                                        font-weight:500; background:#FAFBFD;">
                                 Classification
                             </th>
@@ -60,7 +60,7 @@
                             </td>
                         </tr>
                         <tr>
-                            <th style="padding:12px 16px; color:var(--text-muted);
+                            <th scope="row" style="padding:12px 16px; color:var(--text-muted);
                                        font-weight:500; background:#FAFBFD;">
                                 ID Number
                             </th>
@@ -69,7 +69,7 @@
                             </td>
                         </tr>
                         <tr>
-                            <th style="padding:12px 16px; color:var(--text-muted);
+                            <th scope="row" style="padding:12px 16px; color:var(--text-muted);
                                        font-weight:500; background:#FAFBFD;">
                                 College / Dept
                             </th>
@@ -86,13 +86,13 @@
         <div class="col-md-6">
             <div class="card h-100">
                 <div class="card-header">
-                    <i class="bi bi-car-front-fill me-2" style="color:var(--gold);"></i>
+                    <i class="bi bi-car-front-fill me-2" style="color:var(--gold);" aria-hidden="true"></i>
                     Vehicle Details
                 </div>
                 <div class="card-body" style="padding:0;">
                     <table class="table table-sm mb-0" style="font-size:0.85rem;">
                         <tr>
-                            <th style="width:45%; padding:12px 16px;
+                            <th scope="row" style="width:45%; padding:12px 16px;
                                        color:var(--text-muted); font-weight:500;
                                        background:#FAFBFD;">
                                 Plate Number
@@ -102,7 +102,7 @@
                             </td>
                         </tr>
                         <tr>
-                            <th style="padding:12px 16px; color:var(--text-muted);
+                            <th scope="row" style="padding:12px 16px; color:var(--text-muted);
                                        font-weight:500; background:#FAFBFD;">
                                 Vehicle Type
                             </th>
@@ -111,7 +111,7 @@
                             </td>
                         </tr>
                         <tr>
-                            <th style="padding:12px 16px; color:var(--text-muted);
+                            <th scope="row" style="padding:12px 16px; color:var(--text-muted);
                                        font-weight:500; background:#FAFBFD;">
                                 Color
                             </th>
@@ -120,7 +120,7 @@
                             </td>
                         </tr>
                         <tr>
-                            <th style="padding:12px 16px; color:var(--text-muted);
+                            <th scope="row" style="padding:12px 16px; color:var(--text-muted);
                                        font-weight:500; background:#FAFBFD;">
                                 Owner
                             </th>
@@ -137,7 +137,7 @@
     <!-- Documents -->
     <div class="card mb-4">
         <div class="card-header">
-            <i class="bi bi-file-earmark-check me-2" style="color:var(--gold);"></i>
+            <i class="bi bi-file-earmark-check me-2" style="color:var(--gold);" aria-hidden="true"></i>
             Uploaded Documents
         </div>
         <div class="card-body" style="padding:20px;">
@@ -150,7 +150,7 @@
                                 display:flex; align-items:flex-start; gap:10px;">
                         <i class="bi bi-file-earmark-check-fill"
                            style="color:var(--success); font-size:1.4rem; flex-shrink:0;
-                                  margin-top:2px;"></i>
+                                  margin-top:2px;" aria-hidden="true"></i>
                         <div>
                             <div style="font-size:0.7rem; font-weight:700;
                                         text-transform:uppercase; letter-spacing:0.06em;
@@ -172,7 +172,7 @@
 
     <!-- Appointment note -->
     <div class="alert alert-info mb-4">
-        <i class="bi bi-calendar-check me-2"></i>
+        <i class="bi bi-calendar-check me-2" aria-hidden="true"></i>
         <strong>Appointment will be auto-assigned</strong> immediately after you
         submit, based on the next available inspection date.
     </div>
@@ -183,11 +183,11 @@
         <div class="d-flex justify-content-between align-items-center">
             <button type="submit" name="go_back"
                     class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left me-1"></i> Go Back & Edit
+                <i class="bi bi-arrow-left me-1" aria-hidden="true"></i> Go Back & Edit
             </button>
             <button type="submit" class="btn btn-gold"
                     style="padding:10px 32px; font-size:0.95rem;">
-                <i class="bi bi-send-fill me-2"></i>
+                <i class="bi bi-send-fill me-2" aria-hidden="true"></i>
                 Submit Application
             </button>
         </div>

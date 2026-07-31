@@ -3,9 +3,9 @@
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2><i class="bi bi-file-earmark-text text-primary"></i> Application Detail</h2>
+    <h1><i class="bi bi-file-earmark-text text-primary" aria-hidden="true"></i> Application Detail</h1>
     <a href="{% url 'application_list' %}" class="btn btn-outline-secondary">
-        <i class="bi bi-arrow-left"></i> Back to List
+        <i class="bi bi-arrow-left" aria-hidden="true"></i> Back to List
     </a>
 </div>
 
@@ -28,15 +28,15 @@
         <!-- Personal Details -->
         <div class="card shadow-sm mb-3">
             <div class="card-header bg-white fw-bold">
-                <i class="bi bi-person-fill text-primary"></i> Personal Details
+                <i class="bi bi-person-fill text-primary" aria-hidden="true"></i> Personal Details
             </div>
             <div class="card-body">
                 <table class="table table-sm table-bordered mb-0">
-                    <tr><th>Full Name</th><td>{{ application.full_name }}</td></tr>
-                    <tr><th>Classification</th><td>{{ application.get_classification_display }}</td></tr>
-                    <tr><th>ID Number</th><td>{{ application.id_number }}</td></tr>
-                    <tr><th>College/Dept</th><td>{{ application.college_department }}</td></tr>
-                    <tr><th>Applicant Account</th><td>{{ application.applicant.username }}</td></tr>
+                    <tr><th scope="row">Full Name</th><td>{{ application.full_name }}</td></tr>
+                    <tr><th scope="row">Classification</th><td>{{ application.get_classification_display }}</td></tr>
+                    <tr><th scope="row">ID Number</th><td>{{ application.id_number }}</td></tr>
+                    <tr><th scope="row">College/Dept</th><td>{{ application.college_department }}</td></tr>
+                    <tr><th scope="row">Applicant Account</th><td>{{ application.applicant.username }}</td></tr>
                 </table>
             </div>
         </div>
@@ -44,19 +44,19 @@
         <!-- Vehicle Details -->
         <div class="card shadow-sm mb-3">
             <div class="card-header bg-white fw-bold">
-                <i class="bi bi-car-front-fill text-primary"></i> Vehicle Details
+                <i class="bi bi-car-front-fill text-primary" aria-hidden="true"></i> Vehicle Details
             </div>
             <div class="card-body">
                 <table class="table table-sm table-bordered mb-0">
-                    <tr><th>Plate Number</th><td><strong>{{ application.plate_number }}</strong></td></tr>
-                    <tr><th>Vehicle Type</th><td>{{ application.get_vehicle_type_display }}</td></tr>
-                    <tr><th>Color</th><td>{{ application.get_vehicle_color_display }}</td></tr>
-                    <tr><th>Owner</th><td>{% if application.is_owner %}Yes{% else %}No{% endif %}</td></tr>
+                    <tr><th scope="row">Plate Number</th><td><strong>{{ application.plate_number }}</strong></td></tr>
+                    <tr><th scope="row">Vehicle Type</th><td>{{ application.get_vehicle_type_display }}</td></tr>
+                    <tr><th scope="row">Color</th><td>{{ application.get_vehicle_color_display }}</td></tr>
+                    <tr><th scope="row">Owner</th><td>{% if application.is_owner %}Yes{% else %}No{% endif %}</td></tr>
                     {% if application.sticker_id %}
-                    <tr><th>Sticker ID</th><td><code>{{ application.sticker_id }}</code></td></tr>
+                    <tr><th scope="row">Sticker ID</th><td><code>{{ application.sticker_id }}</code></td></tr>
                     {% endif %}
                     {% if application.rfid_uid %}
-                    <tr><th>RFID UID</th><td><code>{{ application.rfid_uid }}</code></td></tr>
+                    <tr><th scope="row">RFID UID</th><td><code>{{ application.rfid_uid }}</code></td></tr>
                     {% endif %}
                 </table>
             </div>
@@ -68,7 +68,7 @@
         <!-- Documents -->
         <div class="card shadow-sm mb-3">
             <div class="card-header bg-white fw-bold">
-                <i class="bi bi-file-earmark-fill text-primary"></i> Documents
+                <i class="bi bi-file-earmark-fill text-primary" aria-hidden="true"></i> Documents
             </div>
             <div class="card-body">
                 <ul class="list-group list-group-flush">
@@ -77,7 +77,7 @@
                         {% if application.or_cr %}
                             <a href="{% url 'serve_document' application.pk 'or_cr' %}" target="_blank"
                                class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-eye"></i> View
+                                <i class="bi bi-eye" aria-hidden="true"></i> View
                             </a>
                         {% else %}
                             <span class="text-muted">Not uploaded</span>
@@ -88,7 +88,7 @@
                         {% if application.drivers_license %}
                             <a href="{% url 'serve_document' application.pk 'drivers_license' %}" target="_blank"
                                class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-eye"></i> View
+                                <i class="bi bi-eye" aria-hidden="true"></i> View
                             </a>
                         {% else %}
                             <span class="text-muted">Not uploaded</span>
@@ -99,7 +99,7 @@
                         {% if application.cor %}
                             <a href="{% url 'serve_document' application.pk 'cor' %}" target="_blank"
                                class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-eye"></i> View
+                                <i class="bi bi-eye" aria-hidden="true"></i> View
                             </a>
                         {% else %}
                             <span class="text-muted">—</span>
@@ -110,7 +110,7 @@
                         {% if application.authorization_letter %}
                             <a href="{% url 'serve_document' application.pk 'authorization_letter' %}" target="_blank"
                                class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-eye"></i> View
+                                <i class="bi bi-eye" aria-hidden="true"></i> View
                             </a>
                         {% else %}
                             <span class="text-muted">—</span>
@@ -123,7 +123,7 @@
         <!-- Appointment -->
         <div class="card shadow-sm mb-3">
             <div class="card-header bg-white fw-bold">
-                <i class="bi bi-calendar-check text-primary"></i> Appointment
+                <i class="bi bi-calendar-check text-primary" aria-hidden="true"></i> Appointment
             </div>
             <div class="card-body">
                 {% if appointment %}
@@ -143,8 +143,8 @@
                     {% csrf_token %}
                     <input type="hidden" name="action" value="set_appointment">
                     <div class="mb-2">
-                        <label class="form-label small">Date</label>
-                        <select name="slot_id" class="form-select form-select-sm">
+                        <label for="id_slot_id" class="form-label small">Date</label>
+                        <select id="id_slot_id" name="slot_id" class="form-select form-select-sm">
                             <option value="">— Select Date —</option>
                             {% for slot in available_slots %}
                                 <option value="{{ slot.pk }}">
@@ -154,8 +154,8 @@
                         </select>
                     </div>
                     <div class="mb-2">
-                        <label class="form-label small">Time</label>
-                        <select name="time" class="form-select form-select-sm">
+                        <label for="id_time" class="form-label small">Time</label>
+                        <select id="id_time" name="time" class="form-select form-select-sm">
                             <option value="">— Select Time —</option>
                             {% for value, label in time_choices %}
                                 <option value="{{ value }}">{{ label }}</option>
@@ -163,7 +163,7 @@
                         </select>
                     </div>
                     <button type="submit" class="btn btn-sm btn-outline-primary">
-                        <i class="bi bi-calendar-plus"></i> Set Appointment
+                        <i class="bi bi-calendar-plus" aria-hidden="true"></i> Set Appointment
                     </button>
                 </form>
             </div>
@@ -180,14 +180,14 @@
             {% csrf_token %}
             <button type="submit" class="btn btn-success"
                     onclick="return confirm('Approve this application?')">
-                <i class="bi bi-check-circle"></i> Approve
+                <i class="bi bi-check-circle" aria-hidden="true"></i> Approve
             </button>
         </form>
 
         <!-- Reject -->
         <button class="btn btn-danger" data-bs-toggle="collapse"
                 data-bs-target="#rejectForm">
-            <i class="bi bi-x-circle"></i> Reject
+            <i class="bi bi-x-circle" aria-hidden="true"></i> Reject
         </button>
     </div>
 
@@ -196,9 +196,12 @@
         <form method="post" action="{% url 'reject_application' application.pk %}">
             {% csrf_token %}
             <div class="mb-2">
-                <label class="form-label">Reason for Rejection</label>
-                <textarea name="rejection_reason" class="form-control" rows="2"
-                          placeholder="Optional: explain why this application is rejected"></textarea>
+                <label class="form-label" for="rejection_reason">
+                    Reason for Rejection <span class="text-danger">*</span>
+                </label>
+                <textarea id="rejection_reason" name="rejection_reason" class="form-control" rows="2"
+                          placeholder="Explain why this application is rejected — the applicant will see this exact text"
+                          required></textarea>
             </div>
             <button type="submit" class="btn btn-danger">
                 Confirm Rejection
@@ -211,12 +214,12 @@
 {% if application.status == 'approved' %}
 <div class="alert alert-success d-flex justify-content-between align-items-center">
     <span>
-        <i class="bi bi-check-circle-fill"></i>
+        <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
         This application is approved and ready for sticker issuance.
     </span>
     <a href="{% url 'issue_sticker' application.pk %}"
        class="btn btn-primary">
-        <i class="bi bi-patch-check"></i> Go to Sticker Station
+        <i class="bi bi-patch-check" aria-hidden="true"></i> Go to Sticker Station
     </a>
 </div>
 {% endif %}

@@ -4,10 +4,10 @@
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2><i class="bi bi-journal-text text-primary"></i> Gate Logs</h2>
+    <h1><i class="bi bi-journal-text text-primary" aria-hidden="true"></i> Gate Logs</h1>
     <a href="{% url 'export_csv' %}?q={{ query }}&action={{ action_filter }}&date_from={{ date_from }}&date_to={{ date_to }}"
        class="btn btn-success">
-        <i class="bi bi-download"></i> Export CSV
+        <i class="bi bi-download" aria-hidden="true"></i> Export CSV
     </a>
 </div>
 
@@ -16,12 +16,14 @@
     <div class="card-body">
         <form method="get" class="row g-2">
             <div class="col-md-3">
-                <input type="text" name="q" class="form-control"
+                <label class="form-label small" for="filter_q">Search plate or driver</label>
+                <input type="text" id="filter_q" name="q" class="form-control"
                        placeholder="Plate or driver name..."
                        value="{{ query }}">
             </div>
             <div class="col-md-2">
-                <select name="action" class="form-select">
+                <label class="form-label small" for="filter_action">Action</label>
+                <select id="filter_action" name="action" class="form-select">
                     <option value="">All Actions</option>
                     <option value="entry" {% if action_filter == 'entry' %}selected{% endif %}>Entry</option>
                     <option value="exit" {% if action_filter == 'exit' %}selected{% endif %}>Exit</option>
@@ -29,7 +31,8 @@
                 </select>
             </div>
             <div class="col-md-2">
-                <select name="gate" class="form-select">
+                <label class="form-label small" for="filter_gate">Gate</label>
+                <select id="filter_gate" name="gate" class="form-select">
                     <option value="">All Gates</option>
                     {% for gate in gate_locations %}
                         <option value="{{ gate }}"
@@ -40,16 +43,19 @@
                 </select>
             </div>
             <div class="col-md-2">
-                <input type="date" name="date_from" class="form-control"
-                       value="{{ date_from }}" placeholder="From">
+                <label class="form-label small" for="filter_date_from">From date</label>
+                <input type="date" id="filter_date_from" name="date_from" class="form-control"
+                       value="{{ date_from }}">
             </div>
             <div class="col-md-2">
-                <input type="date" name="date_to" class="form-control"
-                       value="{{ date_to }}" placeholder="To">
+                <label class="form-label small" for="filter_date_to">To date</label>
+                <input type="date" id="filter_date_to" name="date_to" class="form-control"
+                       value="{{ date_to }}">
             </div>
-            <div class="col-md-1">
+            <div class="col-md-1 d-flex align-items-end">
                 <button type="submit" class="btn btn-primary w-100">
-                    <i class="bi bi-search"></i>
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                    <span class="visually-hidden">Apply filters</span>
                 </button>
             </div>
         </form>
@@ -64,15 +70,15 @@
 <div class="card shadow-sm">
     <div class="card-body p-0">
         <table class="table table-hover mb-0">
-            <thead class="table-dark">
+            <thead>
                 <tr>
-                    <th>Timestamp</th>
-                    <th>Plate</th>
-                    <th>Sticker ID</th>
-                    <th>Driver</th>
-                    <th>Action</th>
-                    <th>Gate</th>
-                    <th></th>
+                    <th scope="col">Timestamp</th>
+                    <th scope="col">Plate</th>
+                    <th scope="col">Sticker ID</th>
+                    <th scope="col">Driver</th>
+                    <th scope="col">Action</th>
+                    <th scope="col">Gate</th>
+                    <th scope="col"></th>
                 </tr>
             </thead>
             <tbody>
@@ -104,11 +110,11 @@
                     </td>
                     <td>
                         {% if log.action == 'entry' %}
-                            <span class="badge bg-success">Entry</span>
+                            <span class="status-badge badge-entry">Entry</span>
                         {% elif log.action == 'exit' %}
-                            <span class="badge bg-warning text-dark">Exit</span>
+                            <span class="status-badge badge-exit">Exit</span>
                         {% else %}
-                            <span class="badge bg-danger">Denied</span>
+                            <span class="status-badge badge-denied">Denied</span>
                         {% endif %}
                     </td>
                     <td>{{ log.gate_location }}</td>

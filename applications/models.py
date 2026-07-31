@@ -1,7 +1,12 @@
+from datetime import timedelta
 from django.db import models
 from django.db.models import Q
 from accounts.models import User
 from .utils import upload_or_cr, upload_license, upload_cor, upload_auth
+
+# A sticker is valid for one academic year from the day it was handed out.
+# Mirrors the constant in applications/management/commands/expire_stickers.py.
+STICKER_VALIDITY_DAYS = 365
 
 
 class RegistrationWindow(models.Model):
@@ -145,6 +150,13 @@ class StickerApplication(models.Model):
     issued_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def expiry_date(self):
+        """The date the sticker stops being valid, or None if never issued."""
+        if not self.issued_at:
+            return None
+        return self.issued_at + timedelta(days=STICKER_VALIDITY_DAYS)
 
     def __str__(self):
         return f"{self.full_name} – {self.plate_number} ({self.get_status_display()})"

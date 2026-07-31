@@ -21,55 +21,55 @@
                     {% csrf_token %}
 
                     <div class="row g-3">
-                        <div class="col-6">
-                            <label class="form-label">First Name *</label>
-                            <input type="text" name="first_name" class="form-control" required>
+                        <div class="col-sm-6">
+                            <label for="id_first_name" class="form-label">First Name *</label>
+                            <input id="id_first_name" type="text" name="first_name" class="form-control" required>
                         </div>
-                        <div class="col-6">
-                            <label class="form-label">Last Name *</label>
-                            <input type="text" name="last_name" class="form-control" required>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">Username *</label>
-                            <input type="text" name="username" class="form-control" required>
+                        <div class="col-sm-6">
+                            <label for="id_last_name" class="form-label">Last Name *</label>
+                            <input id="id_last_name" type="text" name="last_name" class="form-control" required>
                         </div>
                         <div class="col-12">
-                            <label class="form-label">Email *</label>
-                            <input type="email" name="email" class="form-control" required>
+                            <label for="id_username" class="form-label">Username *</label>
+                            <input id="id_username" type="text" name="username" class="form-control" required>
                         </div>
-                        <div class="col-6">
-                            <label class="form-label">Classification</label>
-                            <select name="classification" class="form-select">
+                        <div class="col-12">
+                            <label for="id_email" class="form-label">Email *</label>
+                            <input id="id_email" type="email" name="email" class="form-control" required>
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="id_classification" class="form-label">Classification</label>
+                            <select id="id_classification" name="classification" class="form-select">
                                 <option value="">— Select —</option>
                                 <option value="student">Student</option>
                                 <option value="faculty">Faculty</option>
                                 <option value="parent">Parent</option>
                             </select>
                         </div>
-                        <div class="col-6">
-                            <label class="form-label">ID Number</label>
-                            <input type="text" name="id_number" class="form-control">
+                        <div class="col-sm-6">
+                            <label for="id_id_number" class="form-label">ID Number</label>
+                            <input id="id_id_number" type="text" name="id_number" class="form-control">
                         </div>
-                        <div class="col-8">
-                            <label class="form-label">College / Department</label>
-                            <input type="text" name="college_department" class="form-control">
+                        <div class="col-sm-8">
+                            <label for="id_college_department" class="form-label">College / Department</label>
+                            <input id="id_college_department" type="text" name="college_department" class="form-control">
                         </div>
-                        <div class="col-4">
-                            <label class="form-label">Contact No.</label>
-                            <input type="text" name="contact_number" class="form-control">
+                        <div class="col-sm-4">
+                            <label for="id_contact_number" class="form-label">Contact No.</label>
+                            <input id="id_contact_number" type="text" name="contact_number" class="form-control">
                         </div>
                     </div>
 
                     <hr class="section-divider">
 
                     <div class="row g-3">
-                        <div class="col-6">
-                            <label class="form-label">Password *</label>
-                            <input type="password" name="password1" class="form-control" required>
+                        <div class="col-sm-6">
+                            <label for="id_password1" class="form-label">Password *</label>
+                            <input id="id_password1" type="password" name="password1" class="form-control" required>
                         </div>
-                        <div class="col-6">
-                            <label class="form-label">Confirm Password *</label>
-                            <input type="password" name="password2" class="form-control" required>
+                        <div class="col-sm-6">
+                            <label for="id_password2" class="form-label">Confirm Password *</label>
+                            <input id="id_password2" type="password" name="password2" class="form-control" required>
                         </div>
                     </div>
 
@@ -83,7 +83,7 @@
 
                     <button type="submit" class="btn btn-primary w-100 mt-4"
                             style="padding:10px;">
-                        Create Account <i class="bi bi-person-check ms-1"></i>
+                        Create Account <i class="bi bi-person-check ms-1" aria-hidden="true"></i>
                     </button>
                 </form>
             </div>

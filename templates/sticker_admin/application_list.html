@@ -2,7 +2,7 @@
 {% block title %}All Applications{% endblock %}
 
 {% block content %}
-<h2><i class="bi bi-folder2-open text-primary"></i> All Applications</h2>
+<h1><i class="bi bi-folder2-open text-primary" aria-hidden="true"></i> All Applications</h1>
 
 <!-- Search and Filter -->
 <div class="card shadow-sm mb-4">
@@ -26,7 +26,7 @@
             </div>
             <div class="col-md-2">
                 <button type="submit" class="btn btn-primary w-100">
-                    <i class="bi bi-search"></i> Search
+                    <i class="bi bi-search" aria-hidden="true"></i> Search
                 </button>
             </div>
             <div class="col-md-1">
@@ -42,16 +42,16 @@
 <div class="card shadow-sm">
     <div class="card-body p-0">
         <table class="table table-hover mb-0">
-            <thead class="table-dark">
+            <thead>
                 <tr>
-                    <th>Name</th>
-                    <th>ID Number</th>
-                    <th>Plate</th>
-                    <th>Classification</th>
-                    <th>Status</th>
-                    <th>Appointment</th>
-                    <th>Submitted</th>
-                    <th></th>
+                    <th scope="col">Name</th>
+                    <th scope="col">ID Number</th>
+                    <th scope="col">Plate</th>
+                    <th scope="col">Classification</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Appointment</th>
+                    <th scope="col">Submitted</th>
+                    <th scope="col"></th>
                 </tr>
             </thead>
             <tbody>
@@ -62,19 +62,9 @@
                     <td><strong>{{ app.plate_number }}</strong></td>
                     <td>{{ app.get_classification_display }}</td>
                     <td>
-                        {% if app.status == 'draft' %}
-                            <span class="badge bg-secondary">Draft</span>
-                        {% elif app.status == 'scheduled' %}
-                            <span class="badge bg-info">Scheduled</span>
-                        {% elif app.status == 'approved' %}
-                            <span class="badge bg-success">Approved</span>
-                        {% elif app.status == 'rejected' %}
-                            <span class="badge bg-danger">Rejected</span>
-                        {% elif app.status == 'issued' %}
-                            <span class="badge bg-primary">Issued</span>
-                        {% elif app.status == 'expired' %}
-                            <span class="badge bg-dark">Expired</span>
-                        {% endif %}
+                        <span class="status-badge badge-{{ app.status }}">
+                            {{ app.get_status_display }}
+                        </span>
                     </td>
                     <td>
                         {% if app.appointment %}

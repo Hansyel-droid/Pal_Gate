@@ -2,11 +2,10 @@ from datetime import timedelta
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from applications.models import StickerApplication
+from applications.models import StickerApplication, STICKER_VALIDITY_DAYS
 from gate.audit import log_action
 
-# A sticker is valid for one academic year
-VALIDITY_DAYS = 365
+VALIDITY_DAYS = STICKER_VALIDITY_DAYS
 
 
 class Command(BaseCommand):

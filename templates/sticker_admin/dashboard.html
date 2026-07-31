@@ -3,7 +3,7 @@
 
 {% block content %}
 <div class="page-header">
-    <h2>Dashboard</h2>
+    <h1>Dashboard</h1>
     <p class="page-sub">
         Welcome back, {{ user.get_full_name|default:user.username }} —
         {{ now|date:"l, F d, Y" }}
@@ -19,12 +19,12 @@
                     <div class="stat-label">Pending Review</div>
                     <div class="stat-value">{{ stats.pending }}</div>
                 </div>
-                <i class="bi bi-hourglass-split stat-icon"></i>
+                <i class="bi bi-hourglass-split stat-icon" aria-hidden="true"></i>
             </div>
             <div style="margin-top:10px;">
                 <a href="{% url 'application_list' %}?status=scheduled"
                    style="font-size:0.78rem; color:var(--warning); font-weight:600;">
-                    View all <i class="bi bi-arrow-right"></i>
+                    View all <i class="bi bi-arrow-right" aria-hidden="true"></i>
                 </a>
             </div>
         </div>
@@ -36,7 +36,7 @@
                     <div class="stat-label">Approved Today</div>
                     <div class="stat-value">{{ stats.approved_today }}</div>
                 </div>
-                <i class="bi bi-check-circle stat-icon"></i>
+                <i class="bi bi-check-circle stat-icon" aria-hidden="true"></i>
             </div>
         </div>
     </div>
@@ -47,12 +47,12 @@
                     <div class="stat-label">Waiting for Claim</div>
                     <div class="stat-value">{{ stats.waiting_claim }}</div>
                 </div>
-                <i class="bi bi-person-check stat-icon"></i>
+                <i class="bi bi-person-check stat-icon" aria-hidden="true"></i>
             </div>
             <div style="margin-top:10px;">
                 <a href="{% url 'sticker_station' %}"
                    style="font-size:0.78rem; color:var(--info); font-weight:600;">
-                    Go to station <i class="bi bi-arrow-right"></i>
+                    Go to station <i class="bi bi-arrow-right" aria-hidden="true"></i>
                 </a>
             </div>
         </div>
@@ -64,7 +64,7 @@
                     <div class="stat-label">Rejected</div>
                     <div class="stat-value">{{ stats.rejected }}</div>
                 </div>
-                <i class="bi bi-x-circle stat-icon"></i>
+                <i class="bi bi-x-circle stat-icon" aria-hidden="true"></i>
             </div>
         </div>
     </div>
@@ -75,7 +75,7 @@
                     <div class="stat-label">High Priority (3+ days)</div>
                     <div class="stat-value">{{ stats.high_priority }}</div>
                 </div>
-                <i class="bi bi-exclamation-triangle stat-icon"></i>
+                <i class="bi bi-exclamation-triangle stat-icon" aria-hidden="true"></i>
             </div>
         </div>
     </div>
@@ -86,7 +86,7 @@
                     <div class="stat-label">Stickers Issued</div>
                     <div class="stat-value">{{ stats.issued }}</div>
                 </div>
-                <i class="bi bi-patch-check stat-icon"></i>
+                <i class="bi bi-patch-check stat-icon" aria-hidden="true"></i>
             </div>
         </div>
     </div>
@@ -96,20 +96,20 @@
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <span><i class="bi bi-clock-history me-2"
-                 style="color:var(--gold);"></i>Recent Activity</span>
+                 style="color:var(--gold);" aria-hidden="true"></i>Recent Activity</span>
         <a href="{% url 'application_list' %}"
            style="font-size:0.78rem; color:var(--navy-mid); font-weight:600;">
-            View all <i class="bi bi-arrow-right"></i>
+            View all <i class="bi bi-arrow-right" aria-hidden="true"></i>
         </a>
     </div>
     <table class="table mb-0">
         <thead>
             <tr>
-                <th>Name</th>
-                <th>Plate</th>
-                <th>Status</th>
-                <th>Last Updated</th>
-                <th></th>
+                <th scope="col">Name</th>
+                <th scope="col">Plate</th>
+                <th scope="col">Status</th>
+                <th scope="col">Last Updated</th>
+                <th scope="col"></th>
             </tr>
         </thead>
         <tbody>

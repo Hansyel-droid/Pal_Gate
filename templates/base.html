@@ -5,8 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}PalSU Gate System{% endblock %}</title>
 
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <!-- Fonts. IBM Plex Sans carries the interface; IBM Plex Mono carries
+         identifiers — plate numbers, sticker IDs, RFID UIDs — which are the
+         physical objects this system tracks, not decoration. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
@@ -23,29 +27,62 @@
             --content-bg:  #F0F4FA;
             --card-bg:     #FFFFFF;
             --text-main:   #1A2340;
-            --text-muted:  #6B7A99;
+            --text-muted:  #5A6987;
             --border:      #DDE3EF;
             --danger:      #E63946;
             --success:     #2D9E6B;
             --warning:     #E89C2F;
             --info:        #2A7FC1;
             --sidebar-w:   240px;
+
+            /* Ink tokens: the readable foreground for each semantic hue on its
+               own tint. The base hues above are fills and borders — they do not
+               reach 4.5:1 as text on their tinted backgrounds, so text uses
+               these instead. */
+            --success-ink: #1A6B47;
+            --danger-ink:  #9B2335;
+            --warning-ink: #8A5A00;
+            --info-ink:    #1A4F8A;
+            --issued-ink:  #3B4699;
+            --neutral-ink: #4B5563;
+
+            --focus-ring:  #2A5298;
+
+            --font-ui:   'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+            --font-id:   'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
         }
 
         /* ── Base ───────────────────────────────────── */
         * { box-sizing: border-box; }
 
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: var(--font-ui);
             background: var(--content-bg);
             color: var(--text-main);
             margin: 0;
             min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
         }
 
         h1, h2, h3, h4, h5, h6 {
-            font-family: 'DM Sans', sans-serif;
+            font-family: var(--font-ui);
             font-weight: 600;
+            letter-spacing: -0.011em;
+        }
+
+        /* Page titles are h1 for document structure, but keep the incumbent
+           1.5rem size — the browser's 2em default would resize every screen. */
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        /* Identifiers and quantities line up in columns. Without this, a table
+           of plate numbers, times, and counts wobbles column to column. */
+        .table,
+        .stat-card .stat-value,
+        code, time {
+            font-variant-numeric: tabular-nums;
         }
 
         /* ── Top Bar ────────────────────────────────── */
@@ -66,12 +103,43 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            font-family: 'DM Sans', sans-serif;
+            font-family: var(--font-ui);
             font-weight: 700;
             font-size: 1rem;
             color: #fff;
             letter-spacing: 0.02em;
+            min-width: 0;
         }
+
+        .sidebar-toggle {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+            cursor: pointer;
+        }
+
+        .sidebar-toggle:hover {
+            border-color: var(--gold);
+            color: var(--gold);
+        }
+
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            top: 56px; left: 0; right: 0; bottom: 0;
+            background: rgba(10,22,40,0.5);
+            z-index: 899;
+        }
+
+        .sidebar-backdrop.show { display: block; }
 
         .topbar-brand .brand-icon {
             width: 30px;
@@ -86,7 +154,7 @@
         }
 
         .topbar-brand .brand-sub {
-            font-size: 0.65rem;
+            font-size: 0.72rem;
             font-weight: 400;
             color: #7A9BBF;
             display: block;
@@ -161,6 +229,7 @@
             overflow-y: auto;
             z-index: 900;
             padding-bottom: 24px;
+            transition: transform 0.2s ease;
         }
 
         .sidebar-section {
@@ -168,11 +237,11 @@
         }
 
         .sidebar-label {
-            font-size: 0.65rem;
+            font-size: 0.72rem;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.1em;
-            color: #4A6A9A;
+            color: #6B8CB8;
             padding: 0 20px 6px;
         }
 
@@ -225,6 +294,7 @@
             margin-bottom: 24px;
         }
 
+        .page-header h1,
         .page-header h2 {
             font-size: 1.5rem;
             font-weight: 700;
@@ -274,7 +344,7 @@
         }
 
         .stat-card .stat-value {
-            font-family: 'DM Sans', sans-serif;
+            font-family: var(--font-ui);
             font-size: 2rem;
             font-weight: 700;
             color: var(--text-main);
@@ -332,17 +402,45 @@
             font-size: 0.72rem;
             font-weight: 600;
             letter-spacing: 0.03em;
+            white-space: nowrap;
         }
 
-        .badge-scheduled { background: #EBF4FF; color: var(--info); }
-        .badge-approved  { background: #E8F7F0; color: var(--success); }
-        .badge-rejected  { background: #FDECEA; color: var(--danger); }
-        .badge-issued    { background: #EEF0FF; color: #5B6AD0; }
-        .badge-draft     { background: #F3F4F6; color: #6B7280; }
-        .badge-expired   { background: #F3F4F6; color: #6B7280; }
-        .badge-entry     { background: #E8F7F0; color: var(--success); }
-        .badge-exit      { background: #FFF8E8; color: var(--warning); }
-        .badge-denied    { background: #FDECEA; color: var(--danger); }
+        .badge-scheduled { background: #EBF4FF; color: var(--info-ink); }
+        .badge-approved  { background: #E8F7F0; color: var(--success-ink); }
+        .badge-rejected  { background: #FDECEA; color: var(--danger-ink); }
+        .badge-issued    { background: #EEF0FF; color: var(--issued-ink); }
+        .badge-draft     { background: #F3F4F6; color: var(--neutral-ink); }
+        .badge-expired   { background: #F3F4F6; color: var(--neutral-ink); }
+        .badge-entry     { background: #E8F7F0; color: var(--success-ink); }
+        .badge-exit      { background: #FFF8E8; color: var(--warning-ink); }
+        .badge-denied    { background: #FDECEA; color: var(--danger-ink); }
+
+        /* ── RFID scanner poller ────────────────────────
+           Shared by the sticker station and quick register: both bind a
+           physical tag to a person, and both must show whether the scanner
+           is actually answering rather than failing silently. */
+        .poll-state {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 20px;
+        }
+        .poll-state i { font-size: 0.55rem; }
+        .poll-state.connected   { background: #E8F7F0; color: var(--success-ink); }
+        .poll-state.waiting     { background: #F3F4F6; color: var(--neutral-ink); }
+        .poll-state.retrying    { background: #FFF8E8; color: var(--warning-ink); }
+        .poll-state.unreachable { background: #FDECEA; color: var(--danger-ink); }
+
+        .new-tag-offer {
+            background: #EBF4FF;
+            border: 1px solid #B8D4F5;
+            border-radius: 8px;
+            padding: 12px 14px;
+            margin-top: 10px;
+        }
 
         /* ── Forms ──────────────────────────────────── */
         .form-control, .form-select {
@@ -421,35 +519,52 @@
         }
 
         /* ── Alerts ─────────────────────────────────── */
+        /* Alerts carry their meaning in the tint and the ink, not in a slab of
+           colour down one edge. The 1px border in the same hue defines the
+           shape without the accent bar. */
         .alert {
             border-radius: 8px;
             font-size: 0.875rem;
-            border: none;
+            border: 1px solid transparent;
             padding: 12px 16px;
         }
 
         .alert-success {
             background: #E8F7F0;
-            color: #1A6B47;
-            border-left: 4px solid var(--success);
+            color: var(--success-ink);
+            border-color: #B7E2CD;
         }
 
         .alert-danger {
             background: #FDECEA;
-            color: #9B2335;
-            border-left: 4px solid var(--danger);
+            color: var(--danger-ink);
+            border-color: #F5C2BC;
         }
 
         .alert-warning {
             background: #FFF8E8;
-            color: #8A5A00;
-            border-left: 4px solid var(--warning);
+            color: var(--warning-ink);
+            border-color: #EFD9A8;
         }
 
         .alert-info {
             background: #EBF4FF;
-            color: #1A4F8A;
-            border-left: 4px solid var(--info);
+            color: var(--info-ink);
+            border-color: #BCD5EF;
+        }
+
+        /* Bootstrap variants used in the admin review flow that the token
+           system had not defined — they were falling through to raw Bootstrap. */
+        .alert-primary {
+            background: #EEF0FF;
+            color: var(--issued-ink);
+            border-color: #C6CCF2;
+        }
+
+        .alert-secondary {
+            background: #F3F4F6;
+            color: var(--neutral-ink);
+            border-color: #DDE0E5;
         }
 
         /* ── Progress Bar (Wizard) ──────────────────── */
@@ -520,18 +635,145 @@
 
         .text-muted { color: var(--text-muted) !important; }
 
+        /* Identifiers: plate numbers, sticker IDs, RFID UIDs. These are the
+           physical objects the system tracks, so they get their own typographic
+           treatment — monospaced for character-by-character comparison, spaced
+           out because these get read aloud at a gate and typed into a form. */
         code {
-            background: #EEF2FF;
-            color: #4338CA;
-            padding: 2px 6px;
+            font-family: var(--font-id);
+            font-weight: 600;
+            font-size: 0.8rem;
+            letter-spacing: 0.06em;
+            background: #E9EEF7;
+            color: var(--navy-mid);
+            border: 1px solid #D4DEEE;
+            padding: 2px 7px;
             border-radius: 4px;
-            font-size: 0.82rem;
+            white-space: nowrap;
+        }
+
+        /* ── Skip link ──────────────────────────────── */
+        /* Driven by :focus rather than inline onfocus/onblur handlers, so it
+           survives a Content-Security-Policy that blocks inline JS. */
+        .skip-link {
+            position: absolute;
+            top: -48px;
+            left: 0;
+            z-index: 9999;
+            background: var(--gold);
+            color: var(--navy);
+            padding: 10px 16px;
+            font-weight: 700;
+            text-decoration: none;
+            border-bottom-right-radius: 6px;
+            transition: top 0.12s ease;
+        }
+
+        .skip-link:focus {
+            top: 0;
+            color: var(--navy);
+        }
+
+        /* ── Focus visibility ───────────────────────── */
+        /* One ring for every interactive element. Only :focus-visible, so it
+           appears for keyboard and assistive tech without ringing every mouse
+           click. Offset keeps it clear of the element's own border. */
+        a:focus-visible,
+        button:focus-visible,
+        .btn:focus-visible,
+        .sidebar-link:focus-visible,
+        .btn-logout:focus-visible,
+        .sidebar-toggle:focus-visible,
+        [tabindex]:focus-visible,
+        summary:focus-visible {
+            outline: 3px solid var(--focus-ring);
+            outline-offset: 2px;
+            border-radius: 4px;
+        }
+
+        /* On the navy topbar and sidebar the navy ring would disappear. */
+        .topbar a:focus-visible,
+        .topbar button:focus-visible,
+        .sidebar a:focus-visible,
+        .sidebar-toggle:focus-visible,
+        .btn-logout:focus-visible {
+            outline-color: var(--gold-light);
+        }
+
+        .form-control:focus-visible,
+        .form-select:focus-visible {
+            outline: 3px solid var(--focus-ring);
+            outline-offset: 1px;
+        }
+
+        /* ── Reduced motion ─────────────────────────── */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
+
+        /* ── Messages ───────────────────────────────── */
+        .messages-wrap {
+            position: fixed;
+            top: 64px;
+            right: 16px;
+            z-index: 1100;
+            /* Never wider than the viewport allows. At 340px this was covering
+               356px of a 360px phone screen. */
+            width: min(340px, calc(100vw - 32px));
+        }
+
+        /* The dismiss control was a 0.65rem glyph — roughly a 10px target.
+           Padding brings it to 44px without changing how it looks. */
+        .messages-wrap .btn-close {
+            flex-shrink: 0;
+            padding: 14px;
+            margin: -12px -10px -12px 0;
+            background-size: 0.65rem;
         }
 
         /* ── Responsive ─────────────────────────────── */
         @media (max-width: 768px) {
-            .sidebar { transform: translateX(-100%); }
+            .sidebar-toggle { display: flex; }
+
+            .sidebar {
+                transform: translateX(-100%);
+                box-shadow: 4px 0 16px rgba(10,22,40,0.3);
+            }
+            .sidebar.open { transform: translateX(0); }
+
             .main-content { margin-left: 0; padding: 20px 16px; }
+
+            .topbar { padding: 0 12px; gap: 8px; }
+            .topbar-brand { font-size: 0.88rem; gap: 8px; }
+            .topbar-brand .brand-sub { font-size: 0.72rem; }
+            .topbar-user { gap: 8px; }
+            .topbar-user .user-info { display: none; }
+
+            /* Hide the label visually but keep it as the button's accessible
+               name — display:none left an icon-only control announcing nothing. */
+            .btn-logout span {
+                position: absolute;
+                width: 1px;
+                height: 1px;
+                padding: 0;
+                margin: -1px;
+                overflow: hidden;
+                clip: rect(0, 0, 0, 0);
+                white-space: nowrap;
+                border: 0;
+            }
+
+            .wizard-step span { font-size: 0.72rem; }
+            .wizard-connector { margin: 0 4px; }
+        }
+
+        @media (max-width: 420px) {
+            .topbar-brand .brand-sub { display: none; }
         }
     </style>
 
@@ -539,20 +781,18 @@
 </head>
 <body>
 
-<a href="#main-content"
-   style="position:absolute; top:-40px; left:0; background:var(--gold);
-          color:var(--navy); padding:8px; z-index:9999; font-weight:700;
-          transition:top 0.1s;"
-   onfocus="this.style.top='0'"
-   onblur="this.style.top='-40px'">
-    Skip to main content
-</a>
+<a href="#main-content" class="skip-link">Skip to main content</a>
 
 <!-- Top Bar -->
 <header class="topbar">
     <div class="topbar-brand">
-        <div class="brand-icon">
-            <i class="bi bi-shield-lock-fill"></i>
+        {% if user.is_authenticated %}
+        <button type="button" class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="appSidebar">
+            <i class="bi bi-list" aria-hidden="true"></i>
+        </button>
+        {% endif %}
+        <div class="brand-icon" aria-hidden="true">
+            <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
         </div>
         <div>
             PalSU Gate System
@@ -566,33 +806,38 @@
             <div class="user-name">{{ user.get_full_name|default:user.username }}</div>
             <div class="user-role">{{ user.get_role_display }}</div>
         </div>
-        <div class="avatar">
-            <i class="bi bi-person-fill"></i>
+        <div class="avatar" aria-hidden="true">
+            <i class="bi bi-person-fill" aria-hidden="true"></i>
         </div>
         <form method="post" action="{% url 'logout' %}" style="margin:0;">
             {% csrf_token %}
             <button type="submit" class="btn-logout">
-                <i class="bi bi-box-arrow-right"></i> Logout
+                <i class="bi bi-box-arrow-right" aria-hidden="true"></i> <span>Logout</span>
             </button>
         </form>
     </div>
     {% endif %}
 </header>
 
+<!-- Sidebar backdrop (mobile) -->
+{% if user.is_authenticated %}
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+{% endif %}
+
 <!-- Sidebar -->
 {% if user.is_authenticated %}
-<nav class="sidebar">
+<nav class="sidebar" id="appSidebar">
     {% if user.role == 'applicant' %}
         <div class="sidebar-section">
             <div class="sidebar-label">Applicant</div>
             <a href="{% url 'applicant_home' %}" class="sidebar-link {% if request.resolver_match.url_name == 'applicant_home' %}active{% endif %}">
-                <i class="bi bi-house-fill"></i> Home
+                <i class="bi bi-house-fill" aria-hidden="true"></i> Home
             </a>
             <a href="{% url 'apply_step1' %}" class="sidebar-link {% if 'apply_step' in request.resolver_match.url_name %}active{% endif %}">
-                <i class="bi bi-file-earmark-plus"></i> Apply for Sticker
+                <i class="bi bi-file-earmark-plus" aria-hidden="true"></i> Apply for Sticker
             </a>
             <a href="{% url 'my_applications' %}" class="sidebar-link {% if request.resolver_match.url_name == 'my_applications' %}active{% endif %}">
-                <i class="bi bi-collection"></i> My Applications
+                <i class="bi bi-collection" aria-hidden="true"></i> My Applications
             </a>
         </div>
 
@@ -600,28 +845,28 @@
         <div class="sidebar-section">
             <div class="sidebar-label">Overview</div>
             <a href="{% url 'admin_dashboard' %}" class="sidebar-link {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
-                <i class="bi bi-speedometer2"></i> Dashboard
+                <i class="bi bi-speedometer2" aria-hidden="true"></i> Dashboard
             </a>
         </div>
         <div class="sidebar-section">
             <div class="sidebar-label">Management</div>
             <a href="{% url 'registration_window' %}" class="sidebar-link {% if request.resolver_match.url_name == 'registration_window' %}active{% endif %}">
-                <i class="bi bi-calendar-range"></i> Registration Window
+                <i class="bi bi-calendar-range" aria-hidden="true"></i> Registration Window
             </a>
             <a href="{% url 'appointment_dates' %}" class="sidebar-link {% if request.resolver_match.url_name == 'appointment_dates' %}active{% endif %}">
-                <i class="bi bi-calendar3"></i> Appointment Dates
+                <i class="bi bi-calendar3" aria-hidden="true"></i> Appointment Dates
             </a>
             <a href="{% url 'application_list' %}" class="sidebar-link {% if request.resolver_match.url_name == 'application_list' %}active{% endif %}">
-                <i class="bi bi-folder2-open"></i> Applications
+                <i class="bi bi-folder2-open" aria-hidden="true"></i> Applications
             </a>
         </div>
         <div class="sidebar-section">
             <div class="sidebar-label">Issuance</div>
             <a href="{% url 'sticker_station' %}" class="sidebar-link {% if 'sticker' in request.resolver_match.url_name %}active{% endif %}">
-                <i class="bi bi-patch-check"></i> Sticker Station
+                <i class="bi bi-patch-check" aria-hidden="true"></i> Sticker Station
             </a>
             <a href="{% url 'quick_register' %}" class="sidebar-link {% if request.resolver_match.url_name == 'quick_register' %}active{% endif %}">
-                <i class="bi bi-lightning-charge"></i> Quick Register
+                <i class="bi bi-lightning-charge" aria-hidden="true"></i> Quick Register
             </a>
         </div>
 
@@ -629,13 +874,13 @@
         <div class="sidebar-section">
             <div class="sidebar-label">Gate Monitor</div>
             <a href="{% url 'gate_live' %}" class="sidebar-link {% if request.resolver_match.url_name == 'gate_live' %}active{% endif %}">
-                <i class="bi bi-activity"></i> Live Overview
+                <i class="bi bi-activity" aria-hidden="true"></i> Live Overview
             </a>
             <a href="{% url 'gate_logs' %}" class="sidebar-link {% if request.resolver_match.url_name == 'gate_logs' %}active{% endif %}">
-                <i class="bi bi-journal-text"></i> Gate Logs
+                <i class="bi bi-journal-text" aria-hidden="true"></i> Gate Logs
             </a>
             <a href="{% url 'time_tracker' %}" class="sidebar-link {% if request.resolver_match.url_name == 'time_tracker' %}active{% endif %}">
-                <i class="bi bi-clock-history"></i> Time Tracker
+                <i class="bi bi-clock-history" aria-hidden="true"></i> Time Tracker
             </a>
         </div>
     {% endif %}
@@ -644,18 +889,28 @@
 
 <!-- Messages -->
 {% if messages %}
-<div style="position:fixed; top:64px; right:16px; z-index:1100; width:340px;">
+<div class="messages-wrap" aria-live="polite" aria-atomic="false">
     {% for message in messages %}
+    {% if message.tags == 'error' or message.tags == 'danger' %}
+    {# Errors interrupt: they are the only messages a user must not miss. #}
     <div class="alert alert-{{ message.tags }} d-flex align-items-start gap-2 mb-2 shadow-sm"
-         style="animation: slideIn 0.2s ease;">
-        {% if message.tags == 'success' %}<i class="bi bi-check-circle-fill mt-1"></i>
-        {% elif message.tags == 'error' or message.tags == 'danger' %}<i class="bi bi-x-circle-fill mt-1"></i>
-        {% elif message.tags == 'warning' %}<i class="bi bi-exclamation-triangle-fill mt-1"></i>
-        {% else %}<i class="bi bi-info-circle-fill mt-1"></i>{% endif %}
+         role="alert" style="animation: slideIn 0.2s ease;">
+        <i class="bi bi-x-circle-fill mt-1" aria-hidden="true"></i>
         <div style="flex:1;">{{ message }}</div>
         <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="alert"
-                style="font-size:0.65rem;"></button>
+                aria-label="Dismiss message"></button>
     </div>
+    {% else %}
+    <div class="alert alert-{{ message.tags }} d-flex align-items-start gap-2 mb-2 shadow-sm"
+         role="status" style="animation: slideIn 0.2s ease;">
+        {% if message.tags == 'success' %}<i class="bi bi-check-circle-fill mt-1" aria-hidden="true"></i>
+        {% elif message.tags == 'warning' %}<i class="bi bi-exclamation-triangle-fill mt-1" aria-hidden="true"></i>
+        {% else %}<i class="bi bi-info-circle-fill mt-1" aria-hidden="true"></i>{% endif %}
+        <div style="flex:1;">{{ message }}</div>
+        <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="alert"
+                aria-label="Dismiss message"></button>
+    </div>
+    {% endif %}
     {% endfor %}
 </div>
 {% endif %}
@@ -672,6 +927,44 @@
         to   { opacity: 1; transform: translateX(0); }
     }
 </style>
+<script>
+    (function () {
+        var toggle = document.getElementById('sidebarToggle');
+        var sidebar = document.getElementById('appSidebar');
+        var backdrop = document.getElementById('sidebarBackdrop');
+        if (!toggle || !sidebar || !backdrop) return;
+
+        function openSidebar() {
+            sidebar.classList.add('open');
+            backdrop.classList.add('show');
+            toggle.setAttribute('aria-expanded', 'true');
+        }
+
+        function closeSidebar() {
+            sidebar.classList.remove('open');
+            backdrop.classList.remove('show');
+            toggle.setAttribute('aria-expanded', 'false');
+        }
+
+        toggle.addEventListener('click', function () {
+            if (sidebar.classList.contains('open')) {
+                closeSidebar();
+            } else {
+                openSidebar();
+            }
+        });
+
+        backdrop.addEventListener('click', closeSidebar);
+
+        sidebar.querySelectorAll('a.sidebar-link').forEach(function (link) {
+            link.addEventListener('click', closeSidebar);
+        });
+
+        window.addEventListener('resize', function () {
+            if (window.innerWidth > 768) closeSidebar();
+        });
+    })();
+</script>
 {% block extra_js %}{% endblock %}
 </body>
 </html>

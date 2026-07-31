@@ -31,27 +31,94 @@ def csv_safe(value):
     return text
 
 
-@role_required('security')
-def gate_live(request):
+# The two posts in real use (PRODUCT.md). Shown even with zero scans yet,
+# so a reader that has never spoken still gets an honest status line instead
+# of silently vanishing from the scope control.
+KNOWN_GATES = ['Main Gate', 'Back Gate']
+
+# Below this, "last scan Ns ago" is the honest whole story. Past it, the
+# reader may simply be quiet (no vehicles), so the copy adds a soft hedge
+# instead of ever claiming "unreachable" — there is no heartbeat signal in
+# this system, only scan history, and asserting a connectivity fact we can't
+# see would violate PRODUCT.md's "never claim more than exists".
+STALE_READER_THRESHOLD = timedelta(minutes=10)
+
+
+def _format_ago(seconds):
+    """
+    Django's `timesince` filter never resolves below a minute, which reads
+    as "0 minutes ago" for a scan that happened 4 seconds ago — exactly
+    wrong for a screen whose job is showing what just happened.
+    """
+    if seconds < 5:
+        return 'just now'
+    if seconds < 60:
+        return f'{seconds}s ago'
+    minutes = seconds // 60
+    if minutes < 60:
+        return f'{minutes}m ago'
+    hours = minutes // 60
+    if hours < 24:
+        return f'{hours}h ago'
+    days = hours // 24
+    return f'{days}d ago'
+
+
+def _reader_statuses():
+    """
+    One entry per known gate, built only from real GateLog timestamps —
+    the only signal this system actually has about reader activity.
+    """
+    now = timezone.localtime()
+    known = list(KNOWN_GATES)
+    seen_elsewhere = GateLog.objects.order_by().values_list(
+        'gate_location', flat=True
+    ).distinct()
+    for g in seen_elsewhere:
+        if g and g not in known:
+            known.append(g)
+
+    statuses = []
+    for gate_name in known:
+        last_log = GateLog.objects.filter(
+            gate_location=gate_name
+        ).order_by('-timestamp').first()
+        if not last_log:
+            statuses.append({
+                'gate': gate_name, 'last_log': None,
+                'ago': None, 'state': 'silent',
+            })
+            continue
+        age = now - last_log.timestamp
+        state = 'stale' if age > STALE_READER_THRESHOLD else 'active'
+        statuses.append({
+            'gate': gate_name, 'last_log': last_log,
+            'ago': _format_ago(int(age.total_seconds())), 'state': state,
+        })
+    return statuses
+
+
+def _gate_live_context(request):
     today = timezone.localdate()
     now = timezone.localtime()
-    last_24h = now - timedelta(hours=24)
 
-    # Today's counts
+    gate_filter = request.GET.get('gate', '').strip()
+    if gate_filter not in KNOWN_GATES:
+        gate_filter = ''  # '' means "All Gates"
+
     today_logs = GateLog.objects.filter(timestamp__date=today)
+    if gate_filter:
+        today_logs = today_logs.filter(gate_location=gate_filter)
     total_today = today_logs.count()
     entries_today = today_logs.filter(action='entry').count()
     exits_today = today_logs.filter(action='exit').count()
 
-    # Active passes = vehicles that entered but haven't exited.
-    # One query for the plates seen today, one query for their latest logs
-    # (across all history, since a vehicle may have entered on a prior day)
-    # instead of a query per plate.
-    # order_by() clears GateLog's default `-timestamp` ordering — without
-    # it, Django silently adds timestamp to SELECT DISTINCT and this would
-    # yield one row per log instead of deduplicating by plate.
+    # Active passes are a campus-wide fact regardless of the gate scope
+    # control — a vehicle may enter one gate and exit the other, so this
+    # number is never filtered by gate_filter (PRODUCT.md).
+    todays_all_logs = GateLog.objects.filter(timestamp__date=today)
     plates_seen = [
-        p for p in today_logs.order_by().values_list(
+        p for p in todays_all_logs.order_by().values_list(
             'application__plate_number', flat=True
         ).distinct()
         if p
@@ -66,13 +133,58 @@ def gate_live(request):
         1 for log in latest_by_plate.values() if log.action == 'entry'
     )
 
-    # Latest 20 logs
-    latest_logs = GateLog.objects.select_related(
-        'application'
-    ).order_by('-timestamp')[:20]
+    # The single most recent scan is the dominant, distance-first focus of
+    # this screen — not filtered to "today" so the screen never falsely
+    # implies a scan is missing right after midnight.
+    latest_scan_qs = GateLog.objects.select_related('application')
+    if gate_filter:
+        latest_scan_qs = latest_scan_qs.filter(gate_location=gate_filter)
+    latest_scan = latest_scan_qs.order_by('-timestamp').first()
+    latest_scan_ago = None
+    if latest_scan:
+        latest_scan_ago = _format_ago(int((now - latest_scan.timestamp).total_seconds()))
 
-    # Hourly data for the traffic chart (last 24 hours)
-    # Build a list of 24 hours with entry/exit counts
+    # Latest 20 logs — genuinely latest, all-time. The empty-state copy
+    # must not claim "today" since this list isn't scoped to today.
+    latest_logs_qs = GateLog.objects.select_related('application')
+    if gate_filter:
+        latest_logs_qs = latest_logs_qs.filter(gate_location=gate_filter)
+    latest_logs = latest_logs_qs.order_by('-timestamp')[:20]
+
+    reader_statuses = _reader_statuses()
+    if gate_filter:
+        reader_statuses = [r for r in reader_statuses if r['gate'] == gate_filter]
+
+    return {
+        'gate_filter': gate_filter,
+        'known_gates': KNOWN_GATES,
+        'reader_statuses': reader_statuses,
+        'latest_scan': latest_scan,
+        'latest_scan_ago': latest_scan_ago,
+        'total_today': total_today,
+        'entries_today': entries_today,
+        'exits_today': exits_today,
+        'active_passes': active_passes,
+        'latest_logs': latest_logs,
+        'server_time': now,
+    }
+
+
+@role_required('security')
+def gate_live(request):
+    context = _gate_live_context(request)
+
+    if request.GET.get('partial'):
+        # Polled by the page's own JS every 5s to refresh the live region
+        # without location.reload() — which used to blow away scroll,
+        # focus, and screen-reader position twelve times a minute.
+        return render(request, 'gate/_live_fragment.html', context)
+
+    # Hourly traffic chart: last 24 hours, campus-wide. This is a seated,
+    # after-the-fact summary rather than the distance-first live scene, so
+    # unlike the rest of this view it is not part of the 5s poll and is not
+    # scoped by gate_filter — it renders once per full page load.
+    now = timezone.localtime()
     hourly_data = []
     for i in range(23, -1, -1):
         hour_start = now - timedelta(hours=i+1)
@@ -93,15 +205,9 @@ def gate_live(request):
             'entries': entries,
             'exits': exits,
         })
+    context['hourly_data'] = hourly_data
 
-    return render(request, 'gate/live.html', {
-        'total_today': total_today,
-        'entries_today': entries_today,
-        'exits_today': exits_today,
-        'active_passes': active_passes,
-        'latest_logs': latest_logs,
-        'hourly_data': hourly_data,
-    })
+    return render(request, 'gate/live.html', context)
 
 
 @role_required('security')

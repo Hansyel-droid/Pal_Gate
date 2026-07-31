@@ -1,11 +1,51 @@
 {% extends 'base.html' %}
 {% block title %}Issue Sticker{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* The UID is read off a physical tag and compared character by
+       character against the read-back before the operator commits. */
+    .uid-readback {
+        font-family: var(--font-id);
+        font-size: 1.5rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        word-break: break-all;
+        color: var(--text-main);
+    }
+    .uid-readback.empty {
+        color: var(--text-muted);
+        font-size: 1rem;
+        letter-spacing: normal;
+    }
+    .bind-summary {
+        background: #F8FAFD;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 16px 18px;
+        margin-bottom: 16px;
+    }
+    .bind-summary dt {
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--text-muted);
+        margin-bottom: 2px;
+    }
+    .bind-summary dd {
+        margin: 0 0 12px;
+        font-weight: 600;
+    }
+    .bind-summary dd:last-child { margin-bottom: 0; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2><i class="bi bi-patch-check text-success"></i> Issue Sticker</h2>
+    <h1><i class="bi bi-patch-check text-success" aria-hidden="true"></i> Issue Sticker</h1>
     <a href="{% url 'sticker_station' %}" class="btn btn-outline-secondary">
-        <i class="bi bi-arrow-left"></i> Back
+        <i class="bi bi-arrow-left" aria-hidden="true"></i> Back
     </a>
 </div>
 
@@ -14,26 +54,26 @@
     <div class="col-md-5">
         <div class="card shadow-sm mb-3">
             <div class="card-header bg-white fw-bold">
-                <i class="bi bi-person-fill text-primary"></i> Applicant
+                <i class="bi bi-person-fill text-primary" aria-hidden="true"></i> Applicant
             </div>
             <div class="card-body">
                 <table class="table table-sm table-bordered mb-0">
-                    <tr><th>Name</th><td>{{ application.full_name }}</td></tr>
-                    <tr><th>ID Number</th><td>{{ application.id_number }}</td></tr>
-                    <tr><th>Classification</th><td>{{ application.get_classification_display }}</td></tr>
-                    <tr><th>College/Dept</th><td>{{ application.college_department }}</td></tr>
+                    <tr><th scope="row">Name</th><td>{{ application.full_name }}</td></tr>
+                    <tr><th scope="row">ID Number</th><td>{{ application.id_number }}</td></tr>
+                    <tr><th scope="row">Classification</th><td>{{ application.get_classification_display }}</td></tr>
+                    <tr><th scope="row">College/Dept</th><td>{{ application.college_department }}</td></tr>
                 </table>
             </div>
         </div>
         <div class="card shadow-sm">
             <div class="card-header bg-white fw-bold">
-                <i class="bi bi-car-front-fill text-primary"></i> Vehicle
+                <i class="bi bi-car-front-fill text-primary" aria-hidden="true"></i> Vehicle
             </div>
             <div class="card-body">
                 <table class="table table-sm table-bordered mb-0">
-                    <tr><th>Plate</th><td><strong>{{ application.plate_number }}</strong></td></tr>
-                    <tr><th>Type</th><td>{{ application.get_vehicle_type_display }}</td></tr>
-                    <tr><th>Color</th><td>{{ application.get_vehicle_color_display }}</td></tr>
+                    <tr><th scope="row">Plate</th><td><strong>{{ application.plate_number }}</strong></td></tr>
+                    <tr><th scope="row">Type</th><td>{{ application.get_vehicle_type_display }}</td></tr>
+                    <tr><th scope="row">Color</th><td>{{ application.get_vehicle_color_display }}</td></tr>
                 </table>
             </div>
         </div>
@@ -43,38 +83,68 @@
     <div class="col-md-7">
         <div class="card shadow-sm">
             <div class="card-header bg-white fw-bold">
-                <i class="bi bi-wifi text-success"></i> RFID Tag Assignment
+                <i class="bi bi-wifi text-success" aria-hidden="true"></i> RFID Tag Assignment
             </div>
             <div class="card-body">
                 <div class="alert alert-info">
-                    <i class="bi bi-info-circle"></i>
-                    Scan the RFID tag using the registration scanner,
-                    or type the UID manually below.
-                    The field will auto-fill every 3 seconds if a new tag is scanned.
+                    <i class="bi bi-info-circle" aria-hidden="true"></i>
+                    Scan the RFID tag using the registration scanner, or type the UID
+                    manually. A newly scanned tag is offered for confirmation — it never
+                    replaces a UID you have already entered.
                 </div>
 
-                <form method="post">
+                <form method="post" id="issue-form">
                     {% csrf_token %}
                     <div class="mb-3">
-                        <label class="form-label fw-bold">RFID Tag UID *</label>
+                        <label for="rfid_uid" class="form-label fw-bold">RFID Tag UID *</label>
                         <div class="input-group">
                             <input type="text" name="rfid_uid" id="rfid_uid"
                                    class="form-control form-control-lg"
                                    placeholder="Scan or type RFID UID..."
-                                   required autocomplete="off">
-                            <button type="button" class="btn btn-outline-secondary"
-                                    onclick="document.getElementById('rfid_uid').value = ''">
-                                <i class="bi bi-x"></i> Clear
+                                   required autocomplete="off" maxlength="100">
+                            <button type="button" class="btn btn-outline-secondary" id="clear-uid">
+                                <i class="bi bi-x" aria-hidden="true"></i> Clear
                             </button>
                         </div>
-                        <div class="form-text" id="scan_status">
-                            <i class="bi bi-circle text-secondary"></i> Waiting for scan...
+
+                        <!-- A newly detected tag is an offer, never an overwrite: the
+                             operator may already be holding a tag they typed by hand. -->
+                        <div class="new-tag-offer d-none" id="new-tag-offer">
+                            <div class="mb-2">
+                                New tag detected:
+                                <strong class="uid-readback" style="font-size:1.1rem;" id="new-tag-uid"></strong>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-primary" id="use-new-tag">
+                                Use this tag
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="dismiss-new-tag">
+                                Keep current
+                            </button>
+                        </div>
+
+                        <div class="form-text mt-2" id="scan_status" role="status" aria-live="polite">
+                            <span class="poll-state waiting" id="poll-state">
+                                <i class="bi bi-circle" aria-hidden="true"></i>
+                                <span id="poll-state-text">Waiting for scan…</span>
+                            </span>
+                            <span class="text-muted ms-2" id="poll-last"></span>
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-success btn-lg w-100"
-                            onclick="return confirm('Issue sticker for {{ application.full_name }}?')">
-                        <i class="bi bi-patch-check-fill"></i> Issue Sticker
+                    <!-- Read-back: the operator verifies the exact UID being bound to
+                         this exact person and plate before committing. The bond is
+                         written to an immutable log and cannot be casually undone. -->
+                    <div class="bind-summary">
+                        <dl class="mb-0">
+                            <dt>Issuing to</dt>
+                            <dd>{{ application.full_name }} — {{ application.plate_number }}</dd>
+                            <dt>RFID UID to be bound</dt>
+                            <dd class="uid-readback empty" id="uid-readback">No UID entered yet</dd>
+                        </dl>
+                    </div>
+
+                    <button type="submit" class="btn btn-success btn-lg w-100" id="issue-btn">
+                        <i class="bi bi-patch-check-fill" aria-hidden="true"></i> Issue Sticker
                     </button>
                 </form>
             </div>
@@ -85,26 +155,141 @@
 
 {% block extra_js %}
 <script>
-    // Poll for a new RFID tag every 3 seconds
-    let lastUid = '';
+(function () {
+    const uidInput   = document.getElementById('rfid_uid');
+    const readback   = document.getElementById('uid-readback');
+    const offer      = document.getElementById('new-tag-offer');
+    const offerUid   = document.getElementById('new-tag-uid');
+    const stateEl    = document.getElementById('poll-state');
+    const stateText  = document.getElementById('poll-state-text');
+    const lastEl     = document.getElementById('poll-last');
+    const form       = document.getElementById('issue-form');
+    const issueBtn   = document.getElementById('issue-btn');
 
-    function pollForRFID() {
-        fetch('/api/latest-pending-uid/')
-            .then(response => response.json())
-            .then(data => {
-                if (data.uid && data.uid !== lastUid) {
-                    document.getElementById('rfid_uid').value = data.uid;
-                    lastUid = data.uid;
-                    document.getElementById('scan_status').innerHTML =
-                        '<i class="bi bi-check-circle text-success"></i> Tag scanned: ' + data.uid;
+    let offeredUid = null;
+    let dismissedUid = null;
+    let consecutiveFailures = 0;
+    let lastSuccessAt = null;
+
+    function setState(kind, text) {
+        stateEl.className = 'poll-state ' + kind;
+        stateText.textContent = text;
+    }
+
+    function renderReadback() {
+        const v = uidInput.value.trim();
+        readback.textContent = v || 'No UID entered yet';
+        readback.classList.toggle('empty', !v);
+    }
+
+    function renderLastPoll() {
+        if (!lastSuccessAt) { lastEl.textContent = ''; return; }
+        const secs = Math.round((Date.now() - lastSuccessAt) / 1000);
+        lastEl.textContent = 'last checked ' + (secs < 5 ? 'just now' : secs + 's ago');
+    }
+
+    function showOffer(uid) {
+        offeredUid = uid;
+        offerUid.textContent = uid;
+        offer.classList.remove('d-none');
+    }
+
+    function hideOffer() {
+        offer.classList.add('d-none');
+        offeredUid = null;
+    }
+
+    document.getElementById('use-new-tag').addEventListener('click', function () {
+        if (offeredUid) { uidInput.value = offeredUid; renderReadback(); }
+        hideOffer();
+    });
+
+    document.getElementById('dismiss-new-tag').addEventListener('click', function () {
+        dismissedUid = offeredUid;
+        hideOffer();
+    });
+
+    document.getElementById('clear-uid').addEventListener('click', function () {
+        uidInput.value = '';
+        renderReadback();
+        uidInput.focus();
+    });
+
+    uidInput.addEventListener('input', renderReadback);
+
+    // Naming the UID in the confirm is the whole point: the operator is
+    // verifying the tag in their hand against the tag about to be written
+    // permanently to this person's record.
+    form.addEventListener('submit', function (e) {
+        const uid = uidInput.value.trim();
+        if (!uid) {
+            e.preventDefault();
+            setState('unreachable', 'Enter or scan a UID first');
+            uidInput.focus();
+            return;
+        }
+        const ok = confirm(
+            'Bind RFID tag ' + uid + '\n' +
+            'to {{ application.full_name|escapejs }} ({{ application.plate_number|escapejs }})?\n\n' +
+            'This is written to the permanent gate record.'
+        );
+        if (!ok) { e.preventDefault(); return; }
+        // Prevent a double-submit from issuing twice on a slow connection.
+        issueBtn.disabled = true;
+        issueBtn.innerHTML = 'Issuing…';
+    });
+
+    function poll() {
+        fetch('/api/latest-pending-uid/', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (res) {
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                return res.json();
+            })
+            .then(function (data) {
+                consecutiveFailures = 0;
+                lastSuccessAt = Date.now();
+                const uid = data.uid;
+                if (!uid) {
+                    setState('waiting', 'Waiting for scan…');
+                    return;
+                }
+                if (uid === uidInput.value.trim()) {
+                    setState('connected', 'Tag matched');
+                    hideOffer();
+                    return;
+                }
+                if (uid === dismissedUid) {
+                    setState('connected', 'Scanner connected');
+                    return;
+                }
+                if (!uidInput.value.trim()) {
+                    // Field is empty, so filling it destroys nothing.
+                    uidInput.value = uid;
+                    renderReadback();
+                    setState('connected', 'Tag scanned');
+                    return;
+                }
+                // Field already holds a UID — offer, never overwrite.
+                setState('connected', 'New tag detected');
+                showOffer(uid);
+            })
+            .catch(function () {
+                consecutiveFailures += 1;
+                if (consecutiveFailures < 3) {
+                    setState('retrying', 'No response, retrying…');
+                } else {
+                    setState('unreachable', 'Scanner unreachable — type the UID manually');
                 }
             })
-            .catch(() => {
-                // API not ready yet, silently ignore
+            .finally(function () {
+                renderLastPoll();
+                setTimeout(poll, 3000);
             });
     }
 
-    // Start polling every 3 seconds
-    setInterval(pollForRFID, 3000);
+    renderReadback();
+    setInterval(renderLastPoll, 1000);
+    poll();
+})();
 </script>
 {% endblock %}

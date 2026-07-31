@@ -3,14 +3,14 @@
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2><i class="bi bi-clock-history text-primary"></i> Time Tracker</h2>
+    <h1><i class="bi bi-clock-history text-primary" aria-hidden="true"></i> Time Tracker</h1>
     <span class="text-muted small">
-        <i class="bi bi-clock"></i> Current time: {{ now|date:"H:i:s" }}
+        <i class="bi bi-clock" aria-hidden="true"></i> Current time: {{ now|date:"H:i:s" }}
         &nbsp;|&nbsp;
         Curfew: 10:00 PM
         &nbsp;|&nbsp;
         <a href="" onclick="location.reload()">
-            <i class="bi bi-arrow-clockwise"></i> Refresh
+            <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Refresh
         </a>
     </span>
 </div>
@@ -18,7 +18,7 @@
 <!-- Curfew Alert Banner — shown when it's past 10 PM -->
 {% if is_past_curfew %}
 <div class="alert alert-danger border-danger border-2 d-flex align-items-center gap-3 mb-3">
-    <i class="bi bi-alarm-fill fs-2 text-danger"></i>
+    <i class="bi bi-alarm-fill fs-2 text-danger" aria-hidden="true"></i>
     <div>
         <strong class="fs-5">🚨 CURFEW ALERT — It is past 10:00 PM!</strong><br>
         All vehicles should be outside the campus.
@@ -33,7 +33,7 @@
      even before curfew (e.g. inside for 12+ hours) -->
 {% if overstay_count > 0 and not is_past_curfew %}
 <div class="alert alert-warning border-warning border-2 d-flex align-items-center gap-3 mb-3">
-    <i class="bi bi-exclamation-triangle-fill fs-2 text-warning"></i>
+    <i class="bi bi-exclamation-triangle-fill fs-2 text-warning" aria-hidden="true"></i>
     <div>
         <strong class="fs-5">⚠️ Overstay Detected</strong><br>
         {{ overstay_count }} vehicle(s) have been inside for
@@ -45,7 +45,7 @@
 <!-- All clear banner -->
 {% if overstay_count == 0 and inside_vehicles %}
 <div class="alert alert-success mb-3">
-    <i class="bi bi-check-circle-fill"></i>
+    <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
     All vehicles are within the allowed time limit.
 </div>
 {% endif %}
@@ -53,38 +53,38 @@
 <!-- Info bar -->
 <p class="text-muted small mb-3">
     Vehicles flagged red are overstaying due to:
-    <span class="badge bg-warning text-dark">Inside 12+ hours</span>
+    <span class="status-badge badge-exit">Inside 12+ hours</span>
     or
-    <span class="badge bg-danger">Past 10:00 PM curfew</span>
+    <span class="status-badge badge-denied">Past 10:00 PM curfew</span>
 </p>
 
 <!-- Vehicles Table -->
 <div class="card shadow-sm">
     <div class="card-header bg-white d-flex justify-content-between align-items-center">
         <span class="fw-bold">
-            <i class="bi bi-car-front-fill text-primary"></i>
+            <i class="bi bi-car-front-fill text-primary" aria-hidden="true"></i>
             Vehicles Currently Inside
-            <span class="badge bg-secondary ms-1">{{ inside_vehicles|length }}</span>
+            <span class="status-badge badge-draft ms-1">{{ inside_vehicles|length }}</span>
         </span>
         {% if overstay_count > 0 %}
-        <span class="badge bg-danger fs-6">
-            <i class="bi bi-exclamation-triangle"></i>
+        <span class="status-badge badge-denied">
+            <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
             {{ overstay_count }} Overstay(s)
         </span>
         {% endif %}
     </div>
     <div class="card-body p-0">
         <table class="table table-hover mb-0">
-            <thead class="table-dark">
+            <thead>
                 <tr>
-                    <th>Plate Number</th>
-                    <th>Driver Name</th>
-                    <th>Classification</th>
-                    <th>Entry Time</th>
-                    <th>Duration Inside</th>
-                    <th>Gate</th>
-                    <th>Status</th>
-                    <th></th>
+                    <th scope="col">Plate Number</th>
+                    <th scope="col">Driver Name</th>
+                    <th scope="col">Classification</th>
+                    <th scope="col">Entry Time</th>
+                    <th scope="col">Duration Inside</th>
+                    <th scope="col">Gate</th>
+                    <th scope="col">Status</th>
+                    <th scope="col"></th>
                 </tr>
             </thead>
             <tbody>
@@ -98,7 +98,7 @@
                     <td>{{ vehicle.entry_time|date:"M d, Y H:i" }}</td>
                     <td>
                         <span class="fw-bold {% if vehicle.is_overstay %}text-danger{% endif %}">
-                            <i class="bi bi-clock{% if vehicle.is_overstay %}-fill text-danger{% endif %}"></i>
+                            <i class="bi bi-clock{% if vehicle.is_overstay %}-fill text-danger{% endif %}" aria-hidden="true"></i>
                             {{ vehicle.duration }}
                         </span>
                     </td>
@@ -107,15 +107,15 @@
                         {% if vehicle.is_overstay %}
                             <div class="d-flex flex-column gap-1">
                                 {% for reason in vehicle.overstay_reasons %}
-                                    <span class="badge bg-danger">
-                                        <i class="bi bi-exclamation-triangle"></i>
+                                    <span class="status-badge badge-denied">
+                                        <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
                                         {{ reason }}
                                     </span>
                                 {% endfor %}
                             </div>
                         {% else %}
-                            <span class="badge bg-success">
-                                <i class="bi bi-check-circle"></i> OK
+                            <span class="status-badge badge-entry">
+                                <i class="bi bi-check-circle" aria-hidden="true"></i> OK
                             </span>
                         {% endif %}
                     </td>
@@ -129,7 +129,7 @@
                 {% empty %}
                 <tr>
                     <td colspan="8" class="text-center text-muted py-4">
-                        <i class="bi bi-check-circle text-success fs-4"></i><br>
+                        <i class="bi bi-check-circle text-success fs-4" aria-hidden="true"></i><br>
                         No vehicles currently inside campus.
                     </td>
                 </tr>

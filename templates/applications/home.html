@@ -3,20 +3,20 @@
 
 {% block content %}
 <div class="page-header">
-    <h2>Welcome, {{ user.get_full_name|default:user.username }}</h2>
+    <h1>Welcome, {{ user.get_full_name|default:user.username }}</h1>
     <p class="page-sub">Vehicle Sticker Application Portal</p>
 </div>
 
 <!-- Registration Window Banner -->
 {% if window %}
 <div class="alert alert-success mb-4">
-    <i class="bi bi-check-circle-fill me-2"></i>
+    <i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>
     <strong>Registration is open</strong> —
     {{ window.start_date|date:"F d" }} to {{ window.end_date|date:"F d, Y" }}
 </div>
 {% else %}
 <div class="alert alert-warning mb-4">
-    <i class="bi bi-clock me-2"></i>
+    <i class="bi bi-clock me-2" aria-hidden="true"></i>
     <strong>Registration is currently closed.</strong>
     Check back during the next registration period.
 </div>
@@ -24,14 +24,14 @@
 
 <!-- Action Cards -->
 <div class="row g-3 mb-4">
-    <div class="col-md-4">
+    <div class="col-sm-6 col-lg-4">
         <div class="card h-100" style="border-top:3px solid var(--navy-mid);">
             <div class="card-body" style="padding:24px;">
                 <div style="width:44px; height:44px; background:#EEF2FF;
                             border-radius:10px; display:flex; align-items:center;
                             justify-content:center; margin-bottom:14px;">
                     <i class="bi bi-file-earmark-plus"
-                       style="font-size:1.3rem; color:var(--navy-mid);"></i>
+                       style="font-size:1.3rem; color:var(--navy-mid);" aria-hidden="true"></i>
                 </div>
                 <h6 style="font-weight:700; margin-bottom:6px;">Apply for Sticker</h6>
                 <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:16px;">
@@ -39,7 +39,7 @@
                 </p>
                 {% if window %}
                     <a href="{% url 'apply_step1' %}" class="btn btn-primary btn-sm">
-                        Start Application <i class="bi bi-arrow-right ms-1"></i>
+                        Start Application <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i>
                     </a>
                 {% else %}
                     <button class="btn btn-outline-secondary btn-sm" disabled>
@@ -49,14 +49,14 @@
             </div>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-sm-6 col-lg-4">
         <div class="card h-100" style="border-top:3px solid var(--success);">
             <div class="card-body" style="padding:24px;">
                 <div style="width:44px; height:44px; background:#E8F7F0;
                             border-radius:10px; display:flex; align-items:center;
                             justify-content:center; margin-bottom:14px;">
                     <i class="bi bi-collection"
-                       style="font-size:1.3rem; color:var(--success);"></i>
+                       style="font-size:1.3rem; color:var(--success);" aria-hidden="true"></i>
                 </div>
                 <h6 style="font-weight:700; margin-bottom:6px;">My Applications</h6>
                 <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:16px;">
@@ -65,19 +65,19 @@
                 <a href="{% url 'my_applications' %}"
                    class="btn btn-sm"
                    style="background:var(--success); color:#fff; border-color:var(--success);">
-                    View Applications <i class="bi bi-arrow-right ms-1"></i>
+                    View Applications <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i>
                 </a>
             </div>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-sm-6 col-lg-4">
         <div class="card h-100" style="border-top:3px solid var(--gold);">
             <div class="card-body" style="padding:24px;">
                 <div style="width:44px; height:44px; background:#FBF5E6;
                             border-radius:10px; display:flex; align-items:center;
                             justify-content:center; margin-bottom:14px;">
                     <i class="bi bi-calendar-check"
-                       style="font-size:1.3rem; color:var(--gold);"></i>
+                       style="font-size:1.3rem; color:var(--gold);" aria-hidden="true"></i>
                 </div>
                 <h6 style="font-weight:700; margin-bottom:6px;">My Appointments</h6>
                 <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:16px;">
@@ -85,7 +85,7 @@
                 </p>
                 <a href="{% url 'my_applications' %}"
                    class="btn btn-gold btn-sm">
-                    View Schedule <i class="bi bi-arrow-right ms-1"></i>
+                    View Schedule <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i>
                 </a>
             </div>
         </div>
@@ -96,17 +96,18 @@
 {% if my_applications %}
 <div class="card">
     <div class="card-header">
-        <i class="bi bi-collection me-2" style="color:var(--gold);"></i>
+        <i class="bi bi-collection me-2" style="color:var(--gold);" aria-hidden="true"></i>
         Recent Applications
     </div>
+    <div class="table-responsive">
     <table class="table mb-0">
         <thead>
             <tr>
-                <th>Plate Number</th>
-                <th>Vehicle</th>
-                <th>Status</th>
-                <th>Appointment</th>
-                <th>Sticker ID</th>
+                <th scope="col">Plate Number</th>
+                <th scope="col">Vehicle</th>
+                <th scope="col">Status</th>
+                <th scope="col">Appointment</th>
+                <th scope="col">Sticker ID</th>
             </tr>
         </thead>
         <tbody>
@@ -140,6 +141,7 @@
             {% endfor %}
         </tbody>
     </table>
+    </div>
 </div>
 {% endif %}
 {% endblock %}
