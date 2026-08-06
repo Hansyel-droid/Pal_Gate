@@ -291,13 +291,20 @@ def application_list(request):
 
 @role_required('admin')
 def application_detail(request, pk):
-    application = get_object_or_404(StickerApplication, pk=pk)
+    # select_related('applicant') because the template reads
+    # application.applicant.username.
+    application = get_object_or_404(
+        StickerApplication.objects.select_related('applicant'), pk=pk
+    )
 
     # Get appointment if exists
     appointment = getattr(application, 'appointment', None)
 
-    # Get all available slots for manual reassignment
-    available_slots = AppointmentSlot.objects.filter(
+    # Get all available slots for manual reassignment. with_booked_count()
+    # because the reassignment dropdown renders slot.slots_remaining for
+    # every row — without the annotation that's one COUNT per open date,
+    # growing linearly with however many dates the admin has opened.
+    available_slots = AppointmentSlot.objects.with_booked_count().filter(
         is_active=True
     ).order_by('date')
 

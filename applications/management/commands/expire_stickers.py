@@ -17,10 +17,12 @@ class Command(BaseCommand):
         # issued_at is when the sticker was actually handed out — measuring
         # from submitted_at would expire stickers based on when the
         # application was filed, which can be weeks before pickup.
+        # select_related because the audit log below reads
+        # application.applicant.username for every row.
         expiring = StickerApplication.objects.filter(
             status='issued',
             issued_at__lt=cutoff
-        )
+        ).select_related('applicant')
 
         count = 0
         for application in expiring:

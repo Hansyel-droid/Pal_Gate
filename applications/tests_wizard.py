@@ -147,6 +147,41 @@ class Step2RevisitTests(TestCase):
         })
         self.assertRedirects(r, reverse('apply_step3'))
 
+    def test_submission_round_trips_file_contents(self):
+        """
+        Documents are streamed from temp storage onto the model rather than
+        read into memory. The bytes still have to arrive intact, and the
+        extension has to survive — the model randomises the stored filename,
+        so the original name is only ever carried for its suffix.
+        """
+        from appointments.models import AppointmentSlot
+
+        # Inspections open the day after the registration window closes,
+        # which setUp put 30 days out.
+        slot = AppointmentSlot.objects.create(
+            date=timezone.localdate() + timedelta(days=40)
+        )
+        body = b'%PDF-1.4 ' + b'payload-' * 5000
+        self.post_step2(
+            or_cr=SimpleUploadedFile('my or cr.pdf', body,
+                                     content_type='application/pdf')
+        )
+        self.client.post(reverse('apply_step3'), {
+            'slot_id': slot.pk, 'time': '08:00',
+        })
+        r = self.client.post(reverse('apply_step4'), {})
+        self.assertRedirects(r, reverse('my_applications'))
+
+        app = StickerApplication.objects.get(plate_number='ABC 123')
+        self.assertTrue(app.or_cr.name.endswith('.pdf'), app.or_cr.name)
+        with app.or_cr.open('rb') as f:
+            self.assertEqual(f.read(), body)
+
+        # Temp storage is emptied once the submission commits.
+        self.assertFalse(
+            default_storage.exists(f'temp_uploads/{self.user.pk}/or_cr')
+        )
+
     def test_form_still_requires_docs_on_a_fresh_form(self):
         form = ApplicationStep2Form(data={
             'plate_number': 'A 1', 'vehicle_type': 'four_wheels',

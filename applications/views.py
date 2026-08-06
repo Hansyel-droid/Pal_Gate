@@ -8,7 +8,7 @@ from django.http import FileResponse, Http404
 from django.urls import reverse
 from django.utils import timezone
 from django.core.files.storage import default_storage
-from django.core.files.base import ContentFile
+from django.core.files.base import File
 from django.core.paginator import Paginator
 
 from accounts.mixins import role_required
@@ -79,9 +79,12 @@ def save_temp_file(uploaded_file, user, field_name):
     # If a temp file already exists for this field, delete it first
     if default_storage.exists(temp_path):
         default_storage.delete(temp_path)
-    # Save the new file. Trust storage's returned name rather than assuming
-    # it took the one we asked for.
-    return default_storage.save(temp_path, ContentFile(uploaded_file.read()))
+    # Hand storage the upload itself rather than ContentFile(f.read()).
+    # Reading it defeated Django's own handling, which already spools
+    # anything over 2.5MB to disk: at a 10MB cap across four document
+    # fields, buffering pulled the whole submission back into RAM.
+    # Trust storage's returned name rather than assuming it took ours.
+    return default_storage.save(temp_path, uploaded_file)
 
 
 def delete_temp_file(file_data):
@@ -108,8 +111,9 @@ def copy_document_to_temp(file_field, user, field_name):
     temp_path = temp_path_for(user, field_name)
     if default_storage.exists(temp_path):
         default_storage.delete(temp_path)
+    # Streamed, not read into memory — storage copies it in chunks.
     with file_field.open('rb') as source:
-        saved_path = default_storage.save(temp_path, ContentFile(source.read()))
+        saved_path = default_storage.save(temp_path, source)
     original_name = file_field.name.rsplit('/', 1)[-1]
     return {'path': saved_path, 'original_name': original_name}
 
@@ -117,9 +121,10 @@ def copy_document_to_temp(file_field, user, field_name):
 @role_required('applicant')
 def applicant_home(request):
     window = get_active_window()
+    # The table on this page renders app.appointment.slot.date for each row.
     my_applications = StickerApplication.objects.filter(
         applicant=request.user
-    ).order_by('-created_at')
+    ).select_related('appointment', 'appointment__slot').order_by('-created_at')
     return render(request, 'applications/home.html', {
         'window': window,
         'my_applications': my_applications,
@@ -418,33 +423,37 @@ def apply_step4(request):
             return redirect('apply_step3')
 
         # User clicked "Submit" — move temp files to real locations
-        def get_temp_file(field_name):
+        def temp_file_available(field_name):
+            file_data = temp_files.get(field_name)
+            return bool(file_data) and default_storage.exists(file_data['path'])
+
+        def attach_document(field_file, field_name):
             """
-            Reads a temp file from storage and returns
-            a ContentFile ready to save to the model.
+            Streams a temp file onto the model's file field, under its
+            original name.
+
+            The handle is open only for the copy itself — FieldFile.save()
+            writes through to storage synchronously — and storage copies in
+            chunks. It used to be read into a bytes object and then into a
+            ContentFile: at the form's 10MB-per-field cap across four
+            document fields that's ~40MB resident per submission, held twice
+            over for the length of the transaction and multiplied by every
+            concurrent submitter. It also defeated Django's own >2.5MB
+            spill-to-disk, which had already kept the upload off the heap.
             """
             file_data = temp_files.get(field_name)
-            if not file_data:
-                return None
-            path = file_data['path']
-            original_name = file_data['original_name']
-            if default_storage.exists(path):
-                with default_storage.open(path) as f:
-                    content = f.read()
-                return ContentFile(content, name=original_name)
-            return None
-
-        # Attach the files from temp storage
-        or_cr_file = get_temp_file('or_cr')
-        license_file = get_temp_file('drivers_license')
-        cor_file = get_temp_file('cor')
-        auth_file = get_temp_file('authorization_letter')
+            if not file_data or not default_storage.exists(file_data['path']):
+                return
+            with default_storage.open(file_data['path'], 'rb') as handle:
+                field_file.save(
+                    file_data['original_name'], File(handle), save=False
+                )
 
         # or_cr and drivers_license are always required. If a temp file
         # went missing (e.g. cleaned up by the scheduled task while the
         # applicant was mid-wizard), don't silently save a broken record —
         # send them back to re-upload.
-        if not or_cr_file or not license_file:
+        if not temp_file_available('or_cr') or not temp_file_available('drivers_license'):
             messages.error(
                 request,
                 'One or more of your required documents could not be found '
@@ -468,12 +477,12 @@ def apply_step4(request):
                     submitted_at=timezone.now(),
                 )
 
-                application.or_cr.save(or_cr_file.name, or_cr_file, save=False)
-                application.drivers_license.save(license_file.name, license_file, save=False)
-                if cor_file:
-                    application.cor.save(cor_file.name, cor_file, save=False)
-                if auth_file:
-                    application.authorization_letter.save(auth_file.name, auth_file, save=False)
+                attach_document(application.or_cr, 'or_cr')
+                attach_document(application.drivers_license, 'drivers_license')
+                attach_document(application.cor, 'cor')
+                attach_document(
+                    application.authorization_letter, 'authorization_letter'
+                )
 
                 application.save()
 

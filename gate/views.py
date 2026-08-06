@@ -4,9 +4,10 @@ from datetime import timedelta
 from xml.sax.saxutils import escape
 
 from django.shortcuts import render, get_object_or_404
-from django.http import HttpResponse
+from django.http import HttpResponse, StreamingHttpResponse
 from django.utils import timezone
-from django.db.models import Q
+from django.db.models import Count, Max, OuterRef, Q, Subquery
+from django.db.models.functions import TruncHour
 
 from accounts.mixins import role_required
 from .models import GateLog
@@ -17,6 +18,17 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet
+
+
+class Echo:
+    """
+    A file-like object that just hands back whatever is written to it, so
+    csv.writer can be used as a row-at-a-time formatter for a streaming
+    response instead of writing into a buffer.
+    """
+
+    def write(self, value):
+        return value
 
 
 def csv_safe(value):
@@ -64,35 +76,78 @@ def _format_ago(seconds):
     return f'{days}d ago'
 
 
+# How far back "who is currently inside" looks. Anything still showing as
+# inside after a week is a missed exit scan, not a vehicle — but a week is
+# generous enough that no genuine overstay (12h rule, 10 PM curfew) can fall
+# out of the window, while still bounding the query to recent rows instead of
+# the whole history of the gate.
+INSIDE_LOOKBACK = timedelta(days=7)
+
+
+def _latest_scan_per_plate(since):
+    """
+    The single most recent GateLog for every plate scanned since `since`.
+
+    A correlated subquery picking each plate's newest row, rather than
+    streaming every matching log into Python and keeping the first one per
+    plate. Both callers used to do the latter with no lower bound at all, so
+    answering "how many vehicles are on campus right now" read every scan the
+    system had ever recorded — and the live dashboard did it on each of its
+    5-second polls.
+    """
+    newest_for_plate = (
+        GateLog.objects
+        .filter(
+            application__plate_number=OuterRef('application__plate_number'),
+            timestamp__gte=since,
+        )
+        .order_by('-timestamp', '-id')
+        .values('id')[:1]
+    )
+    return (
+        GateLog.objects
+        .filter(application__isnull=False, timestamp__gte=since)
+        .filter(id=Subquery(newest_for_plate))
+        .select_related('application')
+    )
+
+
 def _reader_statuses():
     """
     One entry per known gate, built only from real GateLog timestamps —
     the only signal this system actually has about reader activity.
+
+    A single grouped Max() rather than the distinct-gates query plus one
+    "latest log" query per gate it used to run. This is on the 5s poll path,
+    so a per-gate query here is paid twelve times a minute per open
+    dashboard.
     """
     now = timezone.localtime()
+    last_seen = {
+        row['gate_location']: row['last_seen']
+        for row in GateLog.objects.order_by()
+        .values('gate_location')
+        .annotate(last_seen=Max('timestamp'))
+    }
+
     known = list(KNOWN_GATES)
-    seen_elsewhere = GateLog.objects.order_by().values_list(
-        'gate_location', flat=True
-    ).distinct()
-    for g in seen_elsewhere:
-        if g and g not in known:
-            known.append(g)
+    for gate_name in last_seen:
+        if gate_name and gate_name not in known:
+            known.append(gate_name)
 
     statuses = []
     for gate_name in known:
-        last_log = GateLog.objects.filter(
-            gate_location=gate_name
-        ).order_by('-timestamp').first()
-        if not last_log:
+        seen_at = last_seen.get(gate_name)
+        if not seen_at:
             statuses.append({
-                'gate': gate_name, 'last_log': None,
+                'gate': gate_name, 'last_seen': None,
                 'ago': None, 'state': 'silent',
             })
             continue
-        age = now - last_log.timestamp
+        age = now - seen_at
         state = 'stale' if age > STALE_READER_THRESHOLD else 'active'
         statuses.append({
-            'gate': gate_name, 'last_log': last_log,
+            'gate': gate_name, 'last_seen': seen_at,
             'ago': _format_ago(int(age.total_seconds())), 'state': state,
         })
     return statuses
@@ -116,22 +171,18 @@ def _gate_live_context(request):
     # Active passes are a campus-wide fact regardless of the gate scope
     # control — a vehicle may enter one gate and exit the other, so this
     # number is never filtered by gate_filter (PRODUCT.md).
-    todays_all_logs = GateLog.objects.filter(timestamp__date=today)
-    plates_seen = [
-        p for p in todays_all_logs.order_by().values_list(
-            'application__plate_number', flat=True
-        ).distinct()
-        if p
-    ]
-    latest_by_plate = {}
-    for log in GateLog.objects.filter(
-        application__plate_number__in=plates_seen
-    ).select_related('application').order_by('application__plate_number', '-timestamp'):
-        plate = log.application.plate_number
-        latest_by_plate.setdefault(plate, log)
-    active_passes = sum(
-        1 for log in latest_by_plate.values() if log.action == 'entry'
-    )
+    #
+    # Scoped to today, which is what this always meant: the old version only
+    # considered plates scanned today, and for such a plate the newest log
+    # today IS the newest log overall — so reading the whole history to find
+    # it never changed the answer, it just cost the whole history. This runs
+    # on every 5s poll, so it's the one query here that most needs a bound.
+    # `now` is already local and aware, so midnight-today comes off it
+    # directly rather than via a combine/make_aware dance.
+    start_of_today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    active_passes = _latest_scan_per_plate(start_of_today).filter(
+        action='entry'
+    ).count()
 
     # The single most recent scan is the dominant, distance-first focus of
     # this screen — not filtered to "today" so the screen never falsely
@@ -184,30 +235,52 @@ def gate_live(request):
     # after-the-fact summary rather than the distance-first live scene, so
     # unlike the rest of this view it is not part of the 5s poll and is not
     # scoped by gate_filter — it renders once per full page load.
-    now = timezone.localtime()
-    hourly_data = []
-    for i in range(23, -1, -1):
-        hour_start = now - timedelta(hours=i+1)
-        hour_end = now - timedelta(hours=i)
-        hour_label = hour_start.strftime('%H:00')
-        entries = GateLog.objects.filter(
-            action='entry',
-            timestamp__gte=hour_start,
-            timestamp__lt=hour_end
-        ).count()
-        exits = GateLog.objects.filter(
-            action='exit',
-            timestamp__gte=hour_start,
-            timestamp__lt=hour_end
-        ).count()
-        hourly_data.append({
-            'label': hour_label,
-            'entries': entries,
-            'exits': exits,
-        })
-    context['hourly_data'] = hourly_data
+    context['hourly_data'] = _hourly_traffic()
 
     return render(request, 'gate/live.html', context)
+
+
+def _hourly_traffic():
+    """
+    Entry/exit counts for each of the last 24 hours.
+
+    One grouped aggregate rather than the 48 COUNTs this used to run — two
+    per hour, every full page load. Buckets are whole clock hours (the
+    labels always said '%H:00' regardless, so the old rolling windows were
+    mislabelled by up to 59 minutes anyway).
+    """
+    now = timezone.localtime()
+    current_hour = now.replace(minute=0, second=0, microsecond=0)
+    earliest = current_hour - timedelta(hours=23)
+
+    counts = (
+        GateLog.objects
+        .filter(timestamp__gte=earliest, action__in=('entry', 'exit'))
+        .annotate(hour=TruncHour('timestamp'))
+        .values('hour', 'action')
+        .annotate(total=Count('id'))
+    )
+
+    by_hour = {}
+    for row in counts:
+        bucket = by_hour.setdefault(
+            timezone.localtime(row['hour']).replace(
+                minute=0, second=0, microsecond=0
+            ),
+            {'entry': 0, 'exit': 0},
+        )
+        bucket[row['action']] += row['total']
+
+    hourly_data = []
+    for i in range(23, -1, -1):
+        hour_start = current_hour - timedelta(hours=i)
+        bucket = by_hour.get(hour_start, {'entry': 0, 'exit': 0})
+        hourly_data.append({
+            'label': hour_start.strftime('%H:00'),
+            'entries': bucket['entry'],
+            'exits': bucket['exit'],
+        })
+    return hourly_data
 
 
 @role_required('security')
@@ -390,30 +463,33 @@ def export_csv(request):
     if date_to:
         logs = logs.filter(timestamp__date__lte=date_to)
 
-    # Build CSV response
-    response = HttpResponse(content_type='text/csv')
+    # Streamed rather than assembled in memory. With no filters applied this
+    # is the whole table, and the previous version built every row of it into
+    # a single HttpResponse body before sending a byte — one export of a
+    # large history was enough to take the process down. iterator() keeps the
+    # DB cursor from materialising the queryset alongside it.
+    def rows():
+        writer = csv.writer(Echo())
+        yield writer.writerow([
+            'Timestamp', 'Plate Number', 'Sticker ID',
+            'Driver Name', 'Action', 'Gate', 'Denial Reason'
+        ])
+        for log in logs.iterator(chunk_size=2000):
+            # Masked the same way the logs page is — this file gets
+            # downloaded, emailed, and opened outside the system, so it
+            # carries the same over-exposure risk as the browsing page.
+            yield writer.writerow([csv_safe(v) for v in [
+                log.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+                mask_plate(log.application.plate_number) if log.application else '—',
+                log.application.sticker_id if log.application else '—',
+                mask_name(log.application.full_name) if log.application else '—',
+                log.get_action_display(),
+                log.gate_location,
+                log.denial_reason,
+            ]])
+
+    response = StreamingHttpResponse(rows(), content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="gate_logs.csv"'
-
-    writer = csv.writer(response)
-    writer.writerow([
-        'Timestamp', 'Plate Number', 'Sticker ID',
-        'Driver Name', 'Action', 'Gate', 'Denial Reason'
-    ])
-
-    for log in logs:
-        # Masked the same way the logs page is — this file gets downloaded,
-        # emailed, and opened outside the system, so it carries the same
-        # over-exposure risk as the browsing page.
-        writer.writerow([csv_safe(v) for v in [
-            log.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
-            mask_plate(log.application.plate_number) if log.application else '—',
-            log.application.sticker_id if log.application else '—',
-            mask_name(log.application.full_name) if log.application else '—',
-            log.get_action_display(),
-            log.gate_location,
-            log.denial_reason,
-        ]])
-
     return response
 
 
@@ -431,57 +507,43 @@ def time_tracker(request):
 
     inside_vehicles = []
 
-    # order_by() clears GateLog's default `-timestamp` ordering — without
-    # it, Django silently adds timestamp to SELECT DISTINCT so this would
-    # return the same plate once per entry log instead of deduplicating.
-    plates = list(GateLog.objects.filter(
-        action='entry',
-        application__isnull=False
-    ).order_by().values_list(
-        'application__plate_number', flat=True
-    ).distinct())
+    # Every plate whose most recent scan in the lookback window was an
+    # entry — i.e. it went in and hasn't come back out. One query, bounded
+    # to recent history. This used to pull the entire GateLog table into
+    # Python to find the latest row per plate, so a year of scans was read
+    # in full even to render an empty list.
+    still_inside = _latest_scan_per_plate(now - INSIDE_LOOKBACK).filter(
+        action='entry'
+    ).order_by('timestamp')
 
-    # One query for the latest log per plate instead of one query per plate.
-    latest_by_plate = {}
-    for log in GateLog.objects.filter(
-        application__plate_number__in=plates
-    ).select_related('application').order_by('application__plate_number', '-timestamp'):
-        latest_by_plate.setdefault(log.application.plate_number, log)
+    for last_log in still_inside:
+        duration = now - last_log.timestamp
+        total_seconds = int(duration.total_seconds())
+        hours = total_seconds // 3600
+        minutes = (total_seconds % 3600) // 60
 
-    for plate in plates:
-        last_log = latest_by_plate.get(plate)
+        # Check both overstay conditions
+        duration_overstay = duration.total_seconds() > (OVERSTAY_HOURS * 3600)
+        curfew_overstay = is_past_curfew
 
-        if last_log and last_log.action == 'entry':
-            duration = now - last_log.timestamp
-            total_seconds = int(duration.total_seconds())
-            hours = total_seconds // 3600
-            minutes = (total_seconds % 3600) // 60
+        # Either condition triggers overstay
+        is_overstay = duration_overstay or curfew_overstay
 
-            # Check both overstay conditions
-            duration_overstay = duration.total_seconds() > (OVERSTAY_HOURS * 3600)
-            curfew_overstay = is_past_curfew
+        # Build a reason string so the template knows WHY it's flagged
+        overstay_reasons = []
+        if duration_overstay:
+            overstay_reasons.append(f'Inside for over {OVERSTAY_HOURS} hours')
+        if curfew_overstay:
+            overstay_reasons.append('Past 10:00 PM curfew')
 
-            # Either condition triggers overstay
-            is_overstay = duration_overstay or curfew_overstay
-
-            # Build a reason string so the template knows WHY it's flagged
-            overstay_reasons = []
-            if duration_overstay:
-                overstay_reasons.append(f'Inside for over {OVERSTAY_HOURS} hours')
-            if curfew_overstay:
-                overstay_reasons.append('Past 10:00 PM curfew')
-
-            inside_vehicles.append({
-                'log': last_log,
-                'application': last_log.application,
-                'entry_time': last_log.timestamp,
-                'duration': f'{hours}h {minutes}m',
-                'is_overstay': is_overstay,
-                'overstay_reasons': overstay_reasons,
-            })
-
-    # Sort by entry time, oldest first
-    inside_vehicles.sort(key=lambda x: x['entry_time'])
+        inside_vehicles.append({
+            'log': last_log,
+            'application': last_log.application,
+            'entry_time': last_log.timestamp,
+            'duration': f'{hours}h {minutes}m',
+            'is_overstay': is_overstay,
+            'overstay_reasons': overstay_reasons,
+        })
 
     # Count total overstays for the alert banner
     overstay_count = sum(1 for v in inside_vehicles if v['is_overstay'])

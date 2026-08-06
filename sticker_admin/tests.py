@@ -1,12 +1,17 @@
 import tempfile
+from datetime import timedelta
 
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import connection
 from django.test import TestCase, override_settings
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
+from django.utils import timezone
 
 from accounts.models import User
 from applications.models import StickerApplication
+from appointments.models import AppointmentSlot
 from gate.models import AuditLog
 
 
@@ -236,4 +241,53 @@ class ApprovalRejectionEmailTests(TestCase):
         self.assertIn('Blurry OR/CR scan.', mail.outbox[0].body)
         self.assertTrue(
             AuditLog.objects.filter(action='app_rejected').exists()
+        )
+
+
+@override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+class ApplicationDetailQueryShapeTests(TestCase):
+    """
+    application_detail renders slot.slots_remaining for every open date in
+    its reassignment dropdown. Without the booked-count annotation that's
+    one COUNT per date, so opening a term's worth of dates makes the page
+    linearly more expensive to view.
+    """
+
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            username='detail_admin', password='pw-1234567', role='admin'
+        )
+        applicant = User.objects.create_user(
+            username='detail_applicant', password='pw-1234567', role='applicant'
+        )
+        self.application = StickerApplication.objects.create(
+            applicant=applicant, full_name='Detail Person',
+            college_department='CCIS', id_number='2020-9000',
+            classification='student', plate_number='DET-001',
+            vehicle_type='four_wheels', vehicle_color='blue', is_owner=True,
+            or_cr=make_doc(), drivers_license=make_doc(), status='approved',
+        )
+        self.client.force_login(self.admin)
+        self.url = reverse('application_detail', args=[self.application.pk])
+
+    def open_dates(self, count):
+        AppointmentSlot.objects.all().delete()
+        today = timezone.localdate()
+        for i in range(count):
+            AppointmentSlot.objects.create(date=today + timedelta(days=i + 1))
+
+    def count_queries(self, dates):
+        self.open_dates(dates)
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        return len(ctx.captured_queries)
+
+    def test_query_count_does_not_grow_with_open_dates(self):
+        few = self.count_queries(5)
+        many = self.count_queries(60)
+        self.assertEqual(
+            few, many,
+            f'{few} queries at 5 open dates but {many} at 60 — the slot '
+            f'list is still counting bookings one row at a time',
         )
