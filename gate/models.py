@@ -35,6 +35,15 @@ class GateLog(models.Model):
 
     class Meta:
         ordering = ['-timestamp']
+        indexes = [
+            # This is the table that grows fastest — one row per scan,
+            # forever. The live gate view and log browser both sort by
+            # -timestamp, and the scan endpoint looks up the most recent
+            # entry per vehicle to decide entry vs exit.
+            models.Index(fields=['-timestamp'], name='gatelog_timestamp_idx'),
+            models.Index(fields=['application', '-timestamp'],
+                         name='gatelog_app_timestamp_idx'),
+        ]
 
 
 class PendingRFID(models.Model):
@@ -65,6 +74,8 @@ class AuditLog(models.Model):
         ('logout', 'User Logout'),
         ('login_failed', 'Failed Login Attempt'),
         ('lockout', 'Account Locked Out'),
+        ('register_started', 'Registration Started'),
+        ('email_verified', 'Email Verified'),
         # Application events
         ('app_submitted', 'Application Submitted'),
         ('app_approved', 'Application Approved'),
@@ -103,3 +114,7 @@ class AuditLog(models.Model):
 
     class Meta:
         ordering = ['-timestamp']
+        indexes = [
+            # Append-only and never pruned, so it only ever gets bigger.
+            models.Index(fields=['-timestamp'], name='auditlog_timestamp_idx'),
+        ]

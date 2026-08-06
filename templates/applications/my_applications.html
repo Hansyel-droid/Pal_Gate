@@ -1,185 +1,183 @@
 {% extends 'base.html' %}
 {% block title %}My Applications{% endblock %}
 
-{% block extra_css %}
-<style>
-    .app-headline {
-        font-size: 1.25rem;
-        font-weight: 700;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 2px;
-    }
-    .app-card.status-draft     .app-headline { color: var(--neutral-ink); }
-    .app-card.status-scheduled .app-headline { color: var(--info-ink); }
-    .app-card.status-approved  .app-headline { color: var(--success-ink); }
-    .app-card.status-rejected  .app-headline { color: var(--danger-ink); }
-    .app-card.status-issued    .app-headline { color: var(--issued-ink); }
-    .app-card.status-expired   .app-headline { color: var(--neutral-ink); }
-
-    .app-identity {
-        font-size: 0.85rem;
-        color: var(--text-muted);
-    }
-    .app-identity code {
-        color: var(--text-main);
-        font-weight: 600;
-    }
-    .app-next {
-        margin-top: 14px;
-        padding-top: 14px;
-        border-top: 1px solid var(--border);
-        font-size: 0.9rem;
-    }
-    .app-next p:last-child { margin-bottom: 0; }
-    .app-meta {
-        font-size: 0.78rem;
-        color: var(--text-muted);
-        white-space: nowrap;
-    }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="page-header">
-    <h1>My Applications</h1>
-    <p class="page-sub">What happened to each application, and what to do next.</p>
-</div>
+<div class="shell-narrow">
+    <div class="page-header">
+        <h1>My applications</h1>
+        <p class="page-sub">What happened to each application, and what to do next.</p>
+    </div>
 
-{% if page_obj.paginator.count %}
-    {% for app in page_obj %}
-    <div class="card mb-3 app-card status-{{ app.status }}">
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
-                <div>
-                    <div class="app-headline">
-                        {% if app.status == 'draft' %}
-                            <i class="bi bi-hourglass-split" aria-hidden="true"></i> Submitted — appointment pending
-                        {% elif app.status == 'scheduled' %}
-                            <i class="bi bi-calendar-check" aria-hidden="true"></i> Appointment scheduled
-                        {% elif app.status == 'approved' %}
-                            <i class="bi bi-check-circle" aria-hidden="true"></i> Approved
-                        {% elif app.status == 'rejected' %}
-                            <i class="bi bi-x-circle" aria-hidden="true"></i> Rejected
-                        {% elif app.status == 'issued' %}
-                            <i class="bi bi-patch-check" aria-hidden="true"></i> Sticker issued
-                        {% elif app.status == 'expired' %}
-                            <i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Expired
+    {% if page_obj.paginator.count %}
+        {% for app in page_obj %}
+        <div class="card mb-3 app-card status-{{ app.status }}">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                    <div>
+                        <div class="app-headline">
+                            {% if app.status == 'draft' %}
+                                <svg class="ic" aria-hidden="true"><use href="#i-hourglass"/></svg>
+                                Submitted — appointment pending
+                            {% elif app.status == 'scheduled' %}
+                                <svg class="ic" aria-hidden="true"><use href="#i-calendar-check"/></svg>
+                                Appointment scheduled
+                            {% elif app.status == 'approved' %}
+                                <svg class="ic" aria-hidden="true"><use href="#i-check-circle"/></svg>
+                                Approved
+                            {% elif app.status == 'rejected' %}
+                                <svg class="ic" aria-hidden="true"><use href="#i-x-circle"/></svg>
+                                Rejected
+                            {% elif app.status == 'issued' %}
+                                <svg class="ic" aria-hidden="true"><use href="#i-badge-check"/></svg>
+                                Sticker issued
+                            {% elif app.status == 'expired' %}
+                                <svg class="ic" aria-hidden="true"><use href="#i-alert-triangle"/></svg>
+                                Expired
+                            {% endif %}
+                        </div>
+                        <div class="app-identity">
+                            <span class="plate">{{ app.plate_number }}</span>
+                            <span>{{ app.get_vehicle_type_display }}</span>
+                        </div>
+                    </div>
+                    <div class="app-meta">
+                        Submitted {{ app.submitted_at|date:"M d, Y"|default:"—" }}
+                    </div>
+                </div>
+
+                <div class="app-next">
+                    {% if app.status == 'draft' %}
+                        <p>
+                            Your application was submitted successfully. An administrator will
+                            assign your appointment as soon as a slot opens — check back here.
+                            You don't need to do anything else right now.
+                        </p>
+
+                    {% elif app.status == 'scheduled' %}
+                        {% if app.appointment %}
+                            <p class="lede">
+                                <strong>{{ app.appointment.slot.date|date:"l, F d, Y" }}</strong>
+                                at <strong>{{ app.appointment.get_time_display }}</strong>
+                            </p>
+                            <p>
+                                Bring your vehicle and the original documents you uploaded
+                                (OR/CR, driver's licence, and your COR or authorisation letter
+                                if applicable) for physical inspection at this time.
+                            </p>
+                            <div class="note">
+                                <svg class="ic" aria-hidden="true"><use href="#i-alert-triangle"/></svg>
+                                <div>
+                                    <strong>Don't pay at the cashier yet.</strong> Payment isn't
+                                    needed until after your documents are verified and your
+                                    application is approved.
+                                </div>
+                            </div>
+                        {% else %}
+                            <p class="text-muted">
+                                Your appointment is being finalised — check back shortly.
+                            </p>
                         {% endif %}
-                        <!-- impeccable: notification placeholder — once email notifications
-                             ship, surface a "we emailed you on {date}" line here. -->
-                    </div>
-                    <div class="app-identity">
-                        <code>{{ app.plate_number }}</code> · {{ app.get_vehicle_type_display }}
-                    </div>
-                </div>
-                <div class="app-meta">
-                    Submitted {{ app.submitted_at|date:"M d, Y"|default:"—" }}
-                </div>
-            </div>
 
-            <div class="app-next">
-                {% if app.status == 'draft' %}
-                    <p>
-                        Your application was submitted successfully. An administrator will
-                        assign your appointment as soon as a slot opens — check back here.
-                        You don't need to do anything else right now.
-                    </p>
+                    {% elif app.status == 'approved' %}
+                        <p>Your application has been approved. Here's what to do next:</p>
+                        <ol class="steps-inline">
+                            <li>Pay the required fee at the cashier.</li>
+                            <li>
+                                Bring your payment receipt and a valid ID to the Sticker
+                                Station to have your RFID sticker issued.
+                            </li>
+                        </ol>
+                        <div class="note">
+                            <svg class="ic" aria-hidden="true"><use href="#i-alert-triangle"/></svg>
+                            <div>
+                                <strong>Don't go to the Sticker Station without your receipt</strong>
+                                — it's required before a sticker can be issued.
+                            </div>
+                        </div>
 
-                {% elif app.status == 'scheduled' %}
-                    {% if app.appointment %}
+                    {% elif app.status == 'rejected' %}
                         <p>
-                            <strong>{{ app.appointment.slot.date|date:"l, F d, Y" }}</strong>
-                            at <strong>{{ app.appointment.get_time_display }}</strong>
+                            <strong>Reason given:</strong>
+                            {{ app.rejection_reason|default:"No reason was recorded for this rejection." }}
                         </p>
                         <p>
-                            Bring your vehicle and the original documents you uploaded
-                            (OR/CR, driver's license, and your COR or authorization letter
-                            if applicable) for physical inspection at this time.
+                            You can submit a new application with corrected information.
+                            If you have questions about this decision, contact the sticker
+                            administrator's office at the Registrar.
                         </p>
-                    {% else %}
-                        <p class="text-muted">
-                            Your appointment is being finalized — check back shortly.
+                        <a href="{% url 'apply_step1' %}" class="btn btn-primary btn-sm">
+                            <svg class="ic" aria-hidden="true"><use href="#i-refresh"/></svg>
+                            Reapply
+                        </a>
+
+                    {% elif app.status == 'issued' %}
+                        <p>
+                            Sticker ID <code>{{ app.sticker_id }}</code> is bound to this
+                            vehicle and will open the gate on scan.
                         </p>
+                        <p class="mb-0">
+                            Valid until <strong>{{ app.expiry_date|date:"F d, Y" }}</strong>.
+                        </p>
+
+                    {% elif app.status == 'expired' %}
+                        <p>
+                            Your sticker expired on
+                            <strong>{{ app.expiry_date|date:"F d, Y" }}</strong>.
+                            Renew below to reuse your previous details and documents —
+                            you'll only need to re-upload anything that's changed.
+                        </p>
+                        <a href="{% url 'apply_renew' app.pk %}" class="btn btn-primary btn-sm">
+                            <svg class="ic" aria-hidden="true"><use href="#i-refresh"/></svg>
+                            Renew
+                        </a>
                     {% endif %}
-
-                {% elif app.status == 'approved' %}
-                    <p>
-                        Your application has been approved. Visit the Sticker Station with
-                        a valid ID to have your RFID sticker issued.
-                    </p>
-
-                {% elif app.status == 'rejected' %}
-                    <p class="mb-2">
-                        <strong>Reason given:</strong>
-                        {{ app.rejection_reason|default:"No reason was recorded for this rejection." }}
-                    </p>
-                    <p>
-                        You can submit a new application with corrected information.
-                        If you have questions about this decision, contact the system
-                        administrator.
-                    </p>
-                    <a href="{% url 'apply_step1' %}" class="btn btn-primary btn-sm">
-                        <i class="bi bi-arrow-repeat" aria-hidden="true"></i> Reapply
-                    </a>
-
-                {% elif app.status == 'issued' %}
-                    <p class="mb-1">
-                        Sticker ID: <code>{{ app.sticker_id }}</code>
-                    </p>
-                    <p>
-                        Valid until <strong>{{ app.expiry_date|date:"F d, Y" }}</strong>.
-                    </p>
-
-                {% elif app.status == 'expired' %}
-                    <p>
-                        Your sticker expired on
-                        <strong>{{ app.expiry_date|date:"F d, Y" }}</strong>.
-                        There is no renewal shortcut yet — you'll need to submit a new
-                        application and re-upload your documents.
-                    </p>
-                    <a href="{% url 'apply_step1' %}" class="btn btn-primary btn-sm">
-                        <i class="bi bi-arrow-repeat" aria-hidden="true"></i> Apply again
-                    </a>
-                {% endif %}
+                </div>
             </div>
         </div>
+        {% endfor %}
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <nav class="mt-4" aria-label="Applications pages">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                        Previous
+                    </a>
+                </li>
+                {% endif %}
+                <li class="page-item disabled">
+                    <span class="page-link">
+                        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                    </span>
+                </li>
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                        Next
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+    {% else %}
+    <div class="card">
+        <div class="empty-state">
+            <svg class="ic" aria-hidden="true"><use href="#i-inbox"/></svg>
+            <h3>No applications yet</h3>
+            <p>
+                When you submit an application, its status and every next step
+                appear here — this screen is the only place that news arrives.
+            </p>
+            <a href="{% url 'apply_step1' %}" class="btn btn-primary btn-sm mt-3">
+                <svg class="ic" aria-hidden="true"><use href="#i-file-plus"/></svg>
+                Start your first application
+            </a>
+        </div>
     </div>
-    {% endfor %}
-
-    <!-- Pagination -->
-    {% if page_obj.has_other_pages %}
-    <nav class="mt-3" aria-label="Applications pages">
-        <ul class="pagination justify-content-center">
-            {% if page_obj.has_previous %}
-            <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
-                    Previous
-                </a>
-            </li>
-            {% endif %}
-            <li class="page-item disabled">
-                <span class="page-link">
-                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-                </span>
-            </li>
-            {% if page_obj.has_next %}
-            <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.next_page_number }}">
-                    Next
-                </a>
-            </li>
-            {% endif %}
-        </ul>
-    </nav>
     {% endif %}
-
-{% else %}
-<div class="alert alert-info mt-4">
-    <i class="bi bi-info-circle" aria-hidden="true"></i>
-    You have no applications yet.
-    <a href="{% url 'apply_step1' %}">Start your first application</a>.
 </div>
-{% endif %}
 {% endblock %}

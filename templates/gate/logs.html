@@ -3,73 +3,97 @@
 {% block title %}Gate Logs{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1><i class="bi bi-journal-text text-primary" aria-hidden="true"></i> Gate Logs</h1>
-    <a href="{% url 'export_csv' %}?q={{ query }}&action={{ action_filter }}&date_from={{ date_from }}&date_to={{ date_to }}"
-       class="btn btn-success">
-        <i class="bi bi-download" aria-hidden="true"></i> Export CSV
-    </a>
+<div class="toolbar">
+    <div class="page-header">
+        <h1>Gate logs</h1>
+        <p class="page-sub">
+            The permanent record of every scan. Plates, names and IDs are
+            partially masked on this screen.
+        </p>
+    </div>
+    {% comment %} Export is a neutral act, not an approval — it carries the secondary
+       button, and every active filter travels with it so an officer building
+       a single-gate record doesn't silently export both gates. {% endcomment %}
+    <div class="toolbar-actions">
+        <a href="{% url 'export_csv' %}?q={{ query|urlencode }}&amp;action={{ action_filter|urlencode }}&amp;gate={{ gate_filter|urlencode }}&amp;date_from={{ date_from|urlencode }}&amp;date_to={{ date_to|urlencode }}"
+           class="btn btn-secondary">
+            <svg class="ic" aria-hidden="true"><use href="#i-download"/></svg>
+            Export CSV
+        </a>
+    </div>
 </div>
 
 <!-- Filters -->
-<div class="card shadow-sm mb-4">
-    <div class="card-body">
-        <form method="get" class="row g-2">
+<div class="card filter-bar">
+    <div class="card-body card-body-tight">
+        <form method="get" class="row g-2 align-items-end"
+              role="search" aria-label="Filter gate logs">
             <div class="col-md-3">
-                <label class="form-label small" for="filter_q">Search plate or driver</label>
+                <label class="form-label" for="filter_q">Plate or driver</label>
                 <input type="text" id="filter_q" name="q" class="form-control"
-                       placeholder="Plate or driver name..."
-                       value="{{ query }}">
+                       placeholder="Search…" value="{{ query }}">
             </div>
             <div class="col-md-2">
-                <label class="form-label small" for="filter_action">Action</label>
+                <label class="form-label" for="filter_action">Action</label>
                 <select id="filter_action" name="action" class="form-select">
-                    <option value="">All Actions</option>
+                    <option value="">All actions</option>
                     <option value="entry" {% if action_filter == 'entry' %}selected{% endif %}>Entry</option>
                     <option value="exit" {% if action_filter == 'exit' %}selected{% endif %}>Exit</option>
                     <option value="denied" {% if action_filter == 'denied' %}selected{% endif %}>Denied</option>
                 </select>
             </div>
             <div class="col-md-2">
-                <label class="form-label small" for="filter_gate">Gate</label>
+                <label class="form-label" for="filter_gate">Gate</label>
                 <select id="filter_gate" name="gate" class="form-select">
-                    <option value="">All Gates</option>
+                    <option value="">All gates</option>
                     {% for gate in gate_locations %}
-                        <option value="{{ gate }}"
-                            {% if gate_filter == gate %}selected{% endif %}>
+                        <option value="{{ gate }}" {% if gate_filter == gate %}selected{% endif %}>
                             {{ gate }}
                         </option>
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-2">
-                <label class="form-label small" for="filter_date_from">From date</label>
+            <div class="col-6 col-md-2">
+                <label class="form-label" for="filter_date_from">From</label>
                 <input type="date" id="filter_date_from" name="date_from" class="form-control"
                        value="{{ date_from }}">
             </div>
-            <div class="col-md-2">
-                <label class="form-label small" for="filter_date_to">To date</label>
+            <div class="col-6 col-md-2">
+                <label class="form-label" for="filter_date_to">To</label>
                 <input type="date" id="filter_date_to" name="date_to" class="form-control"
                        value="{{ date_to }}">
             </div>
-            <div class="col-md-1 d-flex align-items-end">
+            <div class="col-md-1">
                 <button type="submit" class="btn btn-primary w-100">
-                    <i class="bi bi-search" aria-hidden="true"></i>
+                    <svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>
                     <span class="visually-hidden">Apply filters</span>
                 </button>
             </div>
         </form>
-        <div class="mt-2 text-muted small">
-            Showing {{ page_obj.paginator.count }} result(s).
-            <a href="{% url 'gate_logs' %}">Clear filters</a>
+
+        {% comment %} The active scope stays visible after paginating, so an officer
+           always knows what they are looking at. {% endcomment %}
+        <div class="filter-summary">
+            <span><strong class="text-strong">{{ page_obj.paginator.count }}</strong> result{{ page_obj.paginator.count|pluralize }}</span>
+            {% if gate_filter %}<span class="status-badge badge-draft">{{ gate_filter }}</span>{% endif %}
+            {% if action_filter %}<span class="status-badge badge-draft">{{ action_filter|capfirst }}</span>{% endif %}
+            {% if query %}<span class="status-badge badge-draft">“{{ query }}”</span>{% endif %}
+            {% if date_from or date_to %}
+            <span class="status-badge badge-draft">
+                {{ date_from|default:"any" }} → {{ date_to|default:"any" }}
+            </span>
+            {% endif %}
+            {% if query or action_filter or gate_filter or date_from or date_to %}
+            <a href="{% url 'gate_logs' %}" class="ms-auto">Clear filters</a>
+            {% endif %}
         </div>
     </div>
 </div>
 
 <!-- Logs Table -->
-<div class="card shadow-sm">
-    <div class="card-body p-0">
-        <table class="table table-hover mb-0">
+<div class="card">
+    <div class="table-responsive">
+        <table class="table mb-0">
             <thead>
                 <tr>
                     <th scope="col">Timestamp</th>
@@ -78,34 +102,34 @@
                     <th scope="col">Driver</th>
                     <th scope="col">Action</th>
                     <th scope="col">Gate</th>
-                    <th scope="col"></th>
+                    <th scope="col"><span class="visually-hidden">Incident report</span></th>
                 </tr>
             </thead>
             <tbody>
                 {% for log in page_obj %}
                 <tr>
-                    <td class="text-muted small">
-                        {{ log.timestamp|date:"M d, Y H:i:s" }}
+                    <td class="text-muted">
+                        <time>{{ log.timestamp|date:"M d, Y H:i:s" }}</time>
                     </td>
                     <td>
                         {% if log.application %}
-                            <strong>{{ log.application.plate_number|mask_plate }}</strong>
+                            <span class="plate">{{ log.application.plate_number|mask_plate }}</span>
                         {% else %}
-                            <span class="text-muted small">{{ log.rfid_uid|mask_rfid }}</span>
+                            <code>{{ log.rfid_uid|mask_rfid }}</code>
                         {% endif %}
                     </td>
                     <td>
                         {% if log.application.sticker_id %}
                             <code>{{ log.application.sticker_id|mask_sticker_id }}</code>
                         {% else %}
-                            <span class="text-muted">—</span>
+                            <span class="text-faint">—</span>
                         {% endif %}
                     </td>
                     <td>
                         {% if log.application %}
                             {{ log.application.full_name|mask_name }}
                         {% else %}
-                            <span class="text-muted">—</span>
+                            <span class="text-faint">—</span>
                         {% endif %}
                     </td>
                     <td>
@@ -117,18 +141,28 @@
                             <span class="status-badge badge-denied">Denied</span>
                         {% endif %}
                     </td>
-                    <td>{{ log.gate_location }}</td>
-                    <td>
+                    <td class="text-muted">{{ log.gate_location }}</td>
+                    <td class="text-end">
                         <a href="{% url 'incident_report' log.pk %}"
-                           class="btn btn-sm btn-outline-primary">
+                           class="btn btn-sm btn-secondary">
                             Report
                         </a>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="7" class="text-center text-muted py-4">
-                        No logs found.
+                    <td colspan="7">
+                        <div class="empty-state">
+                            <svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>
+                            <h3>No logs match these filters</h3>
+                            <p>
+                                Widen the date range or clear the filters to see the
+                                full record.
+                            </p>
+                            <a href="{% url 'gate_logs' %}" class="btn btn-secondary btn-sm mt-3">
+                                Clear filters
+                            </a>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
@@ -137,14 +171,14 @@
     </div>
 </div>
 
-<!-- Pagination -->
+<!-- Pagination — carries every active filter, including gate -->
 {% if page_obj.has_other_pages %}
-<nav class="mt-3">
+<nav class="mt-4" aria-label="Gate log pages">
     <ul class="pagination justify-content-center">
         {% if page_obj.has_previous %}
         <li class="page-item">
             <a class="page-link"
-               href="?page={{ page_obj.previous_page_number }}&q={{ query }}&action={{ action_filter }}&date_from={{ date_from }}&date_to={{ date_to }}">
+               href="?page={{ page_obj.previous_page_number }}&amp;q={{ query|urlencode }}&amp;action={{ action_filter|urlencode }}&amp;gate={{ gate_filter|urlencode }}&amp;date_from={{ date_from|urlencode }}&amp;date_to={{ date_to|urlencode }}">
                 Previous
             </a>
         </li>
@@ -157,7 +191,7 @@
         {% if page_obj.has_next %}
         <li class="page-item">
             <a class="page-link"
-               href="?page={{ page_obj.next_page_number }}&q={{ query }}&action={{ action_filter }}&date_from={{ date_from }}&date_to={{ date_to }}">
+               href="?page={{ page_obj.next_page_number }}&amp;q={{ query|urlencode }}&amp;action={{ action_filter|urlencode }}&amp;gate={{ gate_filter|urlencode }}&amp;date_from={{ date_from|urlencode }}&amp;date_to={{ date_to|urlencode }}">
                 Next
             </a>
         </li>

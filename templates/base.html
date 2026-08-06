@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light">
     <title>{% block title %}PalSU Gate System{% endblock %}</title>
 
     <!-- Fonts. IBM Plex Sans carries the interface; IBM Plex Mono carries
@@ -10,647 +11,1749 @@
          physical objects this system tracks, not decoration. -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Bootstrap 5 -->
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;450;500;600;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap 5 — grid and utilities only; every component below is
+         retokenized through Bootstrap's own --bs-* custom properties so the
+         framework's defaults never surface. -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- No icon webfont. Icons are inline <symbol> refs from the sprite at the
+         top of <body>: one stroke weight, currentColor, and no network request
+         on a campus LAN that may not reach a CDN. -->
 
     <style>
-        /* ── Token System ───────────────────────────── */
+        /* ═══════════════════════════════════════════════════════════════
+           TOKENS
+           One neutral ramp, one accent, semantic hues confined to status.
+           Every text/tint pair below is verified ≥4.5:1.
+           ═══════════════════════════════════════════════════════════════ */
         :root {
-            --navy:        #0A1628;
-            --navy-mid:    #1B3A6B;
-            --navy-light:  #2A5298;
-            --gold:        #C9A84C;
-            --gold-light:  #E8C96A;
-            --content-bg:  #F0F4FA;
-            --card-bg:     #FFFFFF;
-            --text-main:   #1A2340;
-            --text-muted:  #5A6987;
-            --border:      #DDE3EF;
-            --danger:      #E63946;
-            --success:     #2D9E6B;
-            --warning:     #E89C2F;
-            --info:        #2A7FC1;
-            --sidebar-w:   240px;
+            /* Neutral ramp — cool cast, so it sits under a blue accent
+               without turning muddy. */
+            --gray-0:    #FFFFFF;
+            --gray-25:   #FCFCFD;
+            --gray-50:   #F7F8FA;
+            --gray-100:  #F1F2F5;
+            --gray-150:  #EDEFF3;
+            --gray-200:  #E4E7EC;
+            --gray-300:  #D3D8E0;
+            --gray-400:  #98A0AE;
+            --gray-500:  #667080;
+            --gray-600:  #4D5561;
+            --gray-700:  #363D49;
+            --gray-800:  #22272F;
+            --gray-900:  #101419;
 
-            /* Ink tokens: the readable foreground for each semantic hue on its
-               own tint. The base hues above are fills and borders — they do not
-               reach 4.5:1 as text on their tinted backgrounds, so text uses
-               these instead. */
-            --success-ink: #1A6B47;
-            --danger-ink:  #9B2335;
-            --warning-ink: #8A5A00;
-            --info-ink:    #1A4F8A;
-            --issued-ink:  #3B4699;
-            --neutral-ink: #4B5563;
+            /* Accent — the only interactive colour. Deep, desaturated; not
+               Bootstrap's #0d6efd and not a stock framework blue. */
+            --accent-50:   #EEF3FC;
+            --accent-100:  #DCE7F8;
+            --accent-200:  #BED2F0;
+            --accent-500:  #2F6BC4;
+            --accent-600:  #1F4FA3;
+            --accent-700:  #17407F;
+            --accent-800:  #123367;
 
-            --focus-ring:  #2A5298;
+            /* Surfaces */
+            --bg:            var(--gray-25);
+            --surface:       var(--gray-0);
+            --surface-sunk:  var(--gray-50);
+            --surface-hover: var(--gray-50);
 
-            --font-ui:   'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
-            --font-id:   'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+            /* Text. --text-strong for headings, --text-main for body,
+               --text-muted for secondary (4.87:1 on --bg). */
+            --text-strong: var(--gray-900);
+            --text-main:   #2A3039;
+            --text-muted:  var(--gray-500);
+            /* Icon-only tone. Never use it for words — see .text-faint. */
+            --text-faint:  var(--gray-400);
+            /* The readable stand-in for "no value": em-dashes, "Unknown",
+               placeholders. --text-faint is 2.63:1 on white, which is fine
+               for a decorative glyph and not fine for text a person reads. */
+            --text-absent: #67707F;    /* 4.99:1 on white, 4.69:1 on --gray-50 */
+            --text-invert: var(--gray-0);
+
+            /* Hairlines. Depth in this system comes from a 1px border first
+               and a shadow only when something genuinely floats. */
+            --border:        var(--gray-200);
+            --border-subtle: var(--gray-150);
+            --border-strong: var(--gray-300);
+            /* WCAG 2.1 AA 1.4.11 (Non-text Contrast) wants 3:1 for the visual
+               boundary of a control. An empty text input is identified by its
+               border alone, and --border-strong is only 1.43:1 on white — so
+               every interactive boundary uses this instead: 3.38:1 on white,
+               3.29:1 on --bg. */
+            --border-control: #848D9D;
+
+            /* Semantic hues. Base = fill/border. Ink = the readable
+               foreground on that hue's own tint, verified at 0.75rem. */
+            --success:       #1C8A5A;
+            /* White on --success is only 4.38:1, so a filled success button
+               uses this deeper green instead: 5.54:1. --success stays the
+               fill/border tone, where the 3:1 non-text threshold applies. */
+            --success-strong: #18774E;
+            --success-ink:   #10633F;   /* 6.56:1 on --success-bg */
+            --success-bg:    #E9F6EF;
+            --success-line:  #BEE3D0;
+
+            --danger:        #C8372D;
+            --danger-ink:    #A02620;   /* 6.63:1 on --danger-bg */
+            --danger-bg:     #FDECEA;
+            --danger-line:   #F5C8C3;
+
+            --warning:       #B87503;
+            --warning-ink:   #8A5600;   /* 5.70:1 on --warning-bg */
+            --warning-bg:    #FDF5E6;
+            --warning-line:  #EFDCAF;
+
+            --info:          var(--accent-500);
+            --info-ink:      var(--accent-700);
+            --info-bg:       var(--accent-50);
+            --info-line:     var(--accent-200);
+
+            --issued-ink:    #3B3A99;
+            --issued-bg:     #EFEFFB;
+            --issued-line:   #CFCFF2;
+
+            --neutral-ink:   var(--gray-600);
+            --neutral-bg:    var(--gray-100);
+            --neutral-line:  var(--gray-200);
+
+            /* Spacing — strict 4px grid. Nothing off-scale anywhere. */
+            --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px;
+            --s5: 20px; --s6: 24px; --s7: 28px; --s8: 32px;
+            --s10: 40px; --s12: 48px; --s16: 64px;
+
+            /* Radii */
+            --r1: 4px; --r2: 6px; --r3: 8px; --r4: 12px; --rfull: 999px;
+
+            /* Type scale. Floor is 0.6875rem (11px) and only for uppercase
+               tracked micro-labels — nothing renders below it. */
+            --fs-micro: 0.6875rem;  /* 11px */
+            --fs-2xs:   0.75rem;    /* 12px */
+            --fs-xs:    0.8125rem;  /* 13px */
+            --fs-sm:    0.875rem;   /* 14px — body baseline */
+            --fs-md:    0.9375rem;  /* 15px */
+            --fs-lg:    1.0625rem;  /* 17px */
+            --fs-xl:    1.25rem;    /* 20px */
+            --fs-2xl:   1.5rem;     /* 24px */
+            --fs-3xl:   1.875rem;   /* 30px */
+
+            --lh-tight: 1.2;
+            --lh-snug:  1.35;
+            --lh-body:  1.55;
+
+            /* Depth — offset plus soft blur, never a zero-offset halo. */
+            --sh-1: 0 1px 2px rgba(16,20,25,.05);
+            --sh-2: 0 1px 2px rgba(16,20,25,.04), 0 2px 6px rgba(16,20,25,.05);
+            --sh-3: 0 2px 4px rgba(16,20,25,.04), 0 8px 20px rgba(16,20,25,.08);
+            --sh-pop: 0 4px 8px rgba(16,20,25,.05), 0 14px 34px rgba(16,20,25,.11);
+
+            /* Motion. One ease — exponential-style ease-out — and three
+               durations. Nothing animates from an invisible default. */
+            --ease:      cubic-bezier(.32,.72,0,1);
+            --ease-soft: cubic-bezier(.4,0,.2,1);
+            --t-fast: 110ms;
+            --t-mid:  170ms;
+            --t-slow: 240ms;
+
+            --focus: var(--accent-600);
+
+            --topbar-h:  52px;
+            --sidebar-w: 232px;
+
+            --font-ui: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+            --font-id: 'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
         }
 
-        /* ── Base ───────────────────────────────────── */
+        /* ── Bootstrap retokenization ───────────────────────────────────
+           Bootstrap 5.3 reads these at component level, so overriding them
+           here reaches pagination, list-group, input-group, form-check,
+           table-hover, .text-primary and .link-* without touching markup.
+           This is what stops framework defaults leaking into the design. */
+        :root {
+            --bs-body-bg:          var(--bg);
+            --bs-body-color:       var(--text-main);
+            --bs-body-font-family: var(--font-ui);
+            --bs-body-font-size:   var(--fs-sm);
+            --bs-body-line-height: var(--lh-body);
+            --bs-border-color:     var(--border);
+            --bs-border-radius:    var(--r2);
+            --bs-border-radius-sm: var(--r1);
+            --bs-border-radius-lg: var(--r3);
+            --bs-primary:          var(--accent-600);
+            --bs-primary-rgb:      31,79,163;
+            --bs-secondary-rgb:    102,112,128;
+            --bs-success-rgb:      16,99,63;
+            --bs-danger-rgb:       160,38,32;
+            --bs-warning-rgb:      138,86,0;
+            --bs-info-rgb:         31,79,163;
+            --bs-link-color:       var(--accent-600);
+            --bs-link-hover-color: var(--accent-700);
+            --bs-emphasis-color:   var(--text-strong);
+            --bs-secondary-color:  var(--text-muted);
+            --bs-heading-color:    var(--text-strong);
+            --bs-focus-ring-color: rgba(31,79,163,.24);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           BASE
+           ═══════════════════════════════════════════════════════════════ */
         * { box-sizing: border-box; }
 
         body {
             font-family: var(--font-ui);
-            background: var(--content-bg);
+            font-size: var(--fs-sm);
+            line-height: var(--lh-body);
+            background: var(--bg);
             color: var(--text-main);
             margin: 0;
             min-height: 100vh;
             -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
         }
 
+        /* Strict hierarchy: size AND weight AND tracking all step together,
+           so heading level is legible without comparing two elements. */
         h1, h2, h3, h4, h5, h6 {
             font-family: var(--font-ui);
-            font-weight: 600;
-            letter-spacing: -0.011em;
+            color: var(--text-strong);
+            line-height: var(--lh-tight);
+            letter-spacing: -0.018em;
+            margin: 0;
         }
 
-        /* Page titles are h1 for document structure, but keep the incumbent
-           1.5rem size — the browser's 2em default would resize every screen. */
-        h1 {
-            font-size: 1.5rem;
-            font-weight: 700;
-        }
+        h1 { font-size: var(--fs-2xl); font-weight: 650; letter-spacing: -0.025em; }
+        h2 { font-size: var(--fs-xl);  font-weight: 620; letter-spacing: -0.022em; }
+        h3 { font-size: var(--fs-lg);  font-weight: 600; }
+        h4 { font-size: var(--fs-md);  font-weight: 600; letter-spacing: -0.012em; }
+        h5 { font-size: var(--fs-sm);  font-weight: 600; letter-spacing: -0.008em; }
+        h6 { font-size: var(--fs-xs);  font-weight: 600; letter-spacing: 0; }
+
+        p { margin: 0 0 var(--s3); }
+        p:last-child { margin-bottom: 0; }
+
+        a { color: var(--accent-600); text-decoration: none; transition: color var(--t-fast) var(--ease-soft); }
+        a:hover { color: var(--accent-700); }
 
         /* Identifiers and quantities line up in columns. Without this, a table
            of plate numbers, times, and counts wobbles column to column. */
-        .table,
-        .stat-card .stat-value,
-        code, time {
+        .table, .stat-value, code, time, .tnum {
             font-variant-numeric: tabular-nums;
+            font-feature-settings: "tnum" 1;
         }
 
-        /* ── Top Bar ────────────────────────────────── */
+        /* ═══════════════════════════════════════════════════════════════
+           ICONS
+           One sprite, one stroke weight, sized by font-size so an icon and
+           its label always share a baseline.
+           ═══════════════════════════════════════════════════════════════ */
+        .ic {
+            width: 1em;
+            height: 1em;
+            flex: none;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 1.75;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            vertical-align: -0.135em;
+            overflow: visible;
+        }
+        .ic-sm { width: .875em; height: .875em; }
+        .ic-lg { width: 1.25em; height: 1.25em; stroke-width: 1.6; }
+        .ic-xl { width: 1.5em;  height: 1.5em;  stroke-width: 1.5; }
+        /* Filled dot / disc glyphs need fill, not stroke. */
+        .ic-solid { fill: currentColor; stroke: none; }
+
+        /* ═══════════════════════════════════════════════════════════════
+           APP SHELL
+           Light, hairline-separated. The old navy slab + gold rule was the
+           highest-contrast object in the app and read as framework chrome.
+           ═══════════════════════════════════════════════════════════════ */
         .topbar {
             position: fixed;
             top: 0; left: 0; right: 0;
-            height: 56px;
-            background: var(--navy);
+            height: var(--topbar-h);
+            background: rgba(255,255,255,.86);
+            backdrop-filter: saturate(180%) blur(12px);
+            -webkit-backdrop-filter: saturate(180%) blur(12px);
+            border-bottom: 1px solid var(--border);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 24px;
+            padding: 0 var(--s5);
             z-index: 1000;
-            border-bottom: 2px solid var(--gold);
         }
 
-        .topbar-brand {
+        /* Wordmark. PRODUCT.md records that no official PalSU seal exists, so
+           this is lettering plus a drawn barrier — the actual object at the
+           gate — never a shield or crest that would read as a seal. */
+        .brand {
             display: flex;
             align-items: center;
-            gap: 10px;
-            font-family: var(--font-ui);
-            font-weight: 700;
-            font-size: 1rem;
-            color: #fff;
-            letter-spacing: 0.02em;
+            gap: var(--s3);
             min-width: 0;
+        }
+        .brand-mark {
+            width: 26px; height: 26px;
+            flex: none;
+            display: grid;
+            place-items: center;
+            color: var(--accent-600);
+        }
+        .brand-mark .ic { width: 26px; height: 26px; stroke-width: 1.6; }
+        .brand-text {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+        .brand-name {
+            font-size: var(--fs-sm);
+            font-weight: 650;
+            letter-spacing: -0.02em;
+            color: var(--text-strong);
+            line-height: 1.15;
+            white-space: nowrap;
+        }
+        .brand-sub {
+            font-size: var(--fs-micro);
+            font-weight: 450;
+            color: var(--text-muted);
+            line-height: 1.25;
+            letter-spacing: 0.005em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .sidebar-toggle {
             display: none;
             align-items: center;
             justify-content: center;
-            width: 34px;
-            height: 34px;
+            width: 32px; height: 32px;
             background: transparent;
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 6px;
-            color: #fff;
-            font-size: 1.1rem;
-            flex-shrink: 0;
+            border: 1px solid var(--border);
+            border-radius: var(--r2);
+            color: var(--text-main);
+            font-size: var(--fs-lg);
+            flex: none;
             cursor: pointer;
+            transition: background var(--t-fast) var(--ease-soft),
+                        border-color var(--t-fast) var(--ease-soft);
         }
-
-        .sidebar-toggle:hover {
-            border-color: var(--gold);
-            color: var(--gold);
-        }
+        .sidebar-toggle:hover { background: var(--surface-hover); border-color: var(--border-strong); }
+        .sidebar-toggle:active { background: var(--gray-100); }
 
         .sidebar-backdrop {
-            display: none;
             position: fixed;
-            top: 56px; left: 0; right: 0; bottom: 0;
-            background: rgba(10,22,40,0.5);
+            inset: var(--topbar-h) 0 0 0;
+            background: rgba(16,20,25,.32);
             z-index: 899;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity var(--t-mid) var(--ease-soft), visibility var(--t-mid);
         }
+        .sidebar-backdrop.show { opacity: 1; visibility: visible; }
 
-        .sidebar-backdrop.show { display: block; }
-
-        .topbar-brand .brand-icon {
-            width: 30px;
-            height: 30px;
-            background: var(--gold);
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--navy);
-            font-size: 1rem;
-        }
-
-        .topbar-brand .brand-sub {
-            font-size: 0.72rem;
-            font-weight: 400;
-            color: #7A9BBF;
-            display: block;
-            line-height: 1;
-            margin-top: 1px;
-        }
-
+        /* ── Topbar user ─────────────────────────────────────────────── */
         .topbar-user {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: var(--s3);
         }
-
-        .topbar-user .user-info {
-            text-align: right;
-        }
-
+        .topbar-user .user-info { text-align: right; line-height: 1.2; }
         .topbar-user .user-name {
-            font-size: 0.85rem;
+            font-size: var(--fs-xs);
             font-weight: 600;
-            color: #fff;
-            line-height: 1.2;
+            color: var(--text-strong);
+            letter-spacing: -0.01em;
         }
-
         .topbar-user .user-role {
-            font-size: 0.7rem;
-            color: var(--gold);
-            font-weight: 500;
+            font-size: var(--fs-micro);
+            font-weight: 550;
+            color: var(--text-muted);
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.07em;
         }
-
         .topbar-user .avatar {
-            width: 34px;
-            height: 34px;
-            background: var(--navy-mid);
-            border: 2px solid var(--gold);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--gold);
-            font-size: 0.9rem;
+            width: 30px; height: 30px;
+            flex: none;
+            background: var(--accent-50);
+            border: 1px solid var(--accent-100);
+            border-radius: var(--rfull);
+            display: grid;
+            place-items: center;
+            color: var(--accent-700);
+            font-size: var(--fs-sm);
         }
 
         .btn-logout {
-            background: transparent;
-            border: 1px solid rgba(255,255,255,0.2);
-            color: rgba(255,255,255,0.7);
-            font-size: 0.78rem;
-            padding: 4px 10px;
-            border-radius: 4px;
-            text-decoration: none;
-            transition: all 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--s2);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text-main);
             font-family: inherit;
+            font-size: var(--fs-xs);
+            font-weight: 550;
+            padding: 5px 10px;
+            border-radius: var(--r2);
             cursor: pointer;
+            transition: background var(--t-fast) var(--ease-soft),
+                        border-color var(--t-fast) var(--ease-soft),
+                        color var(--t-fast) var(--ease-soft);
         }
-
         .btn-logout:hover {
-            border-color: var(--gold);
-            color: var(--gold);
+            background: var(--danger-bg);
+            border-color: var(--danger-line);
+            color: var(--danger-ink);
         }
+        .btn-logout:active { transform: translateY(.5px); }
 
-        /* ── Sidebar ────────────────────────────────── */
+        /* ── Sidebar ─────────────────────────────────────────────────── */
         .sidebar {
             position: fixed;
-            top: 56px;
-            left: 0;
-            bottom: 0;
+            top: var(--topbar-h);
+            left: 0; bottom: 0;
             width: var(--sidebar-w);
-            background: var(--navy);
+            background: var(--surface);
+            border-right: 1px solid var(--border);
             overflow-y: auto;
+            overscroll-behavior: contain;
             z-index: 900;
-            padding-bottom: 24px;
-            transition: transform 0.2s ease;
+            padding: var(--s3) 0 var(--s6);
+            transition: transform var(--t-slow) var(--ease);
         }
 
-        .sidebar-section {
-            padding: 20px 0 4px;
+        .sidebar-section { padding: var(--s3) 0 0; }
+        .sidebar-section + .sidebar-section {
+            margin-top: var(--s3);
+            border-top: 1px solid var(--border-subtle);
         }
 
         .sidebar-label {
-            font-size: 0.72rem;
-            font-weight: 700;
+            font-size: var(--fs-micro);
+            font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: #6B8CB8;
-            padding: 0 20px 6px;
+            letter-spacing: 0.09em;
+            color: var(--text-muted);
+            padding: 0 var(--s4) var(--s2);
         }
 
+        /* Active state is a filled tint plus a 2px inset rail that scales in
+           from the vertical centre — not a 3px slab border. */
         .sidebar-link {
+            position: relative;
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 9px 20px;
-            color: #8AAAD0;
-            text-decoration: none;
-            font-size: 0.85rem;
+            gap: var(--s3);
+            margin: 1px var(--s2);
+            padding: 7px var(--s3);
+            border-radius: var(--r2);
+            color: var(--text-main);
+            font-size: var(--fs-xs);
             font-weight: 500;
-            transition: all 0.15s;
-            border-left: 3px solid transparent;
-            position: relative;
+            letter-spacing: -0.006em;
+            transition: background var(--t-fast) var(--ease-soft),
+                        color var(--t-fast) var(--ease-soft);
         }
-
-        .sidebar-link:hover {
-            color: #fff;
-            background: rgba(255,255,255,0.05);
-            border-left-color: rgba(201,168,76,0.4);
-        }
+        .sidebar-link .ic { color: var(--text-faint); transition: color var(--t-fast) var(--ease-soft); }
+        .sidebar-link:hover { background: var(--surface-hover); color: var(--text-strong); }
+        .sidebar-link:hover .ic { color: var(--text-muted); }
 
         .sidebar-link.active {
-            color: var(--gold);
-            background: rgba(201,168,76,0.08);
-            border-left-color: var(--gold);
+            background: var(--accent-50);
+            color: var(--accent-800);
+            font-weight: 600;
         }
-
-        .sidebar-link i {
-            font-size: 1rem;
-            width: 18px;
-            text-align: center;
+        .sidebar-link.active .ic { color: var(--accent-600); }
+        .sidebar-link.active::before {
+            content: "";
+            position: absolute;
+            left: calc(-1 * var(--s2));
+            top: 50%;
+            width: 2px; height: 18px;
+            border-radius: 0 2px 2px 0;
+            background: var(--accent-600);
+            transform: translateY(-50%) scaleY(0);
+            transform-origin: center;
+            animation: railIn var(--t-slow) var(--ease) forwards;
         }
+        @keyframes railIn { to { transform: translateY(-50%) scaleY(1); } }
 
-        /* ── Main Content ───────────────────────────── */
+        /* ── Main ────────────────────────────────────────────────────── */
         .main-content {
             margin-left: var(--sidebar-w);
-            margin-top: 56px;
-            padding: 28px 32px;
-            min-height: calc(100vh - 56px);
+            margin-top: var(--topbar-h);
+            padding: var(--s6) var(--s7);
+            min-height: calc(100vh - var(--topbar-h));
         }
-
+        /* Anonymous screens have no shell at all, so they own the full
+           viewport and supply their own padding via .auth-wrap. */
         .main-content.no-sidebar {
             margin-left: 0;
+            margin-top: 0;
+            padding: 0;
+            min-height: 100vh;
         }
 
-        /* ── Page Header ────────────────────────────── */
+        /* A measured column so dense screens don't stretch to 2560px. */
+        .shell { max-width: 1200px; }
+        .shell-narrow { max-width: 720px; margin-inline: auto; }
+        .shell-form { max-width: 560px; margin-inline: auto; }
+
+        /* ── Page header ─────────────────────────────────────────────── */
         .page-header {
-            margin-bottom: 24px;
+            margin-bottom: var(--s5);
         }
-
-        .page-header h1,
-        .page-header h2 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--text-main);
-            margin: 0 0 4px;
+        .page-header h1, .page-header h2 {
+            font-size: var(--fs-2xl);
+            font-weight: 650;
+            letter-spacing: -0.025em;
+            color: var(--text-strong);
+            margin: 0 0 var(--s1);
         }
-
         .page-header .page-sub {
-            font-size: 0.85rem;
+            font-size: var(--fs-xs);
+            color: var(--text-muted);
+            line-height: var(--lh-snug);
+            margin: 0;
+            max-width: 68ch;
+        }
+
+        /* Micro eyebrow above nothing is banned; this is a trailing meta row. */
+        .page-meta {
+            display: flex;
+            align-items: center;
+            gap: var(--s2);
+            font-size: var(--fs-2xs);
             color: var(--text-muted);
         }
 
-        /* ── Cards ──────────────────────────────────── */
+        /* ═══════════════════════════════════════════════════════════════
+           SURFACES
+           ═══════════════════════════════════════════════════════════════ */
         .card {
-            background: var(--card-bg);
+            background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 8px;
-            box-shadow: 0 1px 4px rgba(10,22,40,0.06);
+            border-radius: var(--r3);
+            box-shadow: var(--sh-1);
         }
 
         .card-header {
-            background: var(--card-bg);
-            border-bottom: 1px solid var(--border);
-            padding: 14px 20px;
-            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: var(--s2);
+            background: transparent;
+            border-bottom: 1px solid var(--border-subtle);
+            padding: var(--s3) var(--s5);
+            font-size: var(--fs-xs);
             font-weight: 600;
-            color: var(--text-main);
+            letter-spacing: -0.006em;
+            color: var(--text-strong);
+            border-radius: var(--r3) var(--r3) 0 0;
+        }
+        .card-header .ic { color: var(--text-faint); }
+
+        /* A card header titles a region, so it carries the page's h2 layer —
+           between the page h1 and the h3s inside empty states. The heading
+           inherits every visual property from .card-header, so the semantics
+           changed and the rendering did not. Trailing actions stay outside
+           the heading, keeping the accessible heading text to the title. */
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: var(--s2);
+            margin: 0;
+            font-size: inherit;
+            font-weight: inherit;
+            letter-spacing: inherit;
+            line-height: inherit;
+            color: inherit;
         }
 
-        /* ── Stat Cards ─────────────────────────────── */
+        .card-body { padding: var(--s5); }
+        .card-body-tight { padding: var(--s4); }
+        .card-footer {
+            background: var(--surface-sunk);
+            border-top: 1px solid var(--border-subtle);
+            padding: var(--s3) var(--s5);
+            border-radius: 0 0 var(--r3) var(--r3);
+        }
+
+        /* Interactive cards earn a lift; static ones must not imply one. */
+        .card-link {
+            display: block;
+            color: inherit;
+            transition: border-color var(--t-mid) var(--ease-soft),
+                        box-shadow var(--t-mid) var(--ease-soft),
+                        transform var(--t-mid) var(--ease);
+        }
+        .card-link:hover {
+            border-color: var(--border-strong);
+            box-shadow: var(--sh-2);
+            transform: translateY(-1px);
+            color: inherit;
+        }
+        .card-link:active { transform: translateY(0); box-shadow: var(--sh-1); }
+
+        /* ── Stat tiles ──────────────────────────────────────────────── */
         .stat-card {
-            background: var(--card-bg);
+            background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 8px;
-            border-top: 3px solid var(--gold);
-            padding: 20px;
-            box-shadow: 0 1px 4px rgba(10,22,40,0.06);
+            border-radius: var(--r3);
+            padding: var(--s4);
+            box-shadow: var(--sh-1);
+            height: 100%;
         }
-
-        .stat-card .stat-label {
-            font-size: 0.75rem;
+        .stat-label {
+            display: block;
+            font-size: var(--fs-micro);
             font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.06em;
+            letter-spacing: 0.08em;
             color: var(--text-muted);
-            margin-bottom: 8px;
+            margin-bottom: var(--s2);
         }
-
-        .stat-card .stat-value {
-            font-family: var(--font-ui);
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--text-main);
+        .stat-value {
+            font-size: var(--fs-3xl);
+            font-weight: 650;
+            letter-spacing: -0.03em;
+            color: var(--text-strong);
             line-height: 1;
         }
-
-        .stat-card .stat-icon {
-            color: var(--gold);
-            font-size: 1.4rem;
-        }
-
-        .stat-card.danger  { border-top-color: var(--danger); }
-        .stat-card.success { border-top-color: var(--success); }
-        .stat-card.info    { border-top-color: var(--info); }
-        .stat-card.warning { border-top-color: var(--warning); }
-
-        .stat-card.danger  .stat-icon { color: var(--danger); }
-        .stat-card.success .stat-icon { color: var(--success); }
-        .stat-card.info    .stat-icon { color: var(--info); }
-        .stat-card.warning .stat-icon { color: var(--warning); }
-
-        /* ── Tables ─────────────────────────────────── */
-        .table {
-            font-size: 0.85rem;
-        }
-
-        .table thead th {
-            background: #F8FAFD;
-            border-bottom: 2px solid var(--border);
+        .stat-icon { color: var(--text-faint); font-size: var(--fs-lg); }
+        .stat-foot {
+            margin-top: var(--s2);
+            font-size: var(--fs-2xs);
             color: var(--text-muted);
-            font-size: 0.72rem;
-            font-weight: 700;
+        }
+        /* Only the tiles that lead somewhere get this, so an actionable count
+           is distinguishable from a count that is merely reported. */
+        .stat-link {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--s1);
+            margin-top: var(--s2);
+            font-size: var(--fs-2xs);
+            font-weight: 600;
+            color: var(--accent-600);
+        }
+        .stat-link .ic { transition: transform var(--t-mid) var(--ease); }
+        .stat-link:hover { color: var(--accent-700); }
+        .stat-link:hover .ic { transform: translateX(2px); }
+        /* Semantic variants tint the icon only. The value stays neutral so a
+           number is never harder to read for being categorised. */
+        .stat-card.success .stat-icon { color: var(--success); }
+        .stat-card.danger  .stat-icon { color: var(--danger); }
+        .stat-card.warning .stat-icon { color: var(--warning); }
+        .stat-card.info    .stat-icon { color: var(--accent-600); }
+
+        /* ── Tables ──────────────────────────────────────────────────── */
+        .table {
+            font-size: var(--fs-xs);
+            margin: 0;
+            --bs-table-bg: transparent;
+            --bs-table-border-color: var(--border-subtle);
+            border-color: var(--border-subtle);
+        }
+        .table thead th {
+            background: var(--surface-sunk);
+            border-bottom: 1px solid var(--border);
+            border-top: none;
+            color: var(--text-muted);
+            font-size: var(--fs-micro);
+            font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.06em;
-            padding: 10px 16px;
+            letter-spacing: 0.07em;
+            padding: var(--s2) var(--s4);
+            white-space: nowrap;
         }
-
         .table tbody td {
-            padding: 12px 16px;
-            border-color: var(--border);
+            padding: 10px var(--s4);
+            border-color: var(--border-subtle);
             vertical-align: middle;
+            color: var(--text-main);
+        }
+        .table tbody tr {
+            transition: background var(--t-fast) linear;
+        }
+        .table tbody tr:hover { background: var(--surface-sunk); }
+        .table tbody tr:last-child td { border-bottom: none; }
+        .table-sm tbody td { padding: 7px var(--s3); }
+        .table-sm thead th { padding: 6px var(--s3); }
+
+        /* Every table scrolls its own box rather than the page.
+           position:relative is load-bearing, not cosmetic: the .visually-hidden
+           labels inside wide <th> cells are absolutely positioned, and without
+           a positioned ancestor they escape this scroll container and inflate
+           the document's scrollWidth — which made the whole page scroll
+           sideways on every table screen. */
+        .table-responsive {
+            position: relative;
+            border-radius: 0 0 var(--r3) var(--r3);
         }
 
-        .table tbody tr:hover {
-            background: #F8FAFD;
+        /* A row that needs attention. Tint carries it; there is no slab of
+           colour down the edge and no reliance on colour alone — the status
+           cell in these tables always names the reason in words too. */
+        .table tbody tr.is-flagged { background: var(--danger-bg); }
+        .table tbody tr.is-flagged:hover { background: #FBE0DD; }
+        .table tbody tr.is-flagged td { border-color: var(--danger-line); }
+
+        /* An inactive row is de-emphasised without dropping to opacity, which
+           made the text itself hard to read. The Status column names the
+           state in words, so tone is reinforcement, never the only signal. */
+        .table tbody tr.is-inactive { background: var(--gray-50); }
+        .table tbody tr.is-inactive .cell-strong { color: var(--text-muted); font-weight: 400; }
+
+        /* ── Capacity ────────────────────────────────────────────────────
+           Real utilisation of a real appointment day, not a decorative
+           meter: it is how an administrator sees which dates still have
+           room before activating more. */
+        .capacity {
+            display: flex;
+            align-items: center;
+            gap: var(--s2);
+        }
+        .capacity-track {
+            width: 56px;
+            height: 5px;
+            flex: none;
+            background: var(--gray-200);
+            border-radius: var(--rfull);
+            overflow: hidden;
+        }
+        .capacity-fill {
+            height: 100%;
+            border-radius: var(--rfull);
+            background: var(--success);
+            /* Deliberately not animated. The fill size is server-rendered once
+               and never changes, so any animation here would be dead code —
+               and animating box dimensions thrashes layout besides. */
+        }
+        .capacity-fill.is-full { background: var(--danger); }
+        .capacity-count {
+            font-family: var(--font-id);
+            font-size: var(--fs-2xs);
+            font-weight: 500;
+            color: var(--text-muted);
         }
 
-        /* ── Badges ─────────────────────────────────── */
+        /* Square icon-only control for dense table action cells. */
+        .btn-icon {
+            padding: 0;
+            width: 26px;
+            height: 26px;
+            flex: none;
+        }
+        .btn-icon.is-danger { color: var(--danger-ink); }
+        .btn-icon.is-danger:hover { background: var(--danger-bg); border-color: var(--danger-line); color: var(--danger-ink); }
+
+        /* ── Toolbar ─────────────────────────────────────────────────────
+           Page title on the left, the screen's actions on the right,
+           baseline-aligned. Shared by the log, tracker, list and dashboard
+           screens, which each used to hand-roll this row. */
+        .toolbar {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: var(--s3);
+            margin-bottom: var(--s5);
+        }
+        .toolbar > .page-header { margin-bottom: 0; }
+        .toolbar-actions {
+            display: flex;
+            align-items: center;
+            gap: var(--s2);
+            flex-wrap: wrap;
+        }
+
+        /* ── Filter bar ──────────────────────────────────────────────────
+           Labels stay visible: a bare date input announces nothing, and the
+           officer needs to see which filter is active after paginating. */
+        .filter-bar { margin-bottom: var(--s4); }
+        .filter-bar .form-label {
+            font-size: var(--fs-micro);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: var(--text-muted);
+        }
+        .filter-bar .form-control,
+        .filter-bar .form-select { font-size: var(--fs-xs); padding: 6px 10px; }
+        .filter-summary {
+            display: flex;
+            align-items: center;
+            gap: var(--s2);
+            flex-wrap: wrap;
+            margin-top: var(--s3);
+            padding-top: var(--s3);
+            border-top: 1px solid var(--border-subtle);
+            font-size: var(--fs-2xs);
+            color: var(--text-muted);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           STATUS
+           The primary carrier of meaning in this product.
+           ═══════════════════════════════════════════════════════════════ */
         .status-badge {
             display: inline-flex;
             align-items: center;
-            gap: 4px;
-            padding: 3px 10px;
-            border-radius: 20px;
-            font-size: 0.72rem;
-            font-weight: 600;
-            letter-spacing: 0.03em;
+            gap: 5px;
+            padding: 2px 8px;
+            border-radius: var(--r1);
+            border: 1px solid transparent;
+            font-size: var(--fs-2xs);
+            font-weight: 550;
+            letter-spacing: -0.002em;
+            line-height: 1.45;
             white-space: nowrap;
         }
+        .status-badge .ic { width: .8em; height: .8em; stroke-width: 2.25; }
 
-        .badge-scheduled { background: #EBF4FF; color: var(--info-ink); }
-        .badge-approved  { background: #E8F7F0; color: var(--success-ink); }
-        .badge-rejected  { background: #FDECEA; color: var(--danger-ink); }
-        .badge-issued    { background: #EEF0FF; color: var(--issued-ink); }
-        .badge-draft     { background: #F3F4F6; color: var(--neutral-ink); }
-        .badge-expired   { background: #F3F4F6; color: var(--neutral-ink); }
-        .badge-entry     { background: #E8F7F0; color: var(--success-ink); }
-        .badge-exit      { background: #FFF8E8; color: var(--warning-ink); }
-        .badge-denied    { background: #FDECEA; color: var(--danger-ink); }
+        .badge-scheduled { background: var(--info-bg);    color: var(--info-ink);    border-color: var(--info-line); }
+        .badge-approved  { background: var(--success-bg); color: var(--success-ink); border-color: var(--success-line); }
+        .badge-rejected  { background: var(--danger-bg);  color: var(--danger-ink);  border-color: var(--danger-line); }
+        .badge-issued    { background: var(--issued-bg);  color: var(--issued-ink);  border-color: var(--issued-line); }
+        .badge-draft     { background: var(--neutral-bg); color: var(--neutral-ink); border-color: var(--neutral-line); }
+        .badge-expired   { background: var(--neutral-bg); color: var(--neutral-ink); border-color: var(--neutral-line); }
+        .badge-entry     { background: var(--success-bg); color: var(--success-ink); border-color: var(--success-line); }
+        .badge-exit      { background: var(--warning-bg); color: var(--warning-ink); border-color: var(--warning-line); }
+        .badge-denied    { background: var(--danger-bg);  color: var(--danger-ink);  border-color: var(--danger-line); }
 
-        /* ── RFID scanner poller ────────────────────────
-           Shared by the sticker station and quick register: both bind a
-           physical tag to a person, and both must show whether the scanner
-           is actually answering rather than failing silently. */
+        /* ── RFID scanner poller ─────────────────────────────────────────
+           Used by the sticker station, which binds a physical tag to a
+           person and must show whether the scanner is actually answering
+           rather than failing silently. */
         .poll-state {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            padding: 4px 10px;
-            border-radius: 20px;
+            gap: var(--s2);
+            font-size: var(--fs-2xs);
+            font-weight: 550;
+            padding: 3px 9px;
+            border-radius: var(--rfull);
+            border: 1px solid transparent;
         }
-        .poll-state i { font-size: 0.55rem; }
-        .poll-state.connected   { background: #E8F7F0; color: var(--success-ink); }
-        .poll-state.waiting     { background: #F3F4F6; color: var(--neutral-ink); }
-        .poll-state.retrying    { background: #FFF8E8; color: var(--warning-ink); }
-        .poll-state.unreachable { background: #FDECEA; color: var(--danger-ink); }
+        .poll-state .ic { width: .55em; height: .55em; }
+        .poll-state.connected   { background: var(--success-bg); color: var(--success-ink); border-color: var(--success-line); }
+        .poll-state.waiting     { background: var(--neutral-bg); color: var(--neutral-ink); border-color: var(--neutral-line); }
+        .poll-state.retrying    { background: var(--warning-bg); color: var(--warning-ink); border-color: var(--warning-line); }
+        .poll-state.unreachable { background: var(--danger-bg);  color: var(--danger-ink);  border-color: var(--danger-line); }
+
+        /* A live poller earns one breathing dot. Nothing else pulses. */
+        .poll-state.connected .ic {
+            animation: livePulse 2s var(--ease-soft) infinite;
+        }
+        @keyframes livePulse {
+            0%, 100% { opacity: 1; }
+            50%      { opacity: .35; }
+        }
 
         .new-tag-offer {
-            background: #EBF4FF;
-            border: 1px solid #B8D4F5;
-            border-radius: 8px;
-            padding: 12px 14px;
-            margin-top: 10px;
+            background: var(--info-bg);
+            border: 1px solid var(--info-line);
+            border-radius: var(--r2);
+            padding: var(--s3);
+            margin-top: var(--s3);
         }
 
-        /* ── Forms ──────────────────────────────────── */
+        /* ═══════════════════════════════════════════════════════════════
+           FORMS
+           ═══════════════════════════════════════════════════════════════ */
+        .form-label {
+            display: block;
+            font-size: var(--fs-xs);
+            font-weight: 550;
+            color: var(--text-strong);
+            letter-spacing: -0.004em;
+            margin-bottom: var(--s1);
+        }
+
         .form-control, .form-select {
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            font-size: 0.875rem;
+            background: var(--surface);
+            border: 1px solid var(--border-control);
+            border-radius: var(--r2);
+            font-size: var(--fs-sm);
+            line-height: 1.45;
             color: var(--text-main);
-            padding: 8px 12px;
-            transition: border-color 0.15s, box-shadow 0.15s;
+            padding: 7px 11px;
+            box-shadow: var(--sh-1);
+            transition: border-color var(--t-fast) var(--ease-soft),
+                        box-shadow var(--t-fast) var(--ease-soft),
+                        background var(--t-fast) var(--ease-soft);
         }
-
+        .form-control::placeholder { color: var(--text-faint); }
+        .form-control:hover:not(:focus), .form-select:hover:not(:focus) {
+            border-color: var(--gray-400);
+        }
         .form-control:focus, .form-select:focus {
-            border-color: var(--navy-light);
-            box-shadow: 0 0 0 3px rgba(42,82,152,0.12);
+            background: var(--surface);
+            border-color: var(--accent-500);
+            box-shadow: 0 0 0 3px rgba(31,79,163,.13);
+            color: var(--text-main);
             outline: none;
         }
-
-        .form-label {
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: var(--text-main);
-            margin-bottom: 5px;
+        .form-control:disabled, .form-select:disabled,
+        .form-control[readonly] {
+            background: var(--surface-sunk);
+            border-color: var(--border);
+            color: var(--text-muted);
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+        .form-control-lg {
+            font-size: var(--fs-lg);
+            padding: 10px var(--s3);
+            border-radius: var(--r2);
+        }
+        .form-select-sm, .form-control-sm {
+            font-size: var(--fs-xs);
+            padding: 5px 9px;
         }
 
-        /* ── Buttons ────────────────────────────────── */
+        /* Invalid state must be visible without relying on colour alone —
+           the border weight changes too. */
+        /* Django 5.x sets aria-invalid="true" on any field with errors, so the
+           visual invalid state is driven by the same attribute a screen reader
+           reads — they can never disagree. Colour is never the only signal:
+           the errorlist beneath the field names the problem in words. */
+        .form-control.is-invalid, .form-select.is-invalid,
+        .form-control[aria-invalid="true"],
+        .form-select[aria-invalid="true"] {
+            border-color: var(--danger);
+            box-shadow: 0 0 0 3px rgba(200,55,45,.11);
+        }
+        .form-text {
+            font-size: var(--fs-2xs);
+            color: var(--text-muted);
+            line-height: var(--lh-snug);
+            margin-top: var(--s1);
+        }
+        .field-error {
+            display: flex;
+            align-items: flex-start;
+            gap: 5px;
+            font-size: var(--fs-2xs);
+            font-weight: 500;
+            color: var(--danger-ink);
+            line-height: var(--lh-snug);
+            margin-top: var(--s1);
+        }
+        .field-error .ic { margin-top: .18em; }
+        /* Django renders field errors as <ul class="errorlist"><li>. */
+        .errorlist {
+            list-style: none;
+            margin: var(--s1) 0 0;
+            padding: 0;
+            font-size: var(--fs-2xs);
+            font-weight: 500;
+            color: var(--danger-ink);
+            line-height: var(--lh-snug);
+        }
+
+        .form-check-input {
+            border-color: var(--border-control);
+            transition: background-color var(--t-fast) var(--ease-soft),
+                        border-color var(--t-fast) var(--ease-soft);
+        }
+        .form-check-input:checked {
+            background-color: var(--accent-600);
+            border-color: var(--accent-600);
+        }
+        .form-check-label { font-size: var(--fs-xs); }
+
+        .input-group > .form-control:focus,
+        .input-group > .form-select:focus { z-index: 3; }
+
+        /* ── Password visibility toggle ────────────────
+           Applied automatically to every password field by the script at
+           the bottom of this file — see the note there for why it's done
+           this way instead of per-template. */
+        .pwd-wrap { position: relative; }
+        .pwd-wrap .form-control { padding-right: 40px; }
+        .pwd-toggle-btn {
+            position: absolute;
+            top: 50%;
+            right: 3px;
+            transform: translateY(-50%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px; height: 32px;
+            background: none;
+            border: none;
+            border-radius: var(--r1);
+            color: var(--text-faint);
+            font-size: var(--fs-sm);
+            cursor: pointer;
+            transition: color var(--t-fast) var(--ease-soft),
+                        background var(--t-fast) var(--ease-soft);
+        }
+        .pwd-toggle-btn:hover { color: var(--text-strong); background: var(--gray-100); }
+
+        /* ═══════════════════════════════════════════════════════════════
+           BUTTONS
+           Hover shifts tone, active depresses half a pixel. No bounce.
+           ═══════════════════════════════════════════════════════════════ */
         .btn {
-            font-size: 0.83rem;
-            font-weight: 600;
-            border-radius: 6px;
-            padding: 7px 16px;
-            transition: all 0.15s;
+            --bs-btn-focus-box-shadow: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-family: inherit;
+            font-size: var(--fs-xs);
+            font-weight: 550;
+            letter-spacing: -0.004em;
+            line-height: 1.5;
+            border-radius: var(--r2);
+            border: 1px solid transparent;
+            padding: 7px var(--s3);
+            transition: background-color var(--t-fast) var(--ease-soft),
+                        border-color var(--t-fast) var(--ease-soft),
+                        color var(--t-fast) var(--ease-soft),
+                        box-shadow var(--t-fast) var(--ease-soft),
+                        transform var(--t-fast) var(--ease);
         }
+        .btn:active { transform: translateY(.5px); }
+        .btn:disabled, .btn.disabled {
+            opacity: 1;
+            background: var(--gray-100);
+            border-color: var(--border);
+            color: var(--text-faint);
+            box-shadow: none;
+            transform: none;
+            cursor: not-allowed;
+        }
+        .btn-sm { font-size: var(--fs-2xs); padding: 5px 10px; border-radius: var(--r1); }
+        .btn-lg { font-size: var(--fs-sm); padding: 10px var(--s5); }
 
         .btn-primary {
-            background: var(--navy-mid);
-            border-color: var(--navy-mid);
-            color: #fff;
+            background: var(--accent-600);
+            border-color: var(--accent-600);
+            color: var(--text-invert);
+            box-shadow: var(--sh-1);
         }
-
         .btn-primary:hover {
-            background: var(--navy-light);
-            border-color: var(--navy-light);
+            background: var(--accent-700);
+            border-color: var(--accent-700);
+            color: var(--text-invert);
+            box-shadow: var(--sh-2);
+        }
+        .btn-primary:active { background: var(--accent-800); border-color: var(--accent-800); }
+
+        /* Neutral default — the correct button for most actions in an
+           Operate surface. Accent is reserved for the one primary act. */
+        .btn-secondary,
+        .btn-outline-secondary {
+            background: var(--surface);
+            border-color: var(--border-control);
+            color: var(--text-main);
+            box-shadow: var(--sh-1);
+        }
+        .btn-secondary:hover,
+        .btn-outline-secondary:hover {
+            background: var(--surface-hover);
+            border-color: var(--gray-400);
+            color: var(--text-strong);
         }
 
-        .btn-gold {
-            background: var(--gold);
-            border-color: var(--gold);
-            color: var(--navy);
-            font-weight: 700;
+        .btn-outline-primary {
+            background: var(--surface);
+            border-color: var(--accent-200);
+            color: var(--accent-700);
+            box-shadow: var(--sh-1);
         }
-
-        .btn-gold:hover {
-            background: var(--gold-light);
-            border-color: var(--gold-light);
-            color: var(--navy);
+        .btn-outline-primary:hover {
+            background: var(--accent-50);
+            border-color: var(--accent-500);
+            color: var(--accent-800);
         }
 
         .btn-success {
-            background: var(--success);
-            border-color: var(--success);
+            background: var(--success-strong);
+            border-color: var(--success-strong);
+            color: var(--text-invert);
+            box-shadow: var(--sh-1);
         }
+        .btn-success:hover { background: var(--success-ink); border-color: var(--success-ink); color: var(--text-invert); }
 
         .btn-danger {
             background: var(--danger);
             border-color: var(--danger);
+            color: var(--text-invert);
+            box-shadow: var(--sh-1);
         }
+        .btn-danger:hover { background: var(--danger-ink); border-color: var(--danger-ink); color: var(--text-invert); }
 
-        .btn-outline-secondary {
-            border-color: var(--border);
-            color: var(--text-muted);
-        }
-
-        .btn-outline-secondary:hover {
-            background: var(--content-bg);
-            color: var(--text-main);
-        }
-
-        /* ── Alerts ─────────────────────────────────── */
-        /* Alerts carry their meaning in the tint and the ink, not in a slab of
-           colour down one edge. The 1px border in the same hue defines the
-           shape without the accent bar. */
-        .alert {
-            border-radius: 8px;
-            font-size: 0.875rem;
-            border: 1px solid transparent;
-            padding: 12px 16px;
-        }
-
-        .alert-success {
-            background: #E8F7F0;
-            color: var(--success-ink);
-            border-color: #B7E2CD;
-        }
-
-        .alert-danger {
-            background: #FDECEA;
+        /* Destructive-but-secondary: reads as neutral until intent is shown. */
+        .btn-outline-danger {
+            background: var(--surface);
+            border-color: var(--danger-line);
             color: var(--danger-ink);
-            border-color: #F5C2BC;
+            box-shadow: var(--sh-1);
         }
+        .btn-outline-danger:hover { background: var(--danger-bg); border-color: var(--danger); color: var(--danger-ink); }
 
-        .alert-warning {
-            background: #FFF8E8;
-            color: var(--warning-ink);
-            border-color: #EFD9A8;
+        .btn-link {
+            background: none;
+            border-color: transparent;
+            color: var(--accent-600);
+            box-shadow: none;
+            padding: 5px 6px;
+            text-decoration: none;
         }
+        .btn-link:hover { color: var(--accent-700); background: var(--accent-50); }
 
-        .alert-info {
-            background: #EBF4FF;
-            color: var(--info-ink);
-            border-color: #BCD5EF;
+        /* ═══════════════════════════════════════════════════════════════
+           ALERTS
+           Tint plus ink plus a 1px border in the same hue. No accent slab.
+           ═══════════════════════════════════════════════════════════════ */
+        .alert {
+            display: flex;
+            align-items: flex-start;
+            gap: var(--s2);
+            border-radius: var(--r2);
+            font-size: var(--fs-xs);
+            line-height: var(--lh-snug);
+            border: 1px solid transparent;
+            padding: 10px var(--s3);
+            margin-bottom: var(--s4);
         }
+        .alert .ic { margin-top: .12em; }
+        .alert strong { font-weight: 600; }
+        .alert a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 
-        /* Bootstrap variants used in the admin review flow that the token
-           system had not defined — they were falling through to raw Bootstrap. */
-        .alert-primary {
-            background: #EEF0FF;
-            color: var(--issued-ink);
-            border-color: #C6CCF2;
+        .alert-success   { background: var(--success-bg); color: var(--success-ink); border-color: var(--success-line); }
+        .alert-danger,
+        .alert-error     { background: var(--danger-bg);  color: var(--danger-ink);  border-color: var(--danger-line); }
+        .alert-warning   { background: var(--warning-bg); color: var(--warning-ink); border-color: var(--warning-line); }
+        .alert-info      { background: var(--info-bg);    color: var(--info-ink);    border-color: var(--info-line); }
+        .alert-primary   { background: var(--issued-bg);  color: var(--issued-ink);  border-color: var(--issued-line); }
+        .alert-secondary { background: var(--neutral-bg); color: var(--neutral-ink); border-color: var(--neutral-line); }
+
+        /* ═══════════════════════════════════════════════════════════════
+           WIZARD
+           ═══════════════════════════════════════════════════════════════ */
+        .wizard-wrap {
+            max-width: 680px;
+            margin: 0 auto var(--s6);
         }
-
-        .alert-secondary {
-            background: #F3F4F6;
-            color: var(--neutral-ink);
-            border-color: #DDE0E5;
-        }
-
-        /* ── Progress Bar (Wizard) ──────────────────── */
         .wizard-steps {
             display: flex;
             align-items: center;
-            margin-bottom: 28px;
+            list-style: none;
+            margin: 0;
+            padding: 0;
         }
-
         .wizard-step {
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 0.8rem;
-            font-weight: 600;
+            gap: var(--s2);
+            font-size: var(--fs-2xs);
+            font-weight: 550;
+            letter-spacing: -0.004em;
             color: var(--text-muted);
-            flex: 1;
+            flex: none;
+        }
+        .wizard-step .step-num {
+            width: 24px; height: 24px;
+            border-radius: var(--rfull);
+            border: 1px solid var(--border-control);
+            display: grid;
+            place-items: center;
+            font-size: var(--fs-micro);
+            font-weight: 600;
+            flex: none;
+            background: var(--surface);
+            color: var(--text-muted);
+            box-shadow: var(--sh-1);
+            transition: background var(--t-mid) var(--ease-soft),
+                        border-color var(--t-mid) var(--ease-soft),
+                        color var(--t-mid) var(--ease-soft);
+        }
+        .wizard-step .step-num .ic { width: .8em; height: .8em; stroke-width: 2.5; }
+
+        .wizard-step.active { color: var(--text-strong); font-weight: 600; }
+        .wizard-step.active .step-num {
+            background: var(--accent-600);
+            border-color: var(--accent-600);
+            color: var(--text-invert);
+            box-shadow: 0 0 0 3px var(--accent-50);
+        }
+        .wizard-step.done { color: var(--text-main); }
+        .wizard-step.done .step-num {
+            background: var(--success-bg);
+            border-color: var(--success-line);
+            color: var(--success-ink);
+        }
+        .wizard-connector {
+            flex: 1 1 auto;
+            min-width: var(--s3);
+            height: 1px;
+            background: var(--border);
+            margin: 0 var(--s2);
+            transition: background var(--t-slow) var(--ease-soft);
+        }
+        .wizard-connector.is-done { background: var(--success-line); }
+
+        /* ═══════════════════════════════════════════════════════════════
+           PAGINATION · LIST GROUP
+           ═══════════════════════════════════════════════════════════════ */
+        .pagination { gap: var(--s1); margin: 0; }
+        .page-link {
+            border: 1px solid var(--border);
+            border-radius: var(--r2);
+            color: var(--text-main);
+            font-size: var(--fs-2xs);
+            font-weight: 550;
+            padding: 5px 10px;
+            background: var(--surface);
+            transition: background var(--t-fast) var(--ease-soft),
+                        border-color var(--t-fast) var(--ease-soft);
+        }
+        .page-link:hover { background: var(--surface-hover); border-color: var(--border-strong); color: var(--text-strong); }
+        .page-item.disabled .page-link {
+            background: transparent;
+            border-color: transparent;
+            color: var(--text-muted);
+        }
+        .page-item.active .page-link {
+            background: var(--accent-600);
+            border-color: var(--accent-600);
+            color: var(--text-invert);
         }
 
-        .wizard-step .step-num {
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            border: 2px solid var(--border);
+        .list-group-item {
+            border-color: var(--border-subtle);
+            font-size: var(--fs-xs);
+            padding: 10px var(--s4);
+            color: var(--text-main);
+            background: var(--surface);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           IDENTIFIERS
+           Plate numbers, sticker IDs, RFID UIDs — the physical objects the
+           system tracks. Monospaced for character-by-character comparison,
+           tracked out because these get read aloud at a gate and typed
+           into a form.
+           ═══════════════════════════════════════════════════════════════ */
+        code, .id-chip {
+            display: inline-block;
+            font-family: var(--font-id);
+            font-weight: 600;
+            font-size: var(--fs-2xs);
+            letter-spacing: 0.055em;
+            background: var(--gray-50);
+            color: var(--text-strong);
+            border: 1px solid var(--border);
+            padding: 1px 6px;
+            border-radius: var(--r1);
+            white-space: nowrap;
+        }
+        /* The plate is the anchor object of the whole chain of custody, so it
+           gets a plate-shaped treatment rather than a developer-token chip. */
+        .plate {
+            display: inline-flex;
+            align-items: center;
+            font-family: var(--font-id);
+            font-weight: 600;
+            font-size: var(--fs-sm);
+            letter-spacing: 0.09em;
+            color: var(--text-strong);
+            background: var(--surface);
+            border: 1px solid var(--border-strong);
+            border-radius: var(--r1);
+            padding: 2px 9px;
+            box-shadow: var(--sh-1);
+            white-space: nowrap;
+        }
+        .plate-lg { font-size: var(--fs-xl); padding: var(--s1) var(--s3); letter-spacing: 0.1em; }
+
+        /* ═══════════════════════════════════════════════════════════════
+           UTILITIES
+           ═══════════════════════════════════════════════════════════════ */
+        .section-divider {
+            border: none;
+            border-top: 1px solid var(--border-subtle);
+            margin: var(--s5) 0;
+        }
+        .text-muted { color: var(--text-muted) !important; }
+        .text-faint { color: var(--text-absent); }
+        .text-strong { color: var(--text-strong); }
+        .micro-label {
+            font-size: var(--fs-micro);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+        }
+        .meta { font-size: var(--fs-2xs); color: var(--text-muted); }
+        .lede { font-size: var(--fs-md); color: var(--text-main); line-height: var(--lh-body); }
+        .dl-tight dt { font-size: var(--fs-2xs); font-weight: 550; color: var(--text-muted); margin-bottom: 1px; }
+        .dl-tight dd { font-size: var(--fs-xs); color: var(--text-strong); margin-bottom: var(--s3); }
+
+        /* Icon plate for feature/action cards — hairline, not a colour blob. */
+        .icon-plate {
+            width: 34px; height: 34px;
+            flex: none;
+            display: grid;
+            place-items: center;
+            border-radius: var(--r2);
+            background: var(--surface-sunk);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            font-size: var(--fs-md);
+        }
+        .icon-plate.accent  { background: var(--accent-50);  border-color: var(--accent-100);  color: var(--accent-700); }
+        .icon-plate.success { background: var(--success-bg); border-color: var(--success-line); color: var(--success-ink); }
+        .icon-plate.warning { background: var(--warning-bg); border-color: var(--warning-line); color: var(--warning-ink); }
+        .icon-plate.danger  { background: var(--danger-bg);  border-color: var(--danger-line);  color: var(--danger-ink); }
+
+        /* ── Status panel ────────────────────────────────────────────────
+           A full-width statement of the one fact that governs a screen —
+           whether the registration window is open, what the applicant's
+           standing is. Carries a primary action rather than deferring to a
+           row of equal-weight cards. */
+        .status-panel {
+            display: flex;
+            align-items: flex-start;
+            gap: var(--s4);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r3);
+            box-shadow: var(--sh-1);
+            padding: var(--s5);
+            margin-bottom: var(--s5);
+        }
+        .status-panel-body { flex: 1 1 auto; min-width: 0; }
+        .status-panel h2 {
+            font-size: var(--fs-lg);
+            font-weight: 620;
+            letter-spacing: -0.02em;
+            margin: 0 0 var(--s1);
+        }
+        .status-panel p {
+            font-size: var(--fs-xs);
+            color: var(--text-muted);
+            line-height: var(--lh-snug);
+            margin: 0;
+            max-width: 62ch;
+        }
+        .status-panel-action { flex: none; padding-top: 2px; }
+        .status-panel.is-open   { border-color: var(--success-line); }
+        .status-panel.is-closed { border-color: var(--warning-line); }
+
+        /* A dated fact inside the panel: the window's own range, set in the
+           identifier face because these are exact dates people plan around. */
+        .window-dates {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: var(--s3);
+            font-family: var(--font-id);
+            font-size: var(--fs-2xs);
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            color: var(--text-strong);
+            background: var(--surface-sunk);
+            border: 1px solid var(--border);
+            border-radius: var(--r1);
+            padding: 3px var(--s2);
+        }
+
+        /* ── Application status cards (applicant's only messenger) ────────
+           With no notifications built, this screen carries every piece of
+           consequential news. The status headline is the largest element. */
+        .app-headline {
+            display: flex;
+            align-items: center;
+            gap: var(--s2);
+            font-size: var(--fs-lg);
+            font-weight: 620;
+            letter-spacing: -0.02em;
+            color: var(--text-strong);
+            margin-bottom: var(--s1);
+        }
+        .app-headline .ic { width: .95em; height: .95em; }
+        .app-card.status-scheduled .app-headline .ic { color: var(--info-ink); }
+        .app-card.status-approved  .app-headline .ic { color: var(--success-ink); }
+        .app-card.status-rejected  .app-headline .ic { color: var(--danger-ink); }
+        .app-card.status-issued    .app-headline .ic { color: var(--issued-ink); }
+        .app-card.status-draft     .app-headline .ic,
+        .app-card.status-expired   .app-headline .ic { color: var(--neutral-ink); }
+
+        .app-identity {
+            display: flex;
+            align-items: center;
+            gap: var(--s2);
+            font-size: var(--fs-2xs);
+            color: var(--text-muted);
+        }
+        .app-next {
+            margin-top: var(--s4);
+            padding-top: var(--s4);
+            border-top: 1px solid var(--border-subtle);
+            font-size: var(--fs-xs);
+            line-height: var(--lh-body);
+        }
+        .app-next p { margin-bottom: var(--s2); }
+        .app-next p:last-child { margin-bottom: 0; }
+        .app-meta { font-size: var(--fs-2xs); color: var(--text-muted); white-space: nowrap; }
+
+        /* A numbered instruction list, for "what to do next" sequences. */
+        .steps-inline {
+            list-style: none;
+            counter-reset: si;
+            margin: 0 0 var(--s2);
+            padding: 0;
+        }
+        .steps-inline li {
+            counter-increment: si;
+            position: relative;
+            padding-left: var(--s6);
+            margin-bottom: var(--s2);
+        }
+        .steps-inline li::before {
+            content: counter(si);
+            position: absolute;
+            left: 0;
+            top: 1px;
+            width: 18px; height: 18px;
+            display: grid;
+            place-items: center;
+            border-radius: var(--rfull);
+            background: var(--surface-sunk);
+            border: 1px solid var(--border);
+            font-size: var(--fs-micro);
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        /* ── Key / value review table ────────────────────────────────────
+           Used on the review step and admin detail pages to re-present what
+           the applicant entered, in the same order they entered it. */
+        .kv {
+            width: 100%;
+            margin: 0;
+            font-size: var(--fs-xs);
+        }
+        .kv th {
+            width: 42%;
+            padding: 9px var(--s5);
+            background: var(--surface-sunk);
+            color: var(--text-muted);
+            font-size: var(--fs-2xs);
+            font-weight: 500;
+            text-align: left;
+            vertical-align: top;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        .kv td {
+            padding: 9px var(--s5);
+            color: var(--text-strong);
+            font-weight: 500;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        .kv tr:last-child th, .kv tr:last-child td { border-bottom: none; }
+
+        /* ── Record header ───────────────────────────────────────────────
+           Names the specific record being worked on. An administrator
+           reviewing one application needs the plate and the applicant in the
+           title, not a generic screen name. */
+        .record-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: var(--s4);
+            margin-bottom: var(--s5);
+            padding-bottom: var(--s4);
+            border-bottom: 1px solid var(--border);
+        }
+        .record-title {
+            display: flex;
+            align-items: center;
+            gap: var(--s3);
+            flex-wrap: wrap;
+        }
+        .record-title h1 { margin: 0; }
+        .record-sub {
+            display: flex;
+            gap: var(--s3);
+            flex-wrap: wrap;
+            margin-top: var(--s2);
+            font-size: var(--fs-2xs);
+            color: var(--text-muted);
+        }
+
+        /* ── Document rows ───────────────────────────────────────────────
+           The files a reviewer must open to decide. Each states plainly
+           whether it exists, and every link warns that it opens a new tab. */
+        .doc-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--s3);
+            padding: 9px var(--s5);
+            border-bottom: 1px solid var(--border-subtle);
+            font-size: var(--fs-xs);
+        }
+        .doc-row:last-child { border-bottom: none; }
+        .doc-row-name {
+            display: flex;
+            align-items: center;
+            gap: var(--s2);
+            font-weight: 500;
+            color: var(--text-strong);
+        }
+        .doc-row-name .ic { color: var(--text-faint); }
+        .doc-row.is-missing .doc-row-name { color: var(--text-muted); font-weight: 400; }
+
+        /* ── Pickable options ────────────────────────────────────────────
+           Appointment dates and time slots. A full slot stays legible rather
+           than dropping to opacity:0.4, which read as a rendering fault. */
+        .pick {
+            display: block;
+            width: 100%;
+            height: 100%;
+            text-align: left;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r2);
+            padding: var(--s3) var(--s4);
+            color: inherit;
+            box-shadow: var(--sh-1);
+            transition: border-color var(--t-mid) var(--ease-soft),
+                        background var(--t-mid) var(--ease-soft),
+                        box-shadow var(--t-mid) var(--ease-soft),
+                        transform var(--t-mid) var(--ease);
+        }
+        .pick:hover {
+            border-color: var(--accent-500);
+            background: var(--accent-50);
+            box-shadow: var(--sh-2);
+            transform: translateY(-1px);
+            color: inherit;
+        }
+        .pick:active { transform: translateY(0); box-shadow: var(--sh-1); }
+        .pick-day {
+            font-size: var(--fs-micro);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: var(--text-muted);
+        }
+        .pick-date {
+            font-size: var(--fs-md);
+            font-weight: 600;
+            letter-spacing: -0.014em;
+            color: var(--text-strong);
+        }
+        .pick-meta { font-size: var(--fs-2xs); color: var(--text-muted); margin-top: 1px; }
+
+        .pick.is-full,
+        .pick:disabled {
+            background: var(--surface-sunk);
+            border-color: var(--border-subtle);
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+        .pick.is-full:hover,
+        .pick:disabled:hover {
+            transform: none;
+            background: var(--surface-sunk);
+            border-color: var(--border-subtle);
+            box-shadow: none;
+        }
+        .pick.is-full .pick-date, .pick:disabled .pick-date { color: var(--text-muted); }
+
+        .pick-time {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1px;
+            padding: var(--s2) 6px;
+            text-align: center;
+        }
+        .pick-time .t {
+            font-family: var(--font-id);
+            font-size: var(--fs-xs);
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            color: var(--text-strong);
+        }
+        .pick-time:disabled .t { color: var(--text-muted); }
+
+        /* ── Uploaded document confirmation ──────────────────────────────
+           Echoes the real filename the applicant will recognise. */
+        .doc-item {
+            display: flex;
+            align-items: flex-start;
+            gap: var(--s2);
+            height: 100%;
+            background: var(--success-bg);
+            border: 1px solid var(--success-line);
+            border-radius: var(--r2);
+            padding: 10px var(--s3);
+        }
+        .doc-item .ic { color: var(--success-ink); margin-top: .15em; }
+        .doc-label {
+            font-size: var(--fs-micro);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: var(--success-ink);
+        }
+        .doc-name {
+            font-size: var(--fs-2xs);
+            color: var(--text-main);
+            line-height: var(--lh-snug);
+            word-break: break-all;
+        }
+
+        /* ── Notes ───────────────────────────────────────────────────────
+           A quiet inset panel for guidance that is not a message about
+           system state. Alerts are for state; this is for instruction. */
+        .note {
+            display: flex;
+            align-items: flex-start;
+            gap: var(--s2);
+            background: var(--surface-sunk);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--r2);
+            padding: 9px var(--s3);
+            font-size: var(--fs-2xs);
+            color: var(--text-muted);
+            line-height: var(--lh-snug);
+        }
+        .note .ic { color: var(--text-faint); margin-top: .1em; }
+        .note strong { color: var(--text-main); font-weight: 600; }
+
+        /* ── Requirement tags ────────────────────────────────────────────
+           Distinct from .status-badge on purpose: "Required" is an
+           instruction about a field, not a status on a record. Reusing
+           .badge-rejected here made a required field read as rejected. */
+        .tag {
+            display: inline-block;
+            font-size: var(--fs-micro);
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            padding: 1px 5px;
+            border-radius: var(--r1);
+            border: 1px solid var(--border);
+            background: var(--surface-sunk);
+            color: var(--text-muted);
+            vertical-align: 1.5px;
+        }
+        .tag-required    { background: var(--surface); border-color: var(--border-strong); color: var(--text-main); }
+        .tag-conditional { background: var(--info-bg); border-color: var(--info-line); color: var(--info-ink); }
+
+        /* A field that does not apply to this applicant. Dimming the input
+           alone read as "broken"; this states it and stays legible. */
+        .field-na .form-label { color: var(--text-muted); }
+        .field-na .tag { opacity: .6; }
+
+        /* ── Auth layout ─────────────────────────────────────────────────
+           Shared by login, register, verify, lockout and the four password
+           reset screens, which previously each repeated a centring wrapper
+           and a mark. */
+        .auth-wrap {
+            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.75rem;
-            font-weight: 700;
-            flex-shrink: 0;
-            background: #fff;
+            padding: var(--s10) var(--s4);
+        }
+        .auth-col { width: 100%; max-width: 400px; }
+        .auth-col-wide { max-width: 560px; }
+
+        .auth-head { text-align: center; margin-bottom: var(--s5); }
+        .auth-head h1 {
+            font-size: var(--fs-xl);
+            font-weight: 650;
+            letter-spacing: -0.022em;
+            margin: 0;
+        }
+        .auth-head p {
+            font-size: var(--fs-xs);
+            color: var(--text-muted);
+            line-height: var(--lh-snug);
+            margin: var(--s2) 0 0;
+        }
+        /* A hairline plate, not a bordered navy tile — a gold-edged shield
+           reads as an institutional seal, and PRODUCT.md records that no
+           official PalSU seal exists. */
+        .auth-mark {
+            width: 42px; height: 42px;
+            margin: 0 auto var(--s4);
+            display: grid;
+            place-items: center;
+            border-radius: var(--r3);
+            background: var(--accent-50);
+            border: 1px solid var(--accent-100);
+            color: var(--accent-700);
+            font-size: var(--fs-xl);
+        }
+        .auth-mark.success { background: var(--success-bg); border-color: var(--success-line); color: var(--success-ink); }
+        .auth-mark.danger  { background: var(--danger-bg);  border-color: var(--danger-line);  color: var(--danger-ink); }
+        .auth-mark.warning { background: var(--warning-bg); border-color: var(--warning-line); color: var(--warning-ink); }
+
+        .auth-card .card-body { padding: var(--s6); }
+        .auth-card h2 {
+            font-size: var(--fs-md);
+            font-weight: 600;
+            letter-spacing: -0.014em;
+            margin: 0 0 var(--s4);
+        }
+        .auth-alt {
+            text-align: center;
+            margin: var(--s4) 0 0;
+            font-size: var(--fs-xs);
             color: var(--text-muted);
         }
+        .auth-alt a { font-weight: 600; }
+        .field-link { font-size: var(--fs-2xs); font-weight: 500; color: var(--text-muted); }
+        .field-link:hover { color: var(--accent-700); }
 
-        .wizard-step.active .step-num {
-            background: var(--navy-mid);
-            border-color: var(--navy-mid);
-            color: #fff;
-        }
-
-        .wizard-step.active {
-            color: var(--navy-mid);
-        }
-
-        .wizard-step.done .step-num {
-            background: var(--success);
-            border-color: var(--success);
-            color: #fff;
-        }
-
-        .wizard-step.done {
-            color: var(--success);
-        }
-
-        .wizard-connector {
-            flex: 1;
-            height: 2px;
-            background: var(--border);
-            margin: 0 8px;
-        }
-
-        /* ── Misc ───────────────────────────────────── */
-        .section-divider {
-            border: none;
-            border-top: 1px solid var(--border);
-            margin: 20px 0;
-        }
-
-        .text-muted { color: var(--text-muted) !important; }
-
-        /* Identifiers: plate numbers, sticker IDs, RFID UIDs. These are the
-           physical objects the system tracks, so they get their own typographic
-           treatment — monospaced for character-by-character comparison, spaced
-           out because these get read aloud at a gate and typed into a form. */
-        code {
+        /* One-time code: monospaced and tracked out, because it is copied
+           character by character from an email. */
+        .otp-input {
+            text-align: center;
             font-family: var(--font-id);
+            font-size: var(--fs-2xl);
             font-weight: 600;
-            font-size: 0.8rem;
-            letter-spacing: 0.06em;
-            background: #E9EEF7;
-            color: var(--navy-mid);
-            border: 1px solid #D4DEEE;
-            padding: 2px 7px;
-            border-radius: 4px;
-            white-space: nowrap;
+            letter-spacing: 0.3em;
+            padding: 10px;
+            text-indent: 0.3em;
         }
+
+        /* Empty states are first-class here: hardware is partial and the scan
+           stream may be genuinely empty. */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: var(--s10) var(--s5);
+            color: var(--text-muted);
+        }
+        .empty-state .ic { color: var(--text-faint); width: 26px; height: 26px; stroke-width: 1.5; }
+        .empty-state h3 {
+            font-size: var(--fs-sm);
+            font-weight: 600;
+            color: var(--text-strong);
+            margin: var(--s3) 0 var(--s1);
+        }
+        .empty-state p { font-size: var(--fs-xs); max-width: 44ch; margin: 0; }
 
         /* ── Skip link ──────────────────────────────── */
         /* Driven by :focus rather than inline onfocus/onblur handlers, so it
@@ -660,51 +1763,55 @@
             top: -48px;
             left: 0;
             z-index: 9999;
-            background: var(--gold);
-            color: var(--navy);
-            padding: 10px 16px;
-            font-weight: 700;
-            text-decoration: none;
-            border-bottom-right-radius: 6px;
-            transition: top 0.12s ease;
+            background: var(--accent-600);
+            color: var(--text-invert);
+            padding: 9px var(--s4);
+            font-size: var(--fs-xs);
+            font-weight: 600;
+            border-radius: 0 0 var(--r2) 0;
+            transition: top var(--t-mid) var(--ease);
         }
-
-        .skip-link:focus {
-            top: 0;
-            color: var(--navy);
-        }
+        .skip-link:focus { top: 0; color: var(--text-invert); }
 
         /* ── Focus visibility ───────────────────────── */
         /* One ring for every interactive element. Only :focus-visible, so it
            appears for keyboard and assistive tech without ringing every mouse
            click. Offset keeps it clear of the element's own border. */
+        /* The ring: 2px of accent (7.76:1 on every surface here) sitting in a
+           2px gap the colour of the surface behind it, so the indicator stays
+           legible whether the control is on white, on a tint, or on a filled
+           button. Meets 2.4.7 Focus Visible and 1.4.11 Non-text Contrast.
+           .focus-ring applies the same treatment on demand. */
+        .focus-ring,
         a:focus-visible,
         button:focus-visible,
         .btn:focus-visible,
         .sidebar-link:focus-visible,
         .btn-logout:focus-visible,
         .sidebar-toggle:focus-visible,
+        .page-link:focus-visible,
+        .form-check-input:focus-visible,
+        .pick:focus-visible,
+        .gate-scope a:focus-visible,
         [tabindex]:focus-visible,
         summary:focus-visible {
-            outline: 3px solid var(--focus-ring);
+            outline: 2px solid var(--focus);
             outline-offset: 2px;
-            border-radius: 4px;
+            box-shadow: 0 0 0 2px var(--surface);
         }
-
-        /* On the navy topbar and sidebar the navy ring would disappear. */
-        .topbar a:focus-visible,
-        .topbar button:focus-visible,
-        .sidebar a:focus-visible,
-        .sidebar-toggle:focus-visible,
-        .btn-logout:focus-visible {
-            outline-color: var(--gold-light);
-        }
-
+        /* Inputs keep their own soft ring on plain :focus; on keyboard focus
+           the hard outline is added on top rather than replacing it. */
         .form-control:focus-visible,
         .form-select:focus-visible {
-            outline: 3px solid var(--focus-ring);
+            outline: 2px solid var(--focus);
             outline-offset: 1px;
         }
+        /* Bootstrap's own .focus-ring helper, retokenized to match. */
+        :root { --bs-focus-ring-width: 2px; --bs-focus-ring-opacity: 1; }
+
+        /* A focused control inside a horizontally scrolling table would have
+           its outline clipped; a little padding keeps the ring on screen. */
+        .table-responsive { scroll-padding: var(--s1); }
 
         /* ── Reduced motion ─────────────────────────── */
         @media (prefers-reduced-motion: reduce) {
@@ -716,108 +1823,248 @@
             }
         }
 
-        /* ── Messages ───────────────────────────────── */
+        /* ═══════════════════════════════════════════════════════════════
+           MESSAGES
+           ═══════════════════════════════════════════════════════════════ */
         .messages-wrap {
             position: fixed;
-            top: 64px;
-            right: 16px;
+            top: calc(var(--topbar-h) + var(--s2));
+            right: var(--s4);
             z-index: 1100;
+            display: flex;
+            flex-direction: column;
+            gap: var(--s2);
             /* Never wider than the viewport allows. At 340px this was covering
                356px of a 360px phone screen. */
-            width: min(340px, calc(100vw - 32px));
+            width: min(360px, calc(100vw - 2 * var(--s4)));
         }
-
+        .messages-wrap .alert {
+            margin: 0;
+            box-shadow: var(--sh-pop);
+            animation: toastIn var(--t-slow) var(--ease) both;
+        }
+        @keyframes toastIn {
+            from { opacity: 0; transform: translate3d(8px, -4px, 0) scale(.985); }
+            to   { opacity: 1; transform: none; }
+        }
+        @keyframes toastInUp {
+            from { opacity: 0; transform: translate3d(0, 10px, 0) scale(.985); }
+            to   { opacity: 1; transform: none; }
+        }
         /* The dismiss control was a 0.65rem glyph — roughly a 10px target.
            Padding brings it to 44px without changing how it looks. */
         .messages-wrap .btn-close {
             flex-shrink: 0;
             padding: 14px;
-            margin: -12px -10px -12px 0;
-            background-size: 0.65rem;
+            margin: -11px -8px -11px 0;
+            background-size: 0.6rem;
+            opacity: .5;
+            transition: opacity var(--t-fast) var(--ease-soft);
+        }
+        .messages-wrap .btn-close:hover { opacity: 1; }
+
+        /* ═══════════════════════════════════════════════════════════════
+           RESPONSIVE
+           ═══════════════════════════════════════════════════════════════ */
+        @media (max-width: 991px) {
+            .main-content { padding: var(--s5) var(--s5); }
         }
 
-        /* ── Responsive ─────────────────────────────── */
         @media (max-width: 768px) {
             .sidebar-toggle { display: flex; }
 
             .sidebar {
                 transform: translateX(-100%);
-                box-shadow: 4px 0 16px rgba(10,22,40,0.3);
+                box-shadow: var(--sh-pop);
             }
             .sidebar.open { transform: translateX(0); }
 
-            .main-content { margin-left: 0; padding: 20px 16px; }
+            .main-content { margin-left: 0; padding: var(--s5) var(--s4); }
 
-            .topbar { padding: 0 12px; gap: 8px; }
-            .topbar-brand { font-size: 0.88rem; gap: 8px; }
-            .topbar-brand .brand-sub { font-size: 0.72rem; }
-            .topbar-user { gap: 8px; }
+            .topbar { padding: 0 var(--s3); gap: var(--s2); }
+            .topbar-user { gap: var(--s2); }
             .topbar-user .user-info { display: none; }
+
+            .page-header h1, .page-header h2 { font-size: var(--fs-xl); }
+            .stat-value { font-size: var(--fs-2xl); }
 
             /* Hide the label visually but keep it as the button's accessible
                name — display:none left an icon-only control announcing nothing. */
             .btn-logout span {
                 position: absolute;
-                width: 1px;
-                height: 1px;
-                padding: 0;
-                margin: -1px;
+                width: 1px; height: 1px;
+                padding: 0; margin: -1px;
                 overflow: hidden;
                 clip: rect(0, 0, 0, 0);
                 white-space: nowrap;
                 border: 0;
             }
+            .btn-logout { padding: 6px 8px; }
 
-            .wizard-step span { font-size: 0.72rem; }
-            .wizard-connector { margin: 0 4px; }
+            /* A 358px-wide toast on a 390px screen covered the page heading.
+               On phones it becomes a bottom sheet: nothing is obscured, and
+               the dismiss control lands in thumb reach. */
+            .messages-wrap {
+                top: auto;
+                bottom: var(--s3);
+                left: var(--s3);
+                right: var(--s3);
+                width: auto;
+            }
+            .messages-wrap .alert { animation-name: toastInUp; }
+
+            /* The wizard keeps its numbers and drops its labels rather than
+               wrapping into four ragged rows. */
+            .wizard-step span { display: none; }
+            .wizard-step.active span {
+                display: inline;
+                font-size: var(--fs-2xs);
+            }
+            .wizard-connector { margin: 0 var(--s1); }
         }
 
         @media (max-width: 420px) {
-            .topbar-brand .brand-sub { display: none; }
+            .brand-sub { display: none; }
+            .main-content { padding: var(--s4) var(--s3); }
         }
     </style>
 
     {% block extra_css %}{% endblock %}
 </head>
 <body>
+<!--
+  THESIS: A chain-of-custody record system, not an admin panel. Status and the
+  physical identifier (plate, sticker, UID) outrank chrome. Refuses the dark
+  navy shell + gold rule that read as framework decoration.
+  OWN-WORLD: Off-white ground, paper-white cards, 1px cool-slate hairlines
+  instead of shadows. One deep desaturated blue (#1F4FA3) carries every
+  interactive affordance; semantic hue appears only on status. IBM Plex Sans
+  for interface, Plex Mono for identifiers. Inline SVG at one stroke weight.
+  STORY: The visitor sees what happened, what to do next, and which physical
+  object it concerns — without reading a legend.
+  FIRST VIEWPORT: Hairline topbar with typographic wordmark (no seal — none
+  exists), light rail sidebar, page title at 24px/650 over a 13px sub, content
+  on a 4px grid.
+  FORM: Pinned brief — Vercel/Linear/Stripe canon executed straight, no roll.
+  FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
+-->
+
+<!-- ══════════════════════════════════════════════════════════════════
+     ICON SPRITE
+     One 24px grid, 1.75 stroke, round caps, currentColor. Each icon is used
+     by referencing its symbol id through an svg.ic wrapper. Replaces the
+     Bootstrap Icons webfont: no CDN request, one consistent weight, and it
+     renders on a campus LAN with no internet route.
+     ══════════════════════════════════════════════════════════════════ -->
+<svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute;overflow:hidden">
+<defs>
+<symbol id="i-barrier" viewBox="0 0 24 24"><path d="M6 21V6"/><path d="M3.5 21h5"/><path d="M8 9.4 21 5.4v4l-13 4Z"/><path d="M12.4 8.1v4M16.7 6.8v4"/></symbol>
+<symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/><path d="M9.5 20v-6h5v6"/></symbol>
+<symbol id="i-gauge" viewBox="0 0 24 24"><path d="M3.5 18a9.5 9.5 0 1 1 17 0"/><path d="M12 14.5 16 9"/><circle cx="12" cy="16" r="1.6"/></symbol>
+<symbol id="i-pulse" viewBox="0 0 24 24"><path d="M2.5 12h4l2.5-6 4 12 2.5-6h6"/></symbol>
+<symbol id="i-trend-up" viewBox="0 0 24 24"><path d="M3 17l5.5-5.5 3.5 3.5L21 6"/><path d="M15 6h6v6"/></symbol>
+<symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3 3 7.5l9 4.5 9-4.5L12 3Z"/><path d="M3 12.5 12 17l9-4.5"/><path d="M3 17 12 21.5 21 17"/></symbol>
+<symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 8V5.5A1.5 1.5 0 0 1 4.5 4h4l2 2.5h8A1.5 1.5 0 0 1 20 8"/><path d="M3 8h18.2a.8.8 0 0 1 .78 1l-1.9 8.4a2 2 0 0 1-1.95 1.6H4.9a2 2 0 0 1-1.95-1.6L3 8Z"/></symbol>
+<symbol id="i-inbox" viewBox="0 0 24 24"><path d="M3 13.5h4l1.5 2.5h7l1.5-2.5h4"/><path d="M3 13.5 5.7 5.3A2 2 0 0 1 7.6 4h8.8a2 2 0 0 1 1.9 1.3L21 13.5V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4.5Z"/></symbol>
+<symbol id="i-book" viewBox="0 0 24 24"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H19v18H5.5A1.5 1.5 0 0 1 4 19.5v-15Z"/><path d="M4 17h15"/><path d="M8 7.5h7M8 11h7"/></symbol>
+<symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></symbol>
+<symbol id="i-list-check" viewBox="0 0 24 24"><path d="M10 6h11M10 12h11M10 18h11"/><path d="M3 6.5 4.3 7.8 6.5 5.2"/><path d="M3 12.5 4.3 13.8 6.5 11.2"/><path d="M3 18.5 4.3 19.8 6.5 17.2"/></symbol>
+<symbol id="i-menu" viewBox="0 0 24 24"><path d="M3.5 6.5h17M3.5 12h17M3.5 17.5h17"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></symbol>
+<symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3.5v11"/><path d="M7.5 10.5 12 15l4.5-4.5"/><path d="M4 17.5v1.5a1.5 1.5 0 0 0 1.5 1.5h13a1.5 1.5 0 0 0 1.5-1.5v-1.5"/></symbol>
+<symbol id="i-save" viewBox="0 0 24 24"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h10L20 8.5v10a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-13Z"/><path d="M8 4v5h7"/><path d="M8 20v-6h8v6"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9.5 7V4.8a.8.8 0 0 1 .8-.8h3.4a.8.8 0 0 1 .8.8V7"/><path d="M6 7l.9 12.1A2 2 0 0 0 8.9 21h6.2a2 2 0 0 0 2-1.9L18 7"/><path d="M10.5 11v6M13.5 11v6"/></symbol>
+<symbol id="i-send" viewBox="0 0 24 24"><path d="M21 3 10.5 13.5"/><path d="M21 3l-6.8 18-3.7-7.5L3 9.8 21 3Z"/></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 5.5v5h-5"/><path d="M20 10.5A8.5 8.5 0 0 0 5.2 7.4"/><path d="M4 18.5v-5h5"/><path d="M4 13.5a8.5 8.5 0 0 0 14.8 3.1"/></symbol>
+<symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M4 12h15.5"/><path d="M14 6.5 19.5 12 14 17.5"/></symbol>
+<symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M20 12H4.5"/><path d="M10 6.5 4.5 12 10 17.5"/></symbol>
+<symbol id="i-arrow-right-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.75"/><path d="M8.5 12h7"/><path d="M12.5 9 15.5 12 12.5 15"/></symbol>
+<symbol id="i-arrow-left-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.75"/><path d="M15.5 12h-7"/><path d="M11.5 9 8.5 12 11.5 15"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M4.5 12.5 9.5 17.5 19.5 6.5"/></symbol>
+<symbol id="i-check-all" viewBox="0 0 24 24"><path d="M1.5 12.5 6 17l9-11"/><path d="M9 15.5 11.5 18l9-11"/></symbol>
+<symbol id="i-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.75"/><path d="M8.25 12.25 11 15l5-6"/></symbol>
+<symbol id="i-badge-check" viewBox="0 0 24 24"><path d="M12 2.75l2.4 1.8 3-.15 1 2.85 2.5 1.7-1.1 2.8 1.1 2.8-2.5 1.7-1 2.85-3-.15-2.4 1.8-2.4-1.8-3 .15-1-2.85-2.5-1.7 1.1-2.8-1.1-2.8 2.5-1.7 1-2.85 3 .15L12 2.75Z"/><path d="M8.75 12.25 11 14.5l4.5-5"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+<symbol id="i-x-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.75"/><path d="M9 9l6 6M15 9l-6 6"/></symbol>
+<symbol id="i-x-octagon" viewBox="0 0 24 24"><path d="M8.4 2.75h7.2l5.65 5.65v7.2l-5.65 5.65H8.4L2.75 15.6V8.4L8.4 2.75Z"/><path d="M9.25 9.25l5.5 5.5M14.75 9.25l-5.5 5.5"/></symbol>
+<symbol id="i-alert-triangle" viewBox="0 0 24 24"><path d="M10.3 3.9a2 2 0 0 1 3.4 0l7.5 13a2 2 0 0 1-1.7 3H4.5a2 2 0 0 1-1.7-3l7.5-13Z"/><path d="M12 9v4.5"/><path d="M12 17h.01"/></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.75"/><path d="M12 11v5.5"/><path d="M12 7.75h.01"/></symbol>
+<symbol id="i-plus-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.75"/><path d="M12 8.25v7.5M8.25 12h7.5"/></symbol>
+<symbol id="i-minus-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.75"/><path d="M8.25 12h7.5"/></symbol>
+<symbol id="i-dot" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.75"/><path d="M12 7.5V12l3.25 2"/></symbol>
+<symbol id="i-clock-history" viewBox="0 0 24 24"><path d="M12 7.5V12l3.25 2"/><path d="M3.6 9.2A8.75 8.75 0 1 1 12 20.75a8.75 8.75 0 0 1-7.4-4.1"/><path d="M3.25 4.5v5h5"/></symbol>
+<symbol id="i-hourglass" viewBox="0 0 24 24"><path d="M7 3h10"/><path d="M7 21h10"/><path d="M8 3v3.6c0 .5.2 1 .6 1.3L12 11l3.4-3.1c.4-.3.6-.8.6-1.3V3"/><path d="M8 21v-3.6c0-.5.2-1 .6-1.3L12 13l3.4 3.1c.4.3.6.8.6 1.3V21"/></symbol>
+<symbol id="i-alarm" viewBox="0 0 24 24"><circle cx="12" cy="13.5" r="7.25"/><path d="M12 10.5v3l2 1.5"/><path d="M4.8 4.2 6.9 6.3M19.2 4.2 17.1 6.3"/></symbol>
+<symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3.25" y="5" width="17.5" height="16" rx="1.75"/><path d="M3.25 10h17.5"/><path d="M8 3v4M16 3v4"/></symbol>
+<symbol id="i-calendar-check" viewBox="0 0 24 24"><rect x="3.25" y="5" width="17.5" height="16" rx="1.75"/><path d="M3.25 10h17.5"/><path d="M8 3v4M16 3v4"/><path d="M9 15l2 2 4-4.5"/></symbol>
+<symbol id="i-calendar-x" viewBox="0 0 24 24"><rect x="3.25" y="5" width="17.5" height="16" rx="1.75"/><path d="M3.25 10h17.5"/><path d="M8 3v4M16 3v4"/><path d="M10 13.5l4 4M14 13.5l-4 4"/></symbol>
+<symbol id="i-calendar-plus" viewBox="0 0 24 24"><rect x="3.25" y="5" width="17.5" height="16" rx="1.75"/><path d="M3.25 10h17.5"/><path d="M8 3v4M16 3v4"/><path d="M12 13v5M9.5 15.5h5"/></symbol>
+<symbol id="i-calendar-range" viewBox="0 0 24 24"><rect x="3.25" y="5" width="17.5" height="16" rx="1.75"/><path d="M3.25 10h17.5"/><path d="M8 3v4M16 3v4"/><path d="M7 14.5h4M13 17.5h4"/></symbol>
+<symbol id="i-file" viewBox="0 0 24 24"><path d="M13.5 2.75H7A1.75 1.75 0 0 0 5.25 4.5v15A1.75 1.75 0 0 0 7 21.25h10a1.75 1.75 0 0 0 1.75-1.75V8l-5.25-5.25Z"/><path d="M13.5 2.75V8h5.25"/></symbol>
+<symbol id="i-file-text" viewBox="0 0 24 24"><path d="M13.5 2.75H7A1.75 1.75 0 0 0 5.25 4.5v15A1.75 1.75 0 0 0 7 21.25h10a1.75 1.75 0 0 0 1.75-1.75V8l-5.25-5.25Z"/><path d="M13.5 2.75V8h5.25"/><path d="M8.5 12.5h7M8.5 16h5"/></symbol>
+<symbol id="i-file-check" viewBox="0 0 24 24"><path d="M13.5 2.75H7A1.75 1.75 0 0 0 5.25 4.5v15A1.75 1.75 0 0 0 7 21.25h10a1.75 1.75 0 0 0 1.75-1.75V8l-5.25-5.25Z"/><path d="M13.5 2.75V8h5.25"/><path d="M9 15l2 2 4-4.5"/></symbol>
+<symbol id="i-file-plus" viewBox="0 0 24 24"><path d="M13.5 2.75H7A1.75 1.75 0 0 0 5.25 4.5v15A1.75 1.75 0 0 0 7 21.25h10a1.75 1.75 0 0 0 1.75-1.75V8l-5.25-5.25Z"/><path d="M13.5 2.75V8h5.25"/><path d="M12 12v5.5M9.25 14.75h5.5"/></symbol>
+<symbol id="i-file-up" viewBox="0 0 24 24"><path d="M13.5 2.75H7A1.75 1.75 0 0 0 5.25 4.5v15A1.75 1.75 0 0 0 7 21.25h10a1.75 1.75 0 0 0 1.75-1.75V8l-5.25-5.25Z"/><path d="M13.5 2.75V8h5.25"/><path d="M12 18v-5.5"/><path d="M9.75 14.5 12 12.25l2.25 2.25"/></symbol>
+<symbol id="i-file-pdf" viewBox="0 0 24 24"><path d="M13.5 2.75H7A1.75 1.75 0 0 0 5.25 4.5v15A1.75 1.75 0 0 0 7 21.25h10a1.75 1.75 0 0 0 1.75-1.75V8l-5.25-5.25Z"/><path d="M13.5 2.75V8h5.25"/><path d="M8.75 17.5v-4.25h1.4a1.15 1.15 0 0 1 0 2.3h-1.4"/><path d="M13 17.5v-4.25h1.1a1.6 1.6 0 0 1 1.6 1.6v1.05a1.6 1.6 0 0 1-1.6 1.6H13Z"/></symbol>
+<symbol id="i-mail" viewBox="0 0 24 24"><rect x="2.75" y="5" width="18.5" height="14" rx="1.75"/><path d="m3.5 7 8.5 6 8.5-6"/></symbol>
+<symbol id="i-mail-check" viewBox="0 0 24 24"><path d="M21.25 11V6.75A1.75 1.75 0 0 0 19.5 5h-15a1.75 1.75 0 0 0-1.75 1.75v10.5A1.75 1.75 0 0 0 4.5 19h8"/><path d="m3.5 7 8.5 6 8.5-6"/><path d="M15.5 18.5 17.5 20.5 21.5 16"/></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/></symbol>
+<symbol id="i-user-check" viewBox="0 0 24 24"><circle cx="10" cy="8" r="4"/><path d="M3 20.5a7 7 0 0 1 11.2-5.6"/><path d="M15 18.5 17 20.5 21.5 15.5"/></symbol>
+<symbol id="i-login" viewBox="0 0 24 24"><path d="M10 3.5H5.75A1.75 1.75 0 0 0 4 5.25v13.5A1.75 1.75 0 0 0 5.75 20.5H10"/><path d="M9 12h11"/><path d="M15.5 7.5 20 12l-4.5 4.5"/></symbol>
+<symbol id="i-logout" viewBox="0 0 24 24"><path d="M14 3.5H5.75A1.75 1.75 0 0 0 4 5.25v13.5A1.75 1.75 0 0 0 5.75 20.5H14"/><path d="M10.5 12h10"/><path d="M16 7.5 20.5 12 16 16.5"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="4.25" y="10" width="15.5" height="11" rx="1.75"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><path d="M12 14.5v2.5"/></symbol>
+<symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="16" r="4"/><path d="M10.9 13.1 20 4"/><path d="M17 4h4v4"/><path d="M15.5 8.5 18 11"/></symbol>
+<symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.25 12S5.75 5.75 12 5.75 21.75 12 21.75 12 18.25 18.25 12 18.25 2.25 12 2.25 12Z"/><circle cx="12" cy="12" r="3.25"/></symbol>
+<symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M4 4l16 16"/><path d="M9.6 5.9A9.7 9.7 0 0 1 12 5.75c6.25 0 9.75 6.25 9.75 6.25a17 17 0 0 1-2.9 3.7"/><path d="M6.1 8.2A16.7 16.7 0 0 0 2.25 12S5.75 18.25 12 18.25a9.6 9.6 0 0 0 3.4-.6"/><path d="M9.9 9.9a3.25 3.25 0 0 0 4.3 4.3"/></symbol>
+<symbol id="i-car" viewBox="0 0 24 24"><path d="M3 13.5 5.1 7.9A2 2 0 0 1 7 6.5h10a2 2 0 0 1 1.9 1.4L21 13.5"/><path d="M2.75 13.5h18.5v4.25A.75.75 0 0 1 20.5 18.5h-17a.75.75 0 0 1-.75-.75V13.5Z"/><path d="M5 18.5v1.75M19 18.5v1.75"/><path d="M6.5 16h2M15.5 16h2"/></symbol>
+<symbol id="i-wifi" viewBox="0 0 24 24"><path d="M2.5 8.5a14 14 0 0 1 19 0"/><path d="M6 12.2a9 9 0 0 1 12 0"/><path d="M9.25 15.9a4.5 4.5 0 0 1 5.5 0"/><path d="M12 19.5h.01"/></symbol>
+<symbol id="i-broadcast" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.5"/><path d="M7.4 16.6a6.5 6.5 0 0 1 0-9.2M16.6 7.4a6.5 6.5 0 0 1 0 9.2"/><path d="M4.4 19.6a10.75 10.75 0 0 1 0-15.2M19.6 4.4a10.75 10.75 0 0 1 0 15.2"/></symbol>
+<symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.9a.75.75 0 0 1 1.13-.65l11 6.75a.75.75 0 0 1 0 1.28l-11 6.75A.75.75 0 0 1 7 18.4V4.9Z"/></symbol>
+<symbol id="i-pause" viewBox="0 0 24 24"><rect x="6.5" y="4.5" width="4" height="15" rx="1"/><rect x="13.5" y="4.5" width="4" height="15" rx="1"/></symbol>
+</defs>
+</svg>
 
 <a href="#main-content" class="skip-link">Skip to main content</a>
 
+{% comment %}
+The app shell only exists for a signed-in user. Anonymous screens — sign in,
+register, verify, lockout, password reset — carry their own centred mark, so
+rendering the topbar there put the product name on the page twice.
+{% endcomment %}
+{% if user.is_authenticated %}
 <!-- Top Bar -->
 <header class="topbar">
-    <div class="topbar-brand">
-        {% if user.is_authenticated %}
+    <div class="brand">
         <button type="button" class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="appSidebar">
-            <i class="bi bi-list" aria-hidden="true"></i>
+            <svg class="ic" aria-hidden="true"><use href="#i-menu"/></svg>
         </button>
-        {% endif %}
-        <div class="brand-icon" aria-hidden="true">
-            <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
-        </div>
-        <div>
-            PalSU Gate System
+        <span class="brand-mark" aria-hidden="true">
+            <svg class="ic" aria-hidden="true"><use href="#i-barrier"/></svg>
+        </span>
+        <span class="brand-text">
+            <span class="brand-name">PalSU Gate System</span>
             <span class="brand-sub">Palawan State University</span>
-        </div>
+        </span>
     </div>
 
-    {% if user.is_authenticated %}
     <div class="topbar-user">
         <div class="user-info">
             <div class="user-name">{{ user.get_full_name|default:user.username }}</div>
             <div class="user-role">{{ user.get_role_display }}</div>
         </div>
         <div class="avatar" aria-hidden="true">
-            <i class="bi bi-person-fill" aria-hidden="true"></i>
+            <svg class="ic" aria-hidden="true"><use href="#i-user"/></svg>
         </div>
         <form method="post" action="{% url 'logout' %}" style="margin:0;">
             {% csrf_token %}
             <button type="submit" class="btn-logout">
-                <i class="bi bi-box-arrow-right" aria-hidden="true"></i> <span>Logout</span>
+                <svg class="ic" aria-hidden="true"><use href="#i-logout"/></svg> <span>Logout</span>
             </button>
         </form>
     </div>
-    {% endif %}
 </header>
+{% endif %}
 
 <!-- Sidebar backdrop (mobile) -->
 {% if user.is_authenticated %}
@@ -826,61 +2073,69 @@
 
 <!-- Sidebar -->
 {% if user.is_authenticated %}
-<nav class="sidebar" id="appSidebar">
+<nav class="sidebar" id="appSidebar" aria-label="Main navigation">
     {% if user.role == 'applicant' %}
         <div class="sidebar-section">
             <div class="sidebar-label">Applicant</div>
-            <a href="{% url 'applicant_home' %}" class="sidebar-link {% if request.resolver_match.url_name == 'applicant_home' %}active{% endif %}">
-                <i class="bi bi-house-fill" aria-hidden="true"></i> Home
+            <a href="{% url 'applicant_home' %}" class="sidebar-link {% if request.resolver_match.url_name == 'applicant_home' %}active{% endif %}"
+               {% if request.resolver_match.url_name == 'applicant_home' %}aria-current="page"{% endif %}>
+                <svg class="ic" aria-hidden="true"><use href="#i-home"/></svg> Home
             </a>
-            <a href="{% url 'apply_step1' %}" class="sidebar-link {% if 'apply_step' in request.resolver_match.url_name %}active{% endif %}">
-                <i class="bi bi-file-earmark-plus" aria-hidden="true"></i> Apply for Sticker
+            <a href="{% url 'apply_step1' %}" class="sidebar-link {% if 'apply_step' in request.resolver_match.url_name %}active{% endif %}"
+               {% if 'apply_step' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
+                <svg class="ic" aria-hidden="true"><use href="#i-file-plus"/></svg> Apply for Sticker
             </a>
-            <a href="{% url 'my_applications' %}" class="sidebar-link {% if request.resolver_match.url_name == 'my_applications' %}active{% endif %}">
-                <i class="bi bi-collection" aria-hidden="true"></i> My Applications
+            <a href="{% url 'my_applications' %}" class="sidebar-link {% if request.resolver_match.url_name == 'my_applications' %}active{% endif %}"
+               {% if request.resolver_match.url_name == 'my_applications' %}aria-current="page"{% endif %}>
+                <svg class="ic" aria-hidden="true"><use href="#i-layers"/></svg> My Applications
             </a>
         </div>
 
     {% elif user.role == 'admin' %}
         <div class="sidebar-section">
             <div class="sidebar-label">Overview</div>
-            <a href="{% url 'admin_dashboard' %}" class="sidebar-link {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
-                <i class="bi bi-speedometer2" aria-hidden="true"></i> Dashboard
+            <a href="{% url 'admin_dashboard' %}" class="sidebar-link {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}"
+               {% if request.resolver_match.url_name == 'admin_dashboard' %}aria-current="page"{% endif %}>
+                <svg class="ic" aria-hidden="true"><use href="#i-gauge"/></svg> Dashboard
             </a>
         </div>
         <div class="sidebar-section">
             <div class="sidebar-label">Management</div>
-            <a href="{% url 'registration_window' %}" class="sidebar-link {% if request.resolver_match.url_name == 'registration_window' %}active{% endif %}">
-                <i class="bi bi-calendar-range" aria-hidden="true"></i> Registration Window
+            <a href="{% url 'registration_window' %}" class="sidebar-link {% if request.resolver_match.url_name == 'registration_window' %}active{% endif %}"
+               {% if request.resolver_match.url_name == 'registration_window' %}aria-current="page"{% endif %}>
+                <svg class="ic" aria-hidden="true"><use href="#i-calendar-range"/></svg> Registration Window
             </a>
-            <a href="{% url 'appointment_dates' %}" class="sidebar-link {% if request.resolver_match.url_name == 'appointment_dates' %}active{% endif %}">
-                <i class="bi bi-calendar3" aria-hidden="true"></i> Appointment Dates
+            <a href="{% url 'appointment_dates' %}" class="sidebar-link {% if request.resolver_match.url_name == 'appointment_dates' %}active{% endif %}"
+               {% if request.resolver_match.url_name == 'appointment_dates' %}aria-current="page"{% endif %}>
+                <svg class="ic" aria-hidden="true"><use href="#i-calendar"/></svg> Appointment Dates
             </a>
-            <a href="{% url 'application_list' %}" class="sidebar-link {% if request.resolver_match.url_name == 'application_list' %}active{% endif %}">
-                <i class="bi bi-folder2-open" aria-hidden="true"></i> Applications
+            <a href="{% url 'application_list' %}" class="sidebar-link {% if request.resolver_match.url_name == 'application_list' %}active{% endif %}"
+               {% if request.resolver_match.url_name == 'application_list' %}aria-current="page"{% endif %}>
+                <svg class="ic" aria-hidden="true"><use href="#i-folder"/></svg> Applications
             </a>
         </div>
         <div class="sidebar-section">
             <div class="sidebar-label">Issuance</div>
-            <a href="{% url 'sticker_station' %}" class="sidebar-link {% if 'sticker' in request.resolver_match.url_name %}active{% endif %}">
-                <i class="bi bi-patch-check" aria-hidden="true"></i> Sticker Station
-            </a>
-            <a href="{% url 'quick_register' %}" class="sidebar-link {% if request.resolver_match.url_name == 'quick_register' %}active{% endif %}">
-                <i class="bi bi-lightning-charge" aria-hidden="true"></i> Quick Register
+            <a href="{% url 'sticker_station' %}" class="sidebar-link {% if 'sticker' in request.resolver_match.url_name %}active{% endif %}"
+               {% if 'sticker' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
+                <svg class="ic" aria-hidden="true"><use href="#i-badge-check"/></svg> Sticker Station
             </a>
         </div>
 
     {% elif user.role == 'security' %}
         <div class="sidebar-section">
             <div class="sidebar-label">Gate Monitor</div>
-            <a href="{% url 'gate_live' %}" class="sidebar-link {% if request.resolver_match.url_name == 'gate_live' %}active{% endif %}">
-                <i class="bi bi-activity" aria-hidden="true"></i> Live Overview
+            <a href="{% url 'gate_live' %}" class="sidebar-link {% if request.resolver_match.url_name == 'gate_live' %}active{% endif %}"
+               {% if request.resolver_match.url_name == 'gate_live' %}aria-current="page"{% endif %}>
+                <svg class="ic" aria-hidden="true"><use href="#i-pulse"/></svg> Live Overview
             </a>
-            <a href="{% url 'gate_logs' %}" class="sidebar-link {% if request.resolver_match.url_name == 'gate_logs' %}active{% endif %}">
-                <i class="bi bi-journal-text" aria-hidden="true"></i> Gate Logs
+            <a href="{% url 'gate_logs' %}" class="sidebar-link {% if request.resolver_match.url_name == 'gate_logs' %}active{% endif %}"
+               {% if request.resolver_match.url_name == 'gate_logs' %}aria-current="page"{% endif %}>
+                <svg class="ic" aria-hidden="true"><use href="#i-book"/></svg> Gate Logs
             </a>
-            <a href="{% url 'time_tracker' %}" class="sidebar-link {% if request.resolver_match.url_name == 'time_tracker' %}active{% endif %}">
-                <i class="bi bi-clock-history" aria-hidden="true"></i> Time Tracker
+            <a href="{% url 'time_tracker' %}" class="sidebar-link {% if request.resolver_match.url_name == 'time_tracker' %}active{% endif %}"
+               {% if request.resolver_match.url_name == 'time_tracker' %}aria-current="page"{% endif %}>
+                <svg class="ic" aria-hidden="true"><use href="#i-clock-history"/></svg> Time Tracker
             </a>
         </div>
     {% endif %}
@@ -893,19 +2148,17 @@
     {% for message in messages %}
     {% if message.tags == 'error' or message.tags == 'danger' %}
     {# Errors interrupt: they are the only messages a user must not miss. #}
-    <div class="alert alert-{{ message.tags }} d-flex align-items-start gap-2 mb-2 shadow-sm"
-         role="alert" style="animation: slideIn 0.2s ease;">
-        <i class="bi bi-x-circle-fill mt-1" aria-hidden="true"></i>
+    <div class="alert alert-{{ message.tags }}" role="alert">
+        <svg class="ic" aria-hidden="true"><use href="#i-x-circle"/></svg>
         <div style="flex:1;">{{ message }}</div>
         <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="alert"
                 aria-label="Dismiss message"></button>
     </div>
     {% else %}
-    <div class="alert alert-{{ message.tags }} d-flex align-items-start gap-2 mb-2 shadow-sm"
-         role="status" style="animation: slideIn 0.2s ease;">
-        {% if message.tags == 'success' %}<i class="bi bi-check-circle-fill mt-1" aria-hidden="true"></i>
-        {% elif message.tags == 'warning' %}<i class="bi bi-exclamation-triangle-fill mt-1" aria-hidden="true"></i>
-        {% else %}<i class="bi bi-info-circle-fill mt-1" aria-hidden="true"></i>{% endif %}
+    <div class="alert alert-{{ message.tags }}" role="status">
+        {% if message.tags == 'success' %}<svg class="ic" aria-hidden="true"><use href="#i-check-circle"/></svg>
+        {% elif message.tags == 'warning' %}<svg class="ic" aria-hidden="true"><use href="#i-alert-triangle"/></svg>
+        {% else %}<svg class="ic" aria-hidden="true"><use href="#i-info"/></svg>{% endif %}
         <div style="flex:1;">{{ message }}</div>
         <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="alert"
                 aria-label="Dismiss message"></button>
@@ -921,12 +2174,6 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<style>
-    @keyframes slideIn {
-        from { opacity: 0; transform: translateX(20px); }
-        to   { opacity: 1; transform: translateX(0); }
-    }
-</style>
 <script>
     (function () {
         var toggle = document.getElementById('sidebarToggle');
@@ -962,6 +2209,36 @@
 
         window.addEventListener('resize', function () {
             if (window.innerWidth > 768) closeSidebar();
+        });
+    })();
+
+    // Show/hide toggle on every password field, site-wide. Done here once
+    // instead of per-template so login, registration, and password
+    // reset/change all get it automatically, including any password
+    // field added later — nobody has to remember to wire this up again.
+    (function () {
+        var EYE = '<svg class="ic" aria-hidden="true"><use href="#i-eye"/></svg>';
+        var EYE_OFF = '<svg class="ic" aria-hidden="true"><use href="#i-eye-off"/></svg>';
+
+        document.querySelectorAll('input[type="password"]').forEach(function (input) {
+            var wrap = document.createElement('div');
+            wrap.className = 'pwd-wrap';
+            input.parentNode.insertBefore(wrap, input);
+            wrap.appendChild(input);
+
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'pwd-toggle-btn';
+            btn.setAttribute('aria-label', 'Show password');
+            btn.innerHTML = EYE;
+            wrap.appendChild(btn);
+
+            btn.addEventListener('click', function () {
+                var nowShowing = input.type === 'password';
+                input.type = nowShowing ? 'text' : 'password';
+                btn.setAttribute('aria-label', nowShowing ? 'Hide password' : 'Show password');
+                btn.innerHTML = nowShowing ? EYE_OFF : EYE;
+            });
         });
     })();
 </script>

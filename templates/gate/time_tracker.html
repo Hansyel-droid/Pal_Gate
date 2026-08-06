@@ -2,28 +2,37 @@
 {% block title %}Time Tracker{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1><i class="bi bi-clock-history text-primary" aria-hidden="true"></i> Time Tracker</h1>
-    <span class="text-muted small">
-        <i class="bi bi-clock" aria-hidden="true"></i> Current time: {{ now|date:"H:i:s" }}
-        &nbsp;|&nbsp;
-        Curfew: 10:00 PM
-        &nbsp;|&nbsp;
-        <a href="" onclick="location.reload()">
-            <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Refresh
-        </a>
-    </span>
+<div class="toolbar">
+    <div class="page-header">
+        <h1>Time tracker</h1>
+        <p class="page-sub">
+            Vehicles currently inside campus, and which of them have overstayed.
+        </p>
+    </div>
+    <div class="toolbar-actions">
+        <span class="meta d-inline-flex align-items-center gap-1">
+            <svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg>
+            <time class="tnum">{{ now|date:"H:i:s" }}</time>
+        </span>
+        {% comment %} Was <a href="" onclick="location.reload()"> — a focusable link named
+           "Refresh" that navigated nowhere. A button is what this actually is. {% endcomment %}
+        <button type="button" class="btn btn-secondary btn-sm" id="refreshNow">
+            <svg class="ic" aria-hidden="true"><use href="#i-refresh"/></svg>
+            Refresh
+        </button>
+    </div>
 </div>
 
 <!-- Curfew Alert Banner — shown when it's past 10 PM -->
 {% if is_past_curfew %}
-<div class="alert alert-danger border-danger border-2 d-flex align-items-center gap-3 mb-3">
-    <i class="bi bi-alarm-fill fs-2 text-danger" aria-hidden="true"></i>
+<div class="alert alert-danger" role="alert">
+    <svg class="ic ic-lg" aria-hidden="true"><use href="#i-alarm"/></svg>
     <div>
-        <strong class="fs-5">🚨 CURFEW ALERT — It is past 10:00 PM!</strong><br>
+        <strong>Curfew alert — it is past 10:00 PM.</strong><br>
         All vehicles should be outside the campus.
         {% if overstay_count > 0 %}
-            <strong>{{ overstay_count }} vehicle(s) are still inside.</strong>
+            <strong>{{ overstay_count }} vehicle{{ overstay_count|pluralize }}
+            {{ overstay_count|pluralize:"is,are" }} still inside.</strong>
         {% endif %}
     </div>
 </div>
@@ -32,105 +41,121 @@
 <!-- Overstay Warning Banner — shown when vehicles are overstaying
      even before curfew (e.g. inside for 12+ hours) -->
 {% if overstay_count > 0 and not is_past_curfew %}
-<div class="alert alert-warning border-warning border-2 d-flex align-items-center gap-3 mb-3">
-    <i class="bi bi-exclamation-triangle-fill fs-2 text-warning" aria-hidden="true"></i>
+<div class="alert alert-warning" role="alert">
+    <svg class="ic ic-lg" aria-hidden="true"><use href="#i-alert-triangle"/></svg>
     <div>
-        <strong class="fs-5">⚠️ Overstay Detected</strong><br>
-        {{ overstay_count }} vehicle(s) have been inside for
-        more than {{ overstay_hours }} hours.
+        <strong>Overstay detected.</strong><br>
+        {{ overstay_count }} vehicle{{ overstay_count|pluralize }}
+        {{ overstay_count|pluralize:"has,have" }} been inside for more than
+        {{ overstay_hours }} hours.
     </div>
 </div>
 {% endif %}
 
 <!-- All clear banner -->
 {% if overstay_count == 0 and inside_vehicles %}
-<div class="alert alert-success mb-3">
-    <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
-    All vehicles are within the allowed time limit.
+<div class="alert alert-success" role="status">
+    <svg class="ic" aria-hidden="true"><use href="#i-check-circle"/></svg>
+    <div>All vehicles are within the allowed time limit.</div>
 </div>
 {% endif %}
 
-<!-- Info bar -->
-<p class="text-muted small mb-3">
-    Vehicles flagged red are overstaying due to:
-    <span class="status-badge badge-exit">Inside 12+ hours</span>
-    or
-    <span class="status-badge badge-denied">Past 10:00 PM curfew</span>
-</p>
-
 <!-- Vehicles Table -->
-<div class="card shadow-sm">
-    <div class="card-header bg-white d-flex justify-content-between align-items-center">
-        <span class="fw-bold">
-            <i class="bi bi-car-front-fill text-primary" aria-hidden="true"></i>
-            Vehicles Currently Inside
-            <span class="status-badge badge-draft ms-1">{{ inside_vehicles|length }}</span>
-        </span>
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <svg class="ic" aria-hidden="true"><use href="#i-car"/></svg>
+            Vehicles currently inside
+        </h2>
+        <span class="status-badge badge-draft">{{ inside_vehicles|length }}</span>
         {% if overstay_count > 0 %}
-        <span class="status-badge badge-denied">
-            <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
-            {{ overstay_count }} Overstay(s)
+        <span class="status-badge badge-denied ms-auto">
+        <svg class="ic" aria-hidden="true"><use href="#i-alert-triangle"/></svg>
+        {{ overstay_count }} overstay{{ overstay_count|pluralize }}
         </span>
         {% endif %}
     </div>
-    <div class="card-body p-0">
-        <table class="table table-hover mb-0">
+
+    <div class="note m-3">
+        <svg class="ic" aria-hidden="true"><use href="#i-info"/></svg>
+        <div>
+            A vehicle is flagged when it has been inside for more than
+            <strong>{{ overstay_hours }} hours</strong>, or is still inside past
+            the <strong>10:00 PM</strong> curfew. Flagged rows are tinted and the
+            reason is named in the Status column.
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table mb-0">
             <thead>
                 <tr>
-                    <th scope="col">Plate Number</th>
-                    <th scope="col">Driver Name</th>
+                    <th scope="col">Plate number</th>
+                    <th scope="col">Driver</th>
                     <th scope="col">Classification</th>
-                    <th scope="col">Entry Time</th>
-                    <th scope="col">Duration Inside</th>
+                    <th scope="col">Entry time</th>
+                    <th scope="col">Duration inside</th>
                     <th scope="col">Gate</th>
                     <th scope="col">Status</th>
-                    <th scope="col"></th>
+                    <th scope="col"><span class="visually-hidden">Details</span></th>
                 </tr>
             </thead>
             <tbody>
                 {% for vehicle in inside_vehicles %}
-                <tr {% if vehicle.is_overstay %}class="table-danger"{% endif %}>
+                <tr {% if vehicle.is_overstay %}class="is-flagged"{% endif %}>
                     <td>
-                        <strong>{{ vehicle.application.plate_number }}</strong>
+                        <span class="plate">{{ vehicle.application.plate_number }}</span>
                     </td>
                     <td>{{ vehicle.application.full_name }}</td>
-                    <td>{{ vehicle.application.get_classification_display }}</td>
-                    <td>{{ vehicle.entry_time|date:"M d, Y H:i" }}</td>
+                    <td class="text-muted">{{ vehicle.application.get_classification_display }}</td>
+                    <td class="text-muted">
+                        <time>{{ vehicle.entry_time|date:"M d, Y H:i" }}</time>
+                    </td>
                     <td>
-                        <span class="fw-bold {% if vehicle.is_overstay %}text-danger{% endif %}">
-                            <i class="bi bi-clock{% if vehicle.is_overstay %}-fill text-danger{% endif %}" aria-hidden="true"></i>
-                            {{ vehicle.duration }}
+                        <span class="d-inline-flex align-items-center gap-1 fw-semibold
+                                     {% if vehicle.is_overstay %}text-danger{% endif %}">
+                            {% comment %} Inherits the parent span's colour via currentColor,
+                               so overstay tone is set in one place, not two. {% endcomment %}
+                            <svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg>
+                            <span class="tnum">{{ vehicle.duration }}</span>
                         </span>
                     </td>
-                    <td>{{ vehicle.log.gate_location }}</td>
+                    <td class="text-muted">{{ vehicle.log.gate_location }}</td>
                     <td>
                         {% if vehicle.is_overstay %}
-                            <div class="d-flex flex-column gap-1">
+                            <div class="d-flex flex-column align-items-start gap-1">
                                 {% for reason in vehicle.overstay_reasons %}
                                     <span class="status-badge badge-denied">
-                                        <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+                                        <svg class="ic" aria-hidden="true"><use href="#i-alert-triangle"/></svg>
                                         {{ reason }}
                                     </span>
                                 {% endfor %}
                             </div>
                         {% else %}
                             <span class="status-badge badge-entry">
-                                <i class="bi bi-check-circle" aria-hidden="true"></i> OK
+                                <svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>
+                                Within limit
                             </span>
                         {% endif %}
                     </td>
-                    <td>
+                    <td class="text-end">
                         <a href="{% url 'incident_report' vehicle.log.pk %}"
-                           class="btn btn-sm btn-outline-primary">
+                           class="btn btn-sm btn-secondary">
                             Details
                         </a>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="8" class="text-center text-muted py-4">
-                        <i class="bi bi-check-circle text-success fs-4" aria-hidden="true"></i><br>
-                        No vehicles currently inside campus.
+                    <td colspan="8">
+                        <div class="empty-state">
+                            <svg class="ic" aria-hidden="true"><use href="#i-check-circle"/></svg>
+                            <h3>No vehicles inside campus</h3>
+                            <p>
+                                Every vehicle that entered has been scanned back out.
+                                This list fills as vehicles arrive.
+                            </p>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
@@ -142,8 +167,33 @@
 
 {% block extra_js %}
 <script>
-    // Auto-refresh every 30 seconds so the security
-    // officer always sees live data without manual refresh
-    setTimeout(() => { location.reload(); }, 30000);
+    // Auto-refresh so the officer always sees live data. Unlike the previous
+    // unconditional 30s reload, this holds off while the page is hidden or
+    // while something is focused — a reload used to throw away the officer's
+    // focus and restart a screen reader from the top twice a minute.
+    (function () {
+        var INTERVAL = 30000;
+
+        document.getElementById('refreshNow').addEventListener('click', function () {
+            window.location.reload();
+        });
+
+        function isBusy() {
+            var el = document.activeElement;
+            if (document.hidden) return true;
+            if (!el || el === document.body) return false;
+            return el.matches('input, select, textarea, button, a, [tabindex]');
+        }
+
+        function tick() {
+            if (isBusy()) {
+                setTimeout(tick, 5000);   // check back sooner, don't interrupt
+                return;
+            }
+            window.location.reload();
+        }
+
+        setTimeout(tick, INTERVAL);
+    })();
 </script>
 {% endblock %}

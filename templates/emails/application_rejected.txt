@@ -1,0 +1,10 @@
+Hi {{ applicant.first_name|default:application.full_name }},
+
+Your PalSU Gate vehicle sticker application for plate {{ application.plate_number }} was not approved.
+
+Reason given: {{ application.rejection_reason }}
+
+Please log in to the PalSU Gate portal to review the details. If you believe this was a mistake, or would like to correct the issue, contact the registrar/security office.
+
+— PalSU Gate System
+This is an automated message. Please do not reply to this email.

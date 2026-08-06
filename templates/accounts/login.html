@@ -2,64 +2,51 @@
 {% block title %}Sign In — PalSU Gate System{% endblock %}
 
 {% block content %}
-<div style="min-height:calc(100vh - 56px); display:flex; align-items:center;
-            justify-content:center; padding: 40px 16px;">
-    <div style="width:100%; max-width:420px;">
+<div class="auth-wrap">
+    <div class="auth-col">
 
-        <!-- Logo block -->
-        <div class="text-center mb-4">
-            <div style="width:60px; height:60px; background:var(--navy);
-                        border-radius:12px; display:flex; align-items:center;
-                        justify-content:center; margin:0 auto 16px;
-                        border: 2px solid var(--gold);">
-                <i class="bi bi-shield-lock-fill" style="font-size:1.6rem; color:var(--gold);" aria-hidden="true"></i>
+        <div class="auth-head">
+            <div class="auth-mark" aria-hidden="true">
+                <svg class="ic" aria-hidden="true"><use href="#i-barrier"/></svg>
             </div>
-            <h1 style="font-size:1.3rem; font-weight:700; color:var(--text-main); margin:0;">
-                PalSU Gate System
-            </h1>
-            <p style="font-size:0.82rem; color:var(--text-muted); margin:4px 0 0;">
-                Palawan State University — Vehicle Management
-            </p>
+            <h1>PalSU Gate System</h1>
+            <p>Vehicle sticker applications, issuance, and gate records.</p>
         </div>
 
-        <div class="card">
-            <div class="card-body" style="padding:28px;">
-                <h5 style="font-size:1rem; margin-bottom:20px; color:var(--text-main);">
-                    Sign in to your account
-                </h5>
+        <div class="card auth-card">
+            <div class="card-body">
+                <h2>Sign in</h2>
 
                 <form method="post">
                     {% csrf_token %}
                     <div class="mb-3">
                         <label for="id_username" class="form-label">Username</label>
                         <input id="id_username" type="text" name="username" class="form-control"
+                               autocomplete="username"
                                required autofocus placeholder="Enter your username">
                     </div>
-                    <div class="mb-4">
+                    <div class="mb-2">
                         <label for="id_password" class="form-label">Password</label>
                         <input id="id_password" type="password" name="password" class="form-control"
+                               autocomplete="current-password"
                                required placeholder="Enter your password">
                     </div>
-                    <div class="text-end mb-3">
-                        <a href="{% url 'password_reset' %}"
-                           style="font-size:0.82rem; color:var(--text-muted);">
+                    <div class="text-end mb-4">
+                        <a href="{% url 'password_reset' %}" class="field-link">
                             Forgot your password?
                         </a>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100"
-                            style="padding:10px;">
-                        Sign In <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i>
+                    <button type="submit" class="btn btn-primary btn-lg w-100">
+                        Sign in
+                        <svg class="ic" aria-hidden="true"><use href="#i-arrow-right"/></svg>
                     </button>
                 </form>
             </div>
         </div>
 
-        <p class="text-center mt-3" style="font-size:0.83rem; color:var(--text-muted);">
+        <p class="auth-alt">
             New applicant?
-            <a href="{% url 'register' %}"
-               style="color:var(--navy-mid); font-weight:600;">
-                Create an account
-            </a>
+            <a href="{% url 'register' %}">Create an account</a>
         </p>
 
     </div>

@@ -2,61 +2,81 @@
 {% block title %}Register — PalSU Gate System{% endblock %}
 
 {% block content %}
-<div style="min-height:calc(100vh - 56px); display:flex; align-items:center;
-            justify-content:center; padding:40px 16px;">
-    <div style="width:100%; max-width:560px;">
+<div class="auth-wrap">
+    <div class="auth-col auth-col-wide">
 
-        <div class="text-center mb-4">
-            <h1 style="font-size:1.3rem; font-weight:700; color:var(--text-main); margin:0;">
-                Create Applicant Account
-            </h1>
-            <p style="font-size:0.82rem; color:var(--text-muted); margin:4px 0 0;">
+        <div class="auth-head">
+            <h1>Create applicant account</h1>
+            <p>
                 For students, faculty, and parents applying for a vehicle sticker.
+                Requires an official <strong>@{{ email_domain }}</strong> email address.
             </p>
         </div>
 
-        <div class="card">
-            <div class="card-body" style="padding:28px;">
+        <div class="card auth-card">
+            <div class="card-body">
                 <form method="post">
                     {% csrf_token %}
 
                     <div class="row g-3">
                         <div class="col-sm-6">
-                            <label for="id_first_name" class="form-label">First Name *</label>
-                            <input id="id_first_name" type="text" name="first_name" class="form-control" required>
+                            <label for="id_first_name" class="form-label">First name *</label>
+                            <input id="id_first_name" type="text" name="first_name" class="form-control"
+                                   autocomplete="given-name"
+                                   value="{{ form.first_name.value|default:'' }}" required>
                         </div>
                         <div class="col-sm-6">
-                            <label for="id_last_name" class="form-label">Last Name *</label>
-                            <input id="id_last_name" type="text" name="last_name" class="form-control" required>
+                            <label for="id_last_name" class="form-label">Last name *</label>
+                            <input id="id_last_name" type="text" name="last_name" class="form-control"
+                                   autocomplete="family-name"
+                                   value="{{ form.last_name.value|default:'' }}" required>
                         </div>
                         <div class="col-12">
                             <label for="id_username" class="form-label">Username *</label>
-                            <input id="id_username" type="text" name="username" class="form-control" required>
+                            <input id="id_username" type="text" name="username" class="form-control"
+                                   autocomplete="username"
+                                   value="{{ form.username.value|default:'' }}" required>
                         </div>
                         <div class="col-12">
-                            <label for="id_email" class="form-label">Email *</label>
-                            <input id="id_email" type="email" name="email" class="form-control" required>
+                            <label for="id_email" class="form-label">PalSU email *</label>
+                            <input id="id_email" type="email" name="email" class="form-control"
+                                   autocomplete="email"
+                                   value="{{ form.email.value|default:'' }}"
+                                   placeholder="yourid@{{ email_domain }}"
+                                   aria-describedby="email_help" required>
+                            <p id="email_help" class="form-text">
+                                Must end in <strong>@{{ email_domain }}</strong>. We'll email you a
+                                verification code before your account is created.
+                            </p>
                         </div>
                         <div class="col-sm-6">
                             <label for="id_classification" class="form-label">Classification</label>
-                            <select id="id_classification" name="classification" class="form-select">
+                            <select id="id_classification" name="classification" class="form-select"
+                                    aria-describedby="classification_help">
                                 <option value="">— Select —</option>
-                                <option value="student">Student</option>
-                                <option value="faculty">Faculty</option>
-                                <option value="parent">Parent</option>
+                                <option value="student" {% if form.classification.value == 'student' %}selected{% endif %}>Student</option>
+                                <option value="faculty" {% if form.classification.value == 'faculty' %}selected{% endif %}>Faculty</option>
+                                <option value="parent" {% if form.classification.value == 'parent' %}selected{% endif %}>Parent</option>
                             </select>
+                            <p id="classification_help" class="form-text">
+                                Students must upload a Certificate of Registration later in the application.
+                            </p>
                         </div>
                         <div class="col-sm-6">
-                            <label for="id_id_number" class="form-label">ID Number</label>
-                            <input id="id_id_number" type="text" name="id_number" class="form-control">
+                            <label for="id_id_number" class="form-label">ID number</label>
+                            <input id="id_id_number" type="text" name="id_number" class="form-control"
+                                   value="{{ form.id_number.value|default:'' }}">
                         </div>
                         <div class="col-sm-8">
-                            <label for="id_college_department" class="form-label">College / Department</label>
-                            <input id="id_college_department" type="text" name="college_department" class="form-control">
+                            <label for="id_college_department" class="form-label">College / department</label>
+                            <input id="id_college_department" type="text" name="college_department" class="form-control"
+                                   value="{{ form.college_department.value|default:'' }}">
                         </div>
                         <div class="col-sm-4">
-                            <label for="id_contact_number" class="form-label">Contact No.</label>
-                            <input id="id_contact_number" type="text" name="contact_number" class="form-control">
+                            <label for="id_contact_number" class="form-label">Contact no.</label>
+                            <input id="id_contact_number" type="text" name="contact_number" class="form-control"
+                                   autocomplete="tel"
+                                   value="{{ form.contact_number.value|default:'' }}">
                         </div>
                     </div>
 
@@ -65,34 +85,45 @@
                     <div class="row g-3">
                         <div class="col-sm-6">
                             <label for="id_password1" class="form-label">Password *</label>
-                            <input id="id_password1" type="password" name="password1" class="form-control" required>
+                            <input id="id_password1" type="password" name="password1" class="form-control"
+                                   autocomplete="new-password"
+                                   aria-describedby="password_help" required>
                         </div>
                         <div class="col-sm-6">
-                            <label for="id_password2" class="form-label">Confirm Password *</label>
-                            <input id="id_password2" type="password" name="password2" class="form-control" required>
+                            <label for="id_password2" class="form-label">Confirm password *</label>
+                            <input id="id_password2" type="password" name="password2" class="form-control"
+                                   autocomplete="new-password" required>
+                        </div>
+                        <div class="col-12">
+                            <p id="password_help" class="form-text">
+                                At least 8 characters, not entirely numeric, and not too
+                                similar to your name or username.
+                            </p>
                         </div>
                     </div>
 
                     {% if form.errors %}
-                    <div class="alert alert-danger mt-3">
-                        {% for field, errors in form.errors.items %}
-                            {% for error in errors %}<div>{{ error }}</div>{% endfor %}
-                        {% endfor %}
+                    <div class="alert alert-danger mt-3" role="alert">
+                        <svg class="ic" aria-hidden="true"><use href="#i-x-circle"/></svg>
+                        <div>
+                            {% for field, errors in form.errors.items %}
+                                {% for error in errors %}<div>{{ error }}</div>{% endfor %}
+                            {% endfor %}
+                        </div>
                     </div>
                     {% endif %}
 
-                    <button type="submit" class="btn btn-primary w-100 mt-4"
-                            style="padding:10px;">
-                        Create Account <i class="bi bi-person-check ms-1" aria-hidden="true"></i>
+                    <button type="submit" class="btn btn-primary btn-lg w-100 mt-4">
+                        Send verification code
+                        <svg class="ic" aria-hidden="true"><use href="#i-mail"/></svg>
                     </button>
                 </form>
             </div>
         </div>
 
-        <p class="text-center mt-3" style="font-size:0.83rem; color:var(--text-muted);">
+        <p class="auth-alt">
             Already have an account?
-            <a href="{% url 'login' %}"
-               style="color:var(--navy-mid); font-weight:600;">Sign in</a>
+            <a href="{% url 'login' %}">Sign in</a>
         </p>
     </div>
 </div>

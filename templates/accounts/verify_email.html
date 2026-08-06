@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block title %}Verify Your Email — PalSU Gate System{% endblock %}
+
+{% block content %}
+<div class="auth-wrap">
+    <div class="auth-col">
+
+        <div class="auth-head">
+            <div class="auth-mark" aria-hidden="true">
+                <svg class="ic" aria-hidden="true"><use href="#i-mail-check"/></svg>
+            </div>
+            <h1>Check your email</h1>
+            <p>
+                We sent a {{ code_length }}-digit code to<br>
+                <strong class="text-strong">{{ email }}</strong>
+            </p>
+        </div>
+
+        <div class="card auth-card">
+            <div class="card-body">
+                <form method="post" action="{% url 'verify_email' %}">
+                    {% csrf_token %}
+
+                    <label for="id_code" class="form-label">Verification code</label>
+                    <input id="id_code" type="text" name="code" class="form-control otp-input"
+                           inputmode="numeric" autocomplete="one-time-code"
+                           pattern="[0-9 -]*" maxlength="{{ code_length|add:6 }}"
+                           required autofocus
+                           aria-describedby="code_help">
+                    <p id="code_help" class="form-text">
+                        The code expires {{ expiry_minutes }} minutes after it was sent.
+                    </p>
+
+                    {% if form.errors %}
+                    <div class="alert alert-danger mt-3" role="alert">
+                        <svg class="ic" aria-hidden="true"><use href="#i-x-circle"/></svg>
+                        <div>
+                            {% for field, errors in form.errors.items %}
+                                {% for error in errors %}<div>{{ error }}</div>{% endfor %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <button type="submit" class="btn btn-primary btn-lg w-100 mt-3">
+                        Verify &amp; finish
+                        <svg class="ic" aria-hidden="true"><use href="#i-check-circle"/></svg>
+                    </button>
+                </form>
+
+                <hr class="section-divider">
+
+                <form method="post" action="{% url 'resend_otp' %}" class="text-center">
+                    {% csrf_token %}
+                    <span class="meta">
+                        Didn't get it? Check your spam folder, or
+                    </span>
+                    <button type="submit" class="btn btn-link p-0 align-baseline"
+                            {% if resend_in %}disabled{% endif %}>
+                        resend the code{% if resend_in %} ({{ resend_in }}s){% endif %}
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <p class="auth-alt">
+            Wrong address?
+            <a href="{% url 'register' %}">Start over</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

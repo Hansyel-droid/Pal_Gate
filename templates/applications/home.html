@@ -2,146 +2,127 @@
 {% block title %}Home — Applicant{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1>Welcome, {{ user.get_full_name|default:user.username }}</h1>
-    <p class="page-sub">Vehicle Sticker Application Portal</p>
-</div>
+<div class="shell">
+    <div class="page-header">
+        <h1>Welcome, {{ user.get_full_name|default:user.username }}</h1>
+        <p class="page-sub">Apply for a vehicle sticker and track where your application stands.</p>
+    </div>
 
-<!-- Registration Window Banner -->
-{% if window %}
-<div class="alert alert-success mb-4">
-    <i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>
-    <strong>Registration is open</strong> —
-    {{ window.start_date|date:"F d" }} to {{ window.end_date|date:"F d, Y" }}
-</div>
-{% else %}
-<div class="alert alert-warning mb-4">
-    <i class="bi bi-clock me-2" aria-hidden="true"></i>
-    <strong>Registration is currently closed.</strong>
-    Check back during the next registration period.
-</div>
-{% endif %}
+    {% comment %} The registration window governs whether anything can be started at all,
+       so it leads the screen and carries the primary action itself rather than
+       sitting above a row of equal-weight cards. {% endcomment %}
+    {% if window %}
+    <div class="status-panel is-open">
+        <span class="icon-plate success" aria-hidden="true">
+            <svg class="ic" aria-hidden="true"><use href="#i-check-circle"/></svg>
+        </span>
+        <div class="status-panel-body">
+            <h2>Registration is open</h2>
+            <p>
+                Submit a vehicle sticker application in four steps. You'll be given a
+                physical inspection appointment as soon as you submit.
+            </p>
+            <span class="window-dates">
+                <svg class="ic" aria-hidden="true"><use href="#i-calendar-range"/></svg>
+                {{ window.start_date|date:"M d" }} — {{ window.end_date|date:"M d, Y" }}
+            </span>
+        </div>
+        <div class="status-panel-action">
+            <a href="{% url 'apply_step1' %}" class="btn btn-primary">
+                <svg class="ic" aria-hidden="true"><use href="#i-file-plus"/></svg>
+                Start application
+            </a>
+        </div>
+    </div>
+    {% else %}
+    <div class="status-panel is-closed">
+        <span class="icon-plate warning" aria-hidden="true">
+            <svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg>
+        </span>
+        <div class="status-panel-body">
+            <h2>Registration is closed</h2>
+            <p>
+                New applications can only be submitted while the registration window
+                is open. The next window has not been announced yet — any application
+                you already submitted is unaffected and still listed below.
+            </p>
+        </div>
+        <div class="status-panel-action">
+            <button class="btn btn-secondary" disabled>Applications closed</button>
+        </div>
+    </div>
+    {% endif %}
 
-<!-- Action Cards -->
-<div class="row g-3 mb-4">
-    <div class="col-sm-6 col-lg-4">
-        <div class="card h-100" style="border-top:3px solid var(--navy-mid);">
-            <div class="card-body" style="padding:24px;">
-                <div style="width:44px; height:44px; background:#EEF2FF;
-                            border-radius:10px; display:flex; align-items:center;
-                            justify-content:center; margin-bottom:14px;">
-                    <i class="bi bi-file-earmark-plus"
-                       style="font-size:1.3rem; color:var(--navy-mid);" aria-hidden="true"></i>
-                </div>
-                <h6 style="font-weight:700; margin-bottom:6px;">Apply for Sticker</h6>
-                <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:16px;">
-                    Submit a new vehicle sticker application through our 3-step process.
-                </p>
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <svg class="ic" aria-hidden="true"><use href="#i-layers"/></svg>
+                Your applications
+            </h2>
+            {% if my_applications %}
+            <a href="{% url 'my_applications' %}" class="field-link ms-auto">
+                View all &amp; next steps
+            </a>
+            {% endif %}
+        </div>
+
+        {% if my_applications %}
+        <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th scope="col">Plate number</th>
+                    <th scope="col">Vehicle</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Appointment</th>
+                    <th scope="col">Sticker ID</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for app in my_applications|slice:":5" %}
+                <tr>
+                    <td><span class="plate">{{ app.plate_number }}</span></td>
+                    <td class="text-muted">{{ app.get_vehicle_type_display }}</td>
+                    <td>
+                        <span class="status-badge badge-{{ app.status }}">
+                            {{ app.get_status_display }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if app.appointment %}
+                            {{ app.appointment.slot.date|date:"M d, Y" }}
+                            at {{ app.appointment.time }}
+                        {% else %}
+                            <span class="text-faint">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if app.sticker_id %}
+                            <code>{{ app.sticker_id }}</code>
+                        {% else %}
+                            <span class="text-faint">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <svg class="ic" aria-hidden="true"><use href="#i-inbox"/></svg>
+            <h3>No applications yet</h3>
+            <p>
                 {% if window %}
-                    <a href="{% url 'apply_step1' %}" class="btn btn-primary btn-sm">
-                        Start Application <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i>
-                    </a>
+                    Once you submit one, its status and your inspection appointment
+                    appear here. This screen is the only place that news arrives.
                 {% else %}
-                    <button class="btn btn-outline-secondary btn-sm" disabled>
-                        Registration Closed
-                    </button>
+                    You'll be able to start an application when the next
+                    registration window opens.
                 {% endif %}
-            </div>
+            </p>
         </div>
-    </div>
-    <div class="col-sm-6 col-lg-4">
-        <div class="card h-100" style="border-top:3px solid var(--success);">
-            <div class="card-body" style="padding:24px;">
-                <div style="width:44px; height:44px; background:#E8F7F0;
-                            border-radius:10px; display:flex; align-items:center;
-                            justify-content:center; margin-bottom:14px;">
-                    <i class="bi bi-collection"
-                       style="font-size:1.3rem; color:var(--success);" aria-hidden="true"></i>
-                </div>
-                <h6 style="font-weight:700; margin-bottom:6px;">My Applications</h6>
-                <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:16px;">
-                    Track the status of your submitted applications and appointments.
-                </p>
-                <a href="{% url 'my_applications' %}"
-                   class="btn btn-sm"
-                   style="background:var(--success); color:#fff; border-color:var(--success);">
-                    View Applications <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i>
-                </a>
-            </div>
-        </div>
-    </div>
-    <div class="col-sm-6 col-lg-4">
-        <div class="card h-100" style="border-top:3px solid var(--gold);">
-            <div class="card-body" style="padding:24px;">
-                <div style="width:44px; height:44px; background:#FBF5E6;
-                            border-radius:10px; display:flex; align-items:center;
-                            justify-content:center; margin-bottom:14px;">
-                    <i class="bi bi-calendar-check"
-                       style="font-size:1.3rem; color:var(--gold);" aria-hidden="true"></i>
-                </div>
-                <h6 style="font-weight:700; margin-bottom:6px;">My Appointments</h6>
-                <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:16px;">
-                    View your scheduled physical inspection date and time.
-                </p>
-                <a href="{% url 'my_applications' %}"
-                   class="btn btn-gold btn-sm">
-                    View Schedule <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i>
-                </a>
-            </div>
-        </div>
+        {% endif %}
     </div>
 </div>
-
-<!-- Recent Applications (quick view) -->
-{% if my_applications %}
-<div class="card">
-    <div class="card-header">
-        <i class="bi bi-collection me-2" style="color:var(--gold);" aria-hidden="true"></i>
-        Recent Applications
-    </div>
-    <div class="table-responsive">
-    <table class="table mb-0">
-        <thead>
-            <tr>
-                <th scope="col">Plate Number</th>
-                <th scope="col">Vehicle</th>
-                <th scope="col">Status</th>
-                <th scope="col">Appointment</th>
-                <th scope="col">Sticker ID</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for app in my_applications|slice:":5" %}
-            <tr>
-                <td><code>{{ app.plate_number }}</code></td>
-                <td style="color:var(--text-muted);">
-                    {{ app.get_vehicle_type_display }}
-                </td>
-                <td>
-                    <span class="status-badge badge-{{ app.status }}">
-                        {{ app.get_status_display }}
-                    </span>
-                </td>
-                <td style="font-size:0.82rem;">
-                    {% if app.appointment %}
-                        {{ app.appointment.slot.date|date:"M d, Y" }}
-                        at {{ app.appointment.time }}
-                    {% else %}
-                        <span class="text-muted">—</span>
-                    {% endif %}
-                </td>
-                <td>
-                    {% if app.sticker_id %}
-                        <code>{{ app.sticker_id }}</code>
-                    {% else %}
-                        <span class="text-muted">—</span>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    </div>
-</div>
-{% endif %}
 {% endblock %}

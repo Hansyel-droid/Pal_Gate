@@ -1,0 +1,10 @@
+Hi {{ applicant.first_name|default:application.full_name }},
+
+Good news — your PalSU Gate vehicle sticker application for plate {{ application.plate_number }} has been approved.
+
+Please visit the Sticker Station on campus to have your RFID sticker issued. Bring a valid ID.
+
+You can check your application status anytime by logging in to the PalSU Gate portal.
+
+— PalSU Gate System
+This is an automated message. Please do not reply to this email.

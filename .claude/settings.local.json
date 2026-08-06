@@ -41,7 +41,91 @@
       "Bash(python -c \"import requests; print\\(requests.__version__\\)\")",
       "Bash(python walkthrough_apply.py)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" -X POST http://localhost:8000/api/scan/ -H \"Content-Type: application/json\" -d \"{\\\\\"uid\\\\\": \\\\\"04A1B2C3D4E5\\\\\", \\\\\"gate\\\\\": \\\\\"Main Gate\\\\\"}\")",
-      "Bash(grep -v \"\\\\.env$\")"
+      "Bash(grep -v \"\\\\.env$\")",
+      "Bash(curl -s -o /dev/null -w \"8000:%{http_code}\\\\n\" --max-time 3 http://127.0.0.1:8000/)",
+      "Bash(curl -s -o /dev/null -w \"8080:%{http_code}\\\\n\" --max-time 3 http://127.0.0.1:8080/)",
+      "Bash(node .claude/skills/impeccable/scripts/detect.mjs --json templates)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(grep -rnoE \"#[0-9a-fA-F]{3,8}\\\\b\" templates/)",
+      "Bash(awk -F: '{print $1}')",
+      "Bash(grep -rnoPz '<\\(button|a\\)\\\\b[^>]*>\\\\s*<i class=\"bi[^\"]*\"[^>]*>\\\\s*</i>\\\\s*</\\\\1>' templates/)",
+      "Bash(node .claude/skills/impeccable/scripts/detect.mjs templates/applications/step3.html)",
+      "Bash(node .claude/skills/impeccable/scripts/detect.mjs templates/gate)",
+      "Bash(export IMPECCABLE_CRITIQUE_META='{\"target\":\"all of it \\(templates/\\)\",\"total_score\":15,\"max_score\":40,\"na_heuristics\":\"\",\"p0_count\":2,\"p1_count\":2}')",
+      "Bash(node .claude/skills/impeccable/scripts/critique-storage.mjs write \"templates\" \"C:/Users/ADMIN/AppData/Local/Temp/claude/C--Users-ADMIN-Desktop-palsu-gate-final-palsu-gate/d9da9e2f-1f22-4bb7-91a8-8e355075cff4/scratchpad/critique-body.md\")",
+      "Bash(node .claude/skills/impeccable/scripts/critique-storage.mjs trend \"templates\" 5)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(find .claude/skills -iname \"*impeccable*\" 2>/dev/null; echo \"---\"; find / -maxdepth 6 -iname \"*impeccable*\" -path \"*skills*\" 2>/dev/null | head -20)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'total={len\\(d\\)}'\\); [print\\(' ',x['antipattern'],x['file'].split\\('\\\\\\\\\\\\\\\\'\\)[-1],x['line']\\) for x in d]\")",
+      "Skill(impeccable)",
+      "Skill(impeccable:*)",
+      "Bash(python \"C:\\\\Users\\\\ADMIN\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-ADMIN-Desktop-palsu-gate-final-palsu-gate\\\\147c3833-7c75-4d9e-919c-c9861a6bf4f7\\\\scratchpad\\\\seed_qa_data.py\")",
+      "Bash(python manage.py shell)",
+      "Bash(python \"C:\\\\Users\\\\ADMIN\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-ADMIN-Desktop-palsu-gate-final-palsu-gate\\\\147c3833-7c75-4d9e-919c-c9861a6bf4f7\\\\scratchpad\\\\a11y_icons.py\")",
+      "Bash(python \"C:\\\\Users\\\\ADMIN\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-ADMIN-Desktop-palsu-gate-final-palsu-gate\\\\147c3833-7c75-4d9e-919c-c9861a6bf4f7\\\\scratchpad\\\\a11y_th.py\")",
+      "Bash(python \"C:\\\\Users\\\\ADMIN\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-ADMIN-Desktop-palsu-gate-final-palsu-gate\\\\147c3833-7c75-4d9e-919c-c9861a6bf4f7\\\\scratchpad\\\\a11y_labels.py\")",
+      "Bash(python \"C:\\\\Users\\\\ADMIN\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-ADMIN-Desktop-palsu-gate-final-palsu-gate\\\\147c3833-7c75-4d9e-919c-c9861a6bf4f7\\\\scratchpad\\\\a11y_labels_django.py\")",
+      "Bash(cp \"C:\\\\Users\\\\ADMIN\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-ADMIN-Desktop-palsu-gate-final-palsu-gate\\\\147c3833-7c75-4d9e-919c-c9861a6bf4f7\\\\scratchpad\\\\render_check.py\" ./_rc_tmp.py)",
+      "Bash(python manage.py shell -c \"exec\\(open\\('_rc_tmp.py'\\).read\\(\\)\\)\")",
+      "Bash(rm -f ./_rc_tmp.py)",
+      "Bash(python manage.py shell -c \"exec\\(open\\('_rc.py'\\).read\\(\\)\\)\")",
+      "Bash(git symbolic-ref *)",
+      "Bash(git checkout *)",
+      "Bash(git commit *)",
+      "Bash(powershell -Command \"if \\(Test-Path .env\\) { Get-Content .env | Select-String -Pattern 'ALLOWED_HOSTS' } else { 'no .env file' }\")",
+      "Bash(ipconfig)",
+      "Bash(powershell -NoProfile -Command 'Get-NetFirewallRule -Direction Inbound -Enabled True | Get-NetFirewallPortFilter | Where-Object { $_.LocalPort -eq 8000 }')",
+      "Bash(python manage.py makemigrations accounts gate)",
+      "Bash(python manage.py test accounts -v 1)",
+      "Bash(python manage.py makemigrations accounts)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://127.0.0.1:8000/accounts/register/)",
+      "Bash(ps -W)",
+      "Bash(tasklist //FI \"PID eq 25104\")",
+      "Bash(python manage.py migrate accounts 0003)",
+      "Bash(grep -v ':0$')",
+      "Bash(sort -t: -k2 -rn)",
+      "Bash(grep -vE '^\\(row|col|col-[a-z0-9-]+|d-[a-z-]+|mb-[0-9]|mt-[0-9]|me-[0-9]|ms-[0-9]|p-[0-9]|px-[0-9]|py-[0-9]|pt-[0-9]|pb-[0-9]|g-[0-9]|gap-[0-9]|w-100|h-100|text-[a-z]+|align-[a-z-]+|justify-[a-z-]+|flex-[a-z]+|fw-[a-z]+|small|table|thead|mx-auto|my-[0-9]|border|rounded.*|position-[a-z]+|bi|bi-.*|\\)$')",
+      "Bash(node \"C:/Users/ADMIN/AppData/Local/Temp/claude/C--Users-ADMIN-Desktop-palsu-gate-final-palsu-gate/147e6ed7-1fdf-4cec-ac4d-4452d64317cd/scratchpad/migrate.mjs\" templates --dry)",
+      "Bash(node \"C:/Users/ADMIN/AppData/Local/Temp/claude/C--Users-ADMIN-Desktop-palsu-gate-final-palsu-gate/147e6ed7-1fdf-4cec-ac4d-4452d64317cd/scratchpad/migrate.mjs\" templates)",
+      "Bash(python \"C:/Users/ADMIN/AppData/Local/Temp/claude/C--Users-ADMIN-Desktop-palsu-gate-final-palsu-gate/147e6ed7-1fdf-4cec-ac4d-4452d64317cd/scratchpad/tplcheck.py\")",
+      "Bash(python __TRACKED_VAR__/render.py __TRACKED_VAR__/render)",
+      "Bash(grep -v \"^ERROR\\\\|^Traceback\\\\|^  File\\\\|^    \\\\|^django.core\\\\|^$\")",
+      "Bash(python __TRACKED_VAR__/tplcheck.py)",
+      "Bash(python \"C:/Users/ADMIN/AppData/Local/Temp/claude/C--Users-ADMIN-Desktop-palsu-gate-final-palsu-gate/147e6ed7-1fdf-4cec-ac4d-4452d64317cd/scratchpad/cardtitle.py\" --apply)",
+      "Bash(sed -n '/card-header/,/\\\\/div>/p' applications/step1.html)",
+      "Bash(python -c \"import decouple; print\\('ok'\\)\")",
+      "Bash(python \"C:\\\\Users\\\\ADMIN\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-ADMIN-Desktop-palsu-gate-final-palsu-gate\\\\d871a342-4e5d-427c-a5f3-10eed45bdb3e\\\\scratchpad\\\\audit_probe.py\")",
+      "Bash(python \"C:\\\\Users\\\\ADMIN\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-ADMIN-Desktop-palsu-gate-final-palsu-gate\\\\d871a342-4e5d-427c-a5f3-10eed45bdb3e\\\\scratchpad\\\\audit_probe2.py\")",
+      "Bash(python \"C:\\\\Users\\\\ADMIN\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-ADMIN-Desktop-palsu-gate-final-palsu-gate\\\\d871a342-4e5d-427c-a5f3-10eed45bdb3e\\\\scratchpad\\\\audit_probe3.py\")"
     ]
-  }
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ ! -f \"${CLAUDE_PROJECT_DIR}/.claude/skills/impeccable/scripts/hook.mjs\" ] || node \"${CLAUDE_PROJECT_DIR}/.claude/skills/impeccable/scripts/hook.mjs\"",
+            "timeout": 5,
+            "statusMessage": "Checking UI changes"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ ! -f \"${CLAUDE_PROJECT_DIR}/.claude/skills/impeccable/scripts/hook.mjs\" ] || node \"${CLAUDE_PROJECT_DIR}/.claude/skills/impeccable/scripts/hook.mjs\"",
+            "timeout": 30,
+            "statusMessage": "Design deep pass"
+          }
+        ]
+      }
+    ]
+  },
+  "description": "Impeccable design detector: immediate-tier checks after Edit/Write/MultiEdit on UI files, full-rule deep pass on Stop."
 }

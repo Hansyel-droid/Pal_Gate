@@ -2,69 +2,97 @@
 {% block title %}Registration Window{% endblock %}
 
 {% block content %}
-<h1><i class="bi bi-calendar-range text-primary" aria-hidden="true"></i> Registration Window</h1>
-<p class="text-muted">Set the dates when applicants can submit sticker applications.</p>
+<div class="shell-narrow">
+    <div class="page-header">
+        <h1>Registration window</h1>
+        <p class="page-sub">
+            The dates when applicants can submit sticker applications. Appointments
+            are scheduled on weekdays after the window closes.
+        </p>
+    </div>
 
-<!-- Current Status -->
-<div class="card shadow-sm mb-4">
-    <div class="card-body">
-        <h5>Current Status</h5>
-        {% if current_window %}
-            <div class="alert alert-success">
-                <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
-                <strong>Registration is OPEN</strong><br>
-                From <strong>{{ current_window.start_date|date:"F d, Y" }}</strong>
-                to <strong>{{ current_window.end_date|date:"F d, Y" }}</strong>
-            </div>
+    {% comment %} The current state is the fact this screen exists to report, so it leads
+       and carries its own action. {% endcomment %}
+    {% if current_window %}
+    <div class="status-panel is-open">
+        <span class="icon-plate success" aria-hidden="true">
+            <svg class="ic" aria-hidden="true"><use href="#i-check-circle"/></svg>
+        </span>
+        <div class="status-panel-body">
+            <h2>Registration is open</h2>
+            <p>Applicants can submit new applications right now.</p>
+            <span class="window-dates">
+                <svg class="ic" aria-hidden="true"><use href="#i-calendar-range"/></svg>
+                {{ current_window.start_date|date:"M d, Y" }} — {{ current_window.end_date|date:"M d, Y" }}
+            </span>
+        </div>
+        <div class="status-panel-action">
             <form method="post">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="close">
-                <button type="submit" class="btn btn-danger"
-                        onclick="return confirm('Are you sure you want to close registration?')">
-                    <i class="bi bi-x-circle" aria-hidden="true"></i> Close Registration Now
+                <button type="submit" class="btn btn-outline-danger"
+                        onclick="return confirm('Close registration now? Applicants will immediately be unable to submit new applications.')">
+                    <svg class="ic" aria-hidden="true"><use href="#i-x-circle"/></svg>
+                    Close now
                 </button>
             </form>
-        {% else %}
-            <div class="alert alert-warning">
-                <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
-                <strong>Registration is CLOSED.</strong>
-                Set a new window below to open it.
-            </div>
-        {% endif %}
+        </div>
     </div>
-</div>
-
-<!-- Set New Window -->
-<div class="card shadow-sm">
-    <div class="card-header bg-white fw-bold">
-        <i class="bi bi-calendar-plus text-primary" aria-hidden="true"></i> Set New Registration Window
-    </div>
-    <div class="card-body">
-        <form method="post">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="save">
-            <div class="row">
-                <div class="col-md-5 mb-3">
-                    <label for="id_start_date" class="form-label">Start Date *</label>
-                    <input id="id_start_date" type="date" name="start_date" class="form-control" required
-                           value="{% if current_window %}{{ current_window.start_date|date:'Y-m-d' }}{% endif %}">
-                </div>
-                <div class="col-md-5 mb-3">
-                    <label for="id_end_date" class="form-label">End Date *</label>
-                    <input id="id_end_date" type="date" name="end_date" class="form-control" required
-                           value="{% if current_window %}{{ current_window.end_date|date:'Y-m-d' }}{% endif %}">
-                </div>
-                <div class="col-md-2 mb-3 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="bi bi-save" aria-hidden="true"></i> Save
-                    </button>
-                </div>
-            </div>
-            <p class="text-muted small">
-                <i class="bi bi-info-circle" aria-hidden="true"></i>
-                Saving a new window will automatically close any currently open window.
+    {% else %}
+    <div class="status-panel is-closed">
+        <span class="icon-plate warning" aria-hidden="true">
+            <svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg>
+        </span>
+        <div class="status-panel-body">
+            <h2>Registration is closed</h2>
+            <p>
+                No new applications can be submitted. Set a window below to open it.
+                Applications already in the system are unaffected.
             </p>
-        </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <svg class="ic" aria-hidden="true"><use href="#i-calendar-plus"/></svg>
+                {% if current_window %}Change the window{% else %}Set a window{% endif %}
+            </h2>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="save">
+                <div class="row g-3 align-items-end">
+                    <div class="col-sm-5">
+                        <label for="id_start_date" class="form-label">Start date *</label>
+                        <input id="id_start_date" type="date" name="start_date" class="form-control" required
+                               value="{% if current_window %}{{ current_window.start_date|date:'Y-m-d' }}{% endif %}">
+                    </div>
+                    <div class="col-sm-5">
+                        <label for="id_end_date" class="form-label">End date *</label>
+                        <input id="id_end_date" type="date" name="end_date" class="form-control" required
+                               value="{% if current_window %}{{ current_window.end_date|date:'Y-m-d' }}{% endif %}">
+                    </div>
+                    <div class="col-sm-2">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <svg class="ic" aria-hidden="true"><use href="#i-save"/></svg>
+                            Save
+                        </button>
+                    </div>
+                </div>
+
+                <div class="note mt-4">
+                    <svg class="ic" aria-hidden="true"><use href="#i-info"/></svg>
+                    <div>
+                        Saving a window <strong>automatically closes any window
+                        currently open</strong>. Applicants mid-application keep their
+                        saved entries but cannot submit once the window closes.
+                    </div>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 {% endblock %}

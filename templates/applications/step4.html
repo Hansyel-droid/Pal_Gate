@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% block title %}Apply — Step 4: Review{% endblock %}
+
+{% block content %}
+<div class="page-header text-center">
+    <h1>Review &amp; confirm</h1>
+    <p class="page-sub mx-auto">Nothing has been submitted yet. Check each section, then confirm below.</p>
+</div>
+
+{% include 'applications/_wizard.html' with step=4 %}
+
+<div style="max-width:840px; margin:0 auto;">
+
+    <div class="row g-4 mb-4">
+
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <svg class="ic" aria-hidden="true"><use href="#i-user"/></svg>
+                        Personal details
+                    </h2>
+                    <a href="{% url 'apply_step1' %}" class="field-link ms-auto">Change</a>
+                </div>
+                <div class="card-body p-0">
+                    <table class="kv">
+                        <tr>
+                            <th scope="row">Full name</th>
+                            <td>{{ step1.full_name }}</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Classification</th>
+                            <td>{{ step1.classification|capfirst }}</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">ID number</th>
+                            <td>{{ step1.id_number }}</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">College / dept</th>
+                            <td>{{ step1.college_department }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <svg class="ic" aria-hidden="true"><use href="#i-car"/></svg>
+                        Vehicle details
+                    </h2>
+                    <a href="{% url 'apply_step2' %}" class="field-link ms-auto">Change</a>
+                </div>
+                <div class="card-body p-0">
+                    <table class="kv">
+                        <tr>
+                            <th scope="row">Plate number</th>
+                            <td><span class="plate">{{ step2.plate_number }}</span></td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Vehicle type</th>
+                            <td>{{ step2.vehicle_type|capfirst }}</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Colour</th>
+                            <td>{{ step2.vehicle_color|capfirst }}</td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Owner</th>
+                            <td>{% if step2.is_owner == 'yes' %}Yes{% else %}No{% endif %}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2 class="card-title">
+                <svg class="ic" aria-hidden="true"><use href="#i-file-check"/></svg>
+                Uploaded documents
+            </h2>
+        </div>
+        <div class="card-body">
+            <div class="row g-2">
+                {% for label, filename in files_info.items %}
+                {% if filename %}
+                <div class="col-sm-6 col-lg-3">
+                    <div class="doc-item">
+                        <svg class="ic" aria-hidden="true"><use href="#i-file-check"/></svg>
+                        <div>
+                            <div class="doc-label">{{ label }}</div>
+                            <div class="doc-name">{{ filename }}</div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% empty %}
+                <div class="col-12">
+                    <p class="meta mb-0">No documents were uploaded.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2 class="card-title">
+                <svg class="ic" aria-hidden="true"><use href="#i-calendar-check"/></svg>
+                Appointment
+            </h2>
+            <a href="{% url 'apply_step3' %}" class="field-link ms-auto">Change</a>
+        </div>
+        <div class="card-body">
+            <p class="lede mb-2">
+                <strong>{{ appointment_slot.date|date:"l, F d, Y" }}</strong>
+                at <strong>{{ appointment_time_label }}</strong>
+            </p>
+            <p class="meta mb-0">
+                Bring your vehicle and the original documents you uploaded
+                (OR/CR, driver's licence, and your COR or authorisation letter
+                if applicable) for physical inspection at this time.
+                <strong>Don't pay at the cashier yet</strong> — payment comes after
+                your documents are verified and your application is approved.
+            </p>
+        </div>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="d-flex justify-content-between align-items-center gap-3">
+            <button type="submit" name="go_back" class="btn btn-secondary">
+                <svg class="ic" aria-hidden="true"><use href="#i-arrow-left"/></svg>
+                Back to appointment
+            </button>
+            <button type="submit" class="btn btn-primary btn-lg">
+                <svg class="ic" aria-hidden="true"><use href="#i-send"/></svg>
+                Submit application
+            </button>
+        </div>
+    </form>
+
+</div>
+{% endblock %}

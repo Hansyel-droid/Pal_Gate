@@ -1,12 +1,20 @@
 .env
 db.sqlite3
+db.sqlite3-*
 media/
 !media/.gitkeep
 logs/
 staticfiles/
 backups/
+cache/
 __pycache__/
 *.pyc
 venv/
 .venv/
 *.egg-info/
+
+# Claude Code tooling — vendored skill and its machine-local cache/config.
+# Not part of the application; the settings.local.json hooks that reference
+# the skill are guarded and no-op when it isn't present.
+.claude/skills/
+.impeccable/

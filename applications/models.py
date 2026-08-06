@@ -170,3 +170,14 @@ class StickerApplication(models.Model):
                 name='unique_active_plate_number',
             ),
         ]
+        indexes = [
+            # Almost every admin screen filters on status ('approved' at the
+            # sticker station, 'scheduled' on the dashboard, etc.), and the
+            # default ordering is -created_at, so this covers both the filter
+            # and the sort in one index instead of scanning every row.
+            models.Index(fields=['status', '-created_at'],
+                         name='app_status_created_idx'),
+            # The applicant's own list, which is their most-visited page.
+            models.Index(fields=['applicant', '-created_at'],
+                         name='app_applicant_created_idx'),
+        ]

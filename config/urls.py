@@ -1,8 +1,23 @@
 from django.contrib import admin
+from django.shortcuts import redirect
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
 from django_ratelimit.decorators import ratelimit
 from accounts.views import dashboard_redirect
+
+
+def root_redirect(request):
+    """
+    The site root. Nothing was mapped here before, so anyone typing the
+    bare address (the normal thing to do when handed a link) got a 404
+    and reasonably concluded the site was broken.
+
+    Signed-in users go to their own dashboard; everyone else goes to the
+    login page.
+    """
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+    return redirect('login')
 
 # Admin branding
 admin.site.site_header = 'PalSU Gate System Administration'
@@ -16,6 +31,7 @@ password_reset_view = ratelimit(key='ip', rate='5/m', method='POST', block=True)
 )
 
 urlpatterns = [
+    path('', root_redirect, name='root'),
     path('palsu-system-admin-2025/', admin.site.urls),
     path('accounts/', include('accounts.urls')),
     path('dashboard/', dashboard_redirect, name='dashboard'),

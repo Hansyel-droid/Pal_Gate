@@ -1,152 +1,207 @@
 {% extends 'base.html' %}
-{% block title %}Issue Sticker{% endblock %}
+{% block title %}Issue Sticker — {{ application.plate_number }}{% endblock %}
 
 {% block extra_css %}
 <style>
     /* The UID is read off a physical tag and compared character by
-       character against the read-back before the operator commits. */
+       character against the read-back before the operator commits. This is
+       the moment the digital record and the physical gate are bonded, so the
+       read-back is the largest thing in the form. */
     .uid-readback {
+        display: block;
         font-family: var(--font-id);
-        font-size: 1.5rem;
+        font-size: var(--fs-2xl);
         font-weight: 600;
-        letter-spacing: 0.08em;
+        letter-spacing: 0.1em;
+        line-height: 1.25;
         word-break: break-all;
-        color: var(--text-main);
+        color: var(--text-strong);
     }
     .uid-readback.empty {
-        color: var(--text-muted);
-        font-size: 1rem;
+        font-size: var(--fs-sm);
+        font-family: var(--font-ui);
+        font-weight: 400;
         letter-spacing: normal;
+        /* The accent-tinted panel is darker than white, so this needs a
+           deeper grey than the usual placeholder tone: 6.75:1 here. */
+        color: var(--gray-600);
     }
+
+    /* Read-back panel: who, which plate, which tag. Bordered in the accent
+       so it reads as the thing being confirmed, not as another field group. */
     .bind-summary {
-        background: #F8FAFD;
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 16px 18px;
-        margin-bottom: 16px;
+        background: var(--accent-50);
+        border: 1px solid var(--accent-100);
+        border-radius: var(--r3);
+        padding: var(--s4) var(--s5);
+        margin-bottom: var(--s4);
     }
+    .bind-summary dl { margin: 0; }
     .bind-summary dt {
-        font-size: 0.72rem;
-        font-weight: 700;
+        font-size: var(--fs-micro);
+        font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 0.06em;
-        color: var(--text-muted);
+        letter-spacing: 0.08em;
+        color: var(--accent-700);
         margin-bottom: 2px;
     }
     .bind-summary dd {
-        margin: 0 0 12px;
-        font-weight: 600;
+        margin: 0 0 var(--s3);
+        font-size: var(--fs-sm);
+        font-weight: 550;
+        color: var(--text-strong);
     }
     .bind-summary dd:last-child { margin-bottom: 0; }
+
+    #rfid_uid {
+        font-family: var(--font-id);
+        letter-spacing: 0.06em;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1><i class="bi bi-patch-check text-success" aria-hidden="true"></i> Issue Sticker</h1>
-    <a href="{% url 'sticker_station' %}" class="btn btn-outline-secondary">
-        <i class="bi bi-arrow-left" aria-hidden="true"></i> Back
-    </a>
-</div>
-
-<div class="row">
-    <!-- Applicant Info -->
-    <div class="col-md-5">
-        <div class="card shadow-sm mb-3">
-            <div class="card-header bg-white fw-bold">
-                <i class="bi bi-person-fill text-primary" aria-hidden="true"></i> Applicant
+<div class="shell">
+    <div class="record-head">
+        <div>
+            <div class="record-title">
+                <h1>Issue sticker</h1>
+                <span class="status-badge badge-approved">Approved</span>
             </div>
-            <div class="card-body">
-                <table class="table table-sm table-bordered mb-0">
-                    <tr><th scope="row">Name</th><td>{{ application.full_name }}</td></tr>
-                    <tr><th scope="row">ID Number</th><td>{{ application.id_number }}</td></tr>
-                    <tr><th scope="row">Classification</th><td>{{ application.get_classification_display }}</td></tr>
-                    <tr><th scope="row">College/Dept</th><td>{{ application.college_department }}</td></tr>
-                </table>
+            <div class="record-sub">
+                <span class="plate">{{ application.plate_number }}</span>
+                <span>{{ application.full_name }}</span>
+                <span>ID {{ application.id_number }}</span>
             </div>
         </div>
-        <div class="card shadow-sm">
-            <div class="card-header bg-white fw-bold">
-                <i class="bi bi-car-front-fill text-primary" aria-hidden="true"></i> Vehicle
-            </div>
-            <div class="card-body">
-                <table class="table table-sm table-bordered mb-0">
-                    <tr><th scope="row">Plate</th><td><strong>{{ application.plate_number }}</strong></td></tr>
-                    <tr><th scope="row">Type</th><td>{{ application.get_vehicle_type_display }}</td></tr>
-                    <tr><th scope="row">Color</th><td>{{ application.get_vehicle_color_display }}</td></tr>
-                </table>
-            </div>
-        </div>
+        <a href="{% url 'sticker_station' %}" class="btn btn-secondary">
+            <svg class="ic" aria-hidden="true"><use href="#i-arrow-left"/></svg>
+            Back to queue
+        </a>
     </div>
 
-    <!-- Issue Sticker Form -->
-    <div class="col-md-7">
-        <div class="card shadow-sm">
-            <div class="card-header bg-white fw-bold">
-                <i class="bi bi-wifi text-success" aria-hidden="true"></i> RFID Tag Assignment
-            </div>
-            <div class="card-body">
-                <div class="alert alert-info">
-                    <i class="bi bi-info-circle" aria-hidden="true"></i>
-                    Scan the RFID tag using the registration scanner, or type the UID
-                    manually. A newly scanned tag is offered for confirmation — it never
-                    replaces a UID you have already entered.
+    <div class="row g-4">
+        <!-- Applicant / vehicle -->
+        <div class="col-lg-5">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <svg class="ic" aria-hidden="true"><use href="#i-user"/></svg>
+                        Applicant
+                    </h2>
                 </div>
+                <div class="card-body p-0">
+                    <table class="kv">
+                        <tr><th scope="row">Name</th><td>{{ application.full_name }}</td></tr>
+                        <tr><th scope="row">ID number</th><td>{{ application.id_number }}</td></tr>
+                        <tr><th scope="row">Classification</th><td>{{ application.get_classification_display }}</td></tr>
+                        <tr><th scope="row">College / dept</th><td>{{ application.college_department }}</td></tr>
+                    </table>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <svg class="ic" aria-hidden="true"><use href="#i-car"/></svg>
+                        Vehicle
+                    </h2>
+                </div>
+                <div class="card-body p-0">
+                    <table class="kv">
+                        <tr>
+                            <th scope="row">Plate</th>
+                            <td><span class="plate">{{ application.plate_number }}</span></td>
+                        </tr>
+                        <tr><th scope="row">Type</th><td>{{ application.get_vehicle_type_display }}</td></tr>
+                        <tr><th scope="row">Colour</th><td>{{ application.get_vehicle_color_display }}</td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
 
-                <form method="post" id="issue-form">
-                    {% csrf_token %}
-                    <div class="mb-3">
-                        <label for="rfid_uid" class="form-label fw-bold">RFID Tag UID *</label>
-                        <div class="input-group">
-                            <input type="text" name="rfid_uid" id="rfid_uid"
-                                   class="form-control form-control-lg"
-                                   placeholder="Scan or type RFID UID..."
-                                   required autocomplete="off" maxlength="100">
-                            <button type="button" class="btn btn-outline-secondary" id="clear-uid">
-                                <i class="bi bi-x" aria-hidden="true"></i> Clear
-                            </button>
+        <!-- Bind form -->
+        <div class="col-lg-7">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <svg class="ic" aria-hidden="true"><use href="#i-wifi"/></svg>
+                        RFID tag assignment
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <div class="note mb-4">
+                        <svg class="ic" aria-hidden="true"><use href="#i-info"/></svg>
+                        <div>
+                            Scan the tag with the registration scanner, or type the UID
+                            by hand. A newly scanned tag is <strong>offered</strong> for
+                            confirmation — it never replaces a UID you already entered.
                         </div>
+                    </div>
 
-                        <!-- A newly detected tag is an offer, never an overwrite: the
-                             operator may already be holding a tag they typed by hand. -->
-                        <div class="new-tag-offer d-none" id="new-tag-offer">
-                            <div class="mb-2">
-                                New tag detected:
-                                <strong class="uid-readback" style="font-size:1.1rem;" id="new-tag-uid"></strong>
+                    <form method="post" id="issue-form">
+                        {% csrf_token %}
+                        <div class="mb-4">
+                            <label for="rfid_uid" class="form-label">RFID tag UID *</label>
+                            <div class="input-group">
+                                <input type="text" name="rfid_uid" id="rfid_uid"
+                                       class="form-control form-control-lg"
+                                       placeholder="Scan or type UID…"
+                                       required autocomplete="off" maxlength="100">
+                                <button type="button" class="btn btn-secondary" id="clear-uid">
+                                    <svg class="ic" aria-hidden="true"><use href="#i-x"/></svg>
+                                    Clear
+                                </button>
                             </div>
-                            <button type="button" class="btn btn-sm btn-primary" id="use-new-tag">
-                                Use this tag
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" id="dismiss-new-tag">
-                                Keep current
-                            </button>
+
+                            <!-- A newly detected tag is an offer, never an overwrite: the
+                                 operator may already be holding a tag they typed by hand. -->
+                            <div class="new-tag-offer d-none" id="new-tag-offer">
+                                <div class="mb-2" style="font-size:var(--fs-xs);">
+                                    New tag detected:
+                                    <strong class="uid-readback" style="display:inline; font-size:var(--fs-lg);" id="new-tag-uid"></strong>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-sm btn-primary" id="use-new-tag">
+                                        Use this tag
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-secondary" id="dismiss-new-tag">
+                                        Keep current
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="form-text mt-2 d-flex align-items-center gap-2 flex-wrap"
+                                 id="scan_status" role="status" aria-live="polite">
+                                <span class="poll-state waiting" id="poll-state">
+                                    <svg class="ic ic-solid" aria-hidden="true"><use href="#i-dot"/></svg>
+                                    <span id="poll-state-text">Waiting for scan…</span>
+                                </span>
+                                <span class="text-muted" id="poll-last"></span>
+                            </div>
                         </div>
 
-                        <div class="form-text mt-2" id="scan_status" role="status" aria-live="polite">
-                            <span class="poll-state waiting" id="poll-state">
-                                <i class="bi bi-circle" aria-hidden="true"></i>
-                                <span id="poll-state-text">Waiting for scan…</span>
-                            </span>
-                            <span class="text-muted ms-2" id="poll-last"></span>
+                        <!-- Read-back: the operator verifies the exact UID being bound to
+                             this exact person and plate before committing. The bond is
+                             written to an immutable log and cannot be casually undone. -->
+                        <div class="bind-summary">
+                            <dl>
+                                <dt>Issuing to</dt>
+                                <dd>{{ application.full_name }} — {{ application.plate_number }}</dd>
+                                <dt>RFID UID to be bound</dt>
+                                <dd><span class="uid-readback empty" id="uid-readback">No UID entered yet</span></dd>
+                            </dl>
                         </div>
-                    </div>
 
-                    <!-- Read-back: the operator verifies the exact UID being bound to
-                         this exact person and plate before committing. The bond is
-                         written to an immutable log and cannot be casually undone. -->
-                    <div class="bind-summary">
-                        <dl class="mb-0">
-                            <dt>Issuing to</dt>
-                            <dd>{{ application.full_name }} — {{ application.plate_number }}</dd>
-                            <dt>RFID UID to be bound</dt>
-                            <dd class="uid-readback empty" id="uid-readback">No UID entered yet</dd>
-                        </dl>
-                    </div>
-
-                    <button type="submit" class="btn btn-success btn-lg w-100" id="issue-btn">
-                        <i class="bi bi-patch-check-fill" aria-hidden="true"></i> Issue Sticker
-                    </button>
-                </form>
+                        <button type="submit" class="btn btn-success btn-lg w-100" id="issue-btn">
+                            <svg class="ic" aria-hidden="true"><use href="#i-badge-check"/></svg>
+                            Issue sticker
+                        </button>
+                        <p class="form-text text-center mt-2">
+                            Permanent. This binding is written to the gate record and the
+                            audit log against your account.
+                        </p>
+                    </form>
+                </div>
             </div>
         </div>
     </div>

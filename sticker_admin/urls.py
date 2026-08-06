@@ -11,5 +11,4 @@ urlpatterns = [
     path('applications/<int:pk>/reject/', views.reject_application, name='reject_application'),
     path('sticker-station/', views.sticker_station, name='sticker_station'),
     path('sticker-station/issue/<int:pk>/', views.issue_sticker, name='issue_sticker'),
-    path('quick-register/', views.quick_register, name='quick_register'),
 ]

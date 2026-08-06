@@ -2,79 +2,147 @@
 {% block title %}Sticker Station{% endblock %}
 
 {% block content %}
-<h1><i class="bi bi-patch-check text-primary" aria-hidden="true"></i> Sticker Station</h1>
-<p class="text-muted">Search for an approved applicant to issue their sticker and RFID tag.</p>
+<div class="toolbar">
+    <div class="page-header">
+        <h1>Sticker station</h1>
+        <p class="page-sub">
+            Approved applicants waiting for their sticker and RFID tag.
+            Longest-waiting first.
+        </p>
+    </div>
+    <div class="toolbar-actions">
+        <div class="stat-card" style="padding:var(--s3) var(--s4);">
+            <span class="stat-label">Waiting</span>
+            <div class="stat-value" style="font-size:var(--fs-xl);">{{ total_waiting }}</div>
+        </div>
+    </div>
+</div>
 
 <!-- Search -->
-<div class="card shadow-sm mb-4">
-    <div class="card-body">
-        <form method="get" class="row g-2">
+<div class="card filter-bar">
+    <div class="card-body card-body-tight">
+        <form method="get" class="row g-2 align-items-end"
+              role="search" aria-label="Filter the issuance queue">
             <div class="col-md-9">
-                <input type="text" name="q" class="form-control form-control-lg"
-                       placeholder="Search by name, ID number, plate number..."
-                       value="{{ query }}" autofocus>
+                <label for="id_q" class="form-label">Name, ID number or plate</label>
+                <input id="id_q" type="text" name="q" class="form-control"
+                       placeholder="Filter the queue…" value="{{ query }}" autofocus>
             </div>
-            <div class="col-md-3">
-                <button type="submit" class="btn btn-primary btn-lg w-100">
-                    <i class="bi bi-search" aria-hidden="true"></i> Search
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-grow-1">
+                    <svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>
+                    Search
                 </button>
+                {% if query %}
+                <a href="{% url 'sticker_station' %}" class="btn btn-secondary"
+                   aria-label="Clear search">
+                    <svg class="ic" aria-hidden="true"><use href="#i-x"/></svg>
+                </a>
+                {% endif %}
             </div>
         </form>
     </div>
 </div>
 
-<!-- Results -->
-{% if query %}
+<!-- Queue -->
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <svg class="ic" aria-hidden="true"><use href="#i-list-check"/></svg>
+            {% if query %}Matching approved applicants{% else %}Waiting for sticker{% endif %}
+        </h2>
+        <span class="meta ms-2">{{ page_obj.paginator.count }} shown</span>
+    </div>
+
     {% if results %}
-        <div class="card shadow-sm">
-            <div class="card-header bg-white fw-bold">
-                Search Results ({{ results.count }} found)
-            </div>
-            <div class="card-body p-0">
-                <table class="table table-hover mb-0">
-                    <thead>
-                        <tr>
-                            <th scope="col">Name</th>
-                            <th scope="col">ID Number</th>
-                            <th scope="col">Plate</th>
-                            <th scope="col">Vehicle Type</th>
-                            <th scope="col">Appointment</th>
-                            <th scope="col"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for app in results %}
-                        <tr>
-                            <td>{{ app.full_name }}</td>
-                            <td>{{ app.id_number }}</td>
-                            <td><strong>{{ app.plate_number }}</strong></td>
-                            <td>{{ app.get_vehicle_type_display }}</td>
-                            <td>
-                                {% if app.appointment %}
-                                    {{ app.appointment.slot.date|date:"M d" }}
-                                    at {{ app.appointment.time }}
-                                {% else %}
-                                    <span class="text-muted">—</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <a href="{% url 'issue_sticker' app.pk %}"
-                                   class="btn btn-sm btn-success">
-                                    <i class="bi bi-patch-check" aria-hidden="true"></i> Issue Sticker
-                                </a>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    {% else %}
-        <div class="alert alert-warning">
-            <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
-            No approved applications found for "<strong>{{ query }}</strong>".
-            Only approved applications can be processed here.
-        </div>
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">ID number</th>
+                    <th scope="col">Plate</th>
+                    <th scope="col">Vehicle type</th>
+                    <th scope="col">Appointment</th>
+                    <th scope="col"><span class="visually-hidden">Issue sticker</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for app in results %}
+                <tr>
+                    <td class="text-strong fw-medium">{{ app.full_name }}</td>
+                    <td class="text-muted">{{ app.id_number }}</td>
+                    <td><span class="plate">{{ app.plate_number }}</span></td>
+                    <td class="text-muted">{{ app.get_vehicle_type_display }}</td>
+                    <td>
+                        {% if app.appointment %}
+                            {{ app.appointment.slot.date|date:"M d" }}
+                            at {{ app.appointment.get_time_display }}
+                        {% else %}
+                            <span class="text-faint">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        <a href="{% url 'issue_sticker' app.pk %}"
+                           class="btn btn-sm btn-primary">
+                            <svg class="ic" aria-hidden="true"><use href="#i-badge-check"/></svg>
+                            Issue sticker
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <div class="card-footer">
+        <nav aria-label="Approved applicants pages">
+            <ul class="pagination justify-content-center mb-0">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link"
+                       href="?page={{ page_obj.previous_page_number }}{% if query %}&amp;q={{ query|urlencode }}{% endif %}">
+                        Previous
+                    </a>
+                </li>
+                {% endif %}
+                <li class="page-item disabled">
+                    <span class="page-link">
+                        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                    </span>
+                </li>
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link"
+                       href="?page={{ page_obj.next_page_number }}{% if query %}&amp;q={{ query|urlencode }}{% endif %}">
+                        Next
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
     {% endif %}
-{% endif %}
+
+    {% else %}
+    <div class="empty-state">
+        <svg class="ic" aria-hidden="true"><use href="#i-inbox"/></svg>
+        {% if query %}
+            <h3>No approved applicants match “{{ query }}”</h3>
+            <p>
+                Only <strong>approved</strong> applications appear here. Check the
+                <a href="{% url 'application_list' %}">Applications</a> list for one
+                that hasn't been approved yet.
+            </p>
+        {% else %}
+            <h3>Nobody is waiting for a sticker</h3>
+            <p>
+                Approved applicants appear here automatically, longest-waiting
+                first, ready to have an RFID tag bound to their plate.
+            </p>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
 {% endblock %}

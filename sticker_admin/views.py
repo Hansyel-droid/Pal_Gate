@@ -10,8 +10,13 @@ from django.utils import timezone
 from django.db.models import Q, Count
 
 from accounts.mixins import role_required
-from accounts.models import User
 from applications.models import StickerApplication, RegistrationWindow
+from applications.notifications import (
+    notify_appointment_assigned,
+    notify_approved,
+    notify_rejected,
+    notify_sticker_issued,
+)
 from appointments.models import AppointmentSlot, Appointment
 from gate.audit import log_action
 from gate.models import GateLog
@@ -227,12 +232,19 @@ def appointment_dates(request):
             messages.success(request, f'{count} slot(s) activated.')
             return redirect('appointment_dates')
 
-    # Stats for the summary bar — one query with annotate() instead of a
-    # Python loop calling is_full()/.count() per slot.
-    slots = slots.annotate(booked_count=Count('appointments'))
-    total = slots.count()
-    active = slots.filter(is_active=True).count()
-    full = sum(1 for s in slots if s.booked_count >= s.capacity)
+    # Stats for the summary bar. The booked_count annotation is what keeps
+    # the template's per-row .total_booked / .is_full / .has_bookings calls
+    # from each firing their own COUNT — see
+    # AppointmentSlotQuerySet.with_booked_count(). capacity is PER TIME SLOT
+    # now, so a day's real capacity is capacity * number of bookable times.
+    slots = list(slots.with_booked_count())
+    per_day_capacity = len(Appointment.TIME_CHOICES)
+    total = len(slots)
+    active = sum(1 for s in slots if s.is_active)
+    full = sum(
+        1 for s in slots
+        if s.booked_count >= s.capacity * per_day_capacity
+    )
     booked = sum(s.booked_count for s in slots)
 
     return render(request, 'sticker_admin/appointment_dates.html', {
@@ -305,7 +317,7 @@ def application_detail(request, pk):
                     appointment.time = time
                     appointment.save()
                 else:
-                    Appointment.objects.create(
+                    appointment = Appointment.objects.create(
                         application=application,
                         slot=slot,
                         time=time
@@ -318,6 +330,9 @@ def application_detail(request, pk):
                     f'{slot.date} at {time}.',
                     target_user=application.applicant.username,
                     extra_data={'application_id': pk, 'slot_id': slot.pk, 'time': time}
+                )
+                transaction.on_commit(
+                    lambda: notify_appointment_assigned(application, appointment)
                 )
                 messages.success(request, 'Appointment updated successfully.')
                 return redirect('application_detail', pk=pk)
@@ -352,6 +367,7 @@ def approve_application(request, pk):
             target_user=application.applicant.username,
             extra_data={'application_id': pk}
         )
+        transaction.on_commit(lambda: notify_approved(application))
         messages.success(
             request,
             f'Application for {application.full_name} approved.'
@@ -390,6 +406,7 @@ def reject_application(request, pk):
             target_user=application.applicant.username,
             extra_data={'application_id': pk, 'reason': reason}
         )
+        transaction.on_commit(lambda: notify_rejected(application))
         messages.warning(
             request,
             f'Application for {application.full_name} rejected.'
@@ -399,21 +416,39 @@ def reject_application(request, pk):
 
 @role_required('admin')
 def sticker_station(request):
+    """
+    The issuing counter. Shows everyone currently approved and waiting for
+    a sticker by default — staff shouldn't have to already know a name to
+    find out who's in the queue. Search narrows that same list.
+    """
     query = request.GET.get('q', '')
-    results = []
+
+    approved = StickerApplication.objects.filter(
+        status='approved'
+    ).select_related('appointment', 'appointment__slot')
 
     if query:
-        results = StickerApplication.objects.filter(
+        approved = approved.filter(
             Q(full_name__icontains=query) |
             Q(id_number__icontains=query) |
             Q(plate_number__icontains=query) |
-            Q(sticker_id__icontains=query),
-            status='approved'
+            Q(sticker_id__icontains=query)
         )
+
+    # Longest-waiting first: whoever was approved earliest should be served
+    # first, which is also the order people physically queue in.
+    approved = approved.order_by('updated_at')
+
+    total_waiting = StickerApplication.objects.filter(status='approved').count()
+
+    paginator = Paginator(approved, 20)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
 
     return render(request, 'sticker_admin/sticker_station.html', {
         'query': query,
-        'results': results,
+        'results': page_obj,
+        'page_obj': page_obj,
+        'total_waiting': total_waiting,
     })
 
 
@@ -481,6 +516,7 @@ def issue_sticker(request, pk):
                 'rfid_uid': rfid_uid,
             }
         )
+        transaction.on_commit(lambda: notify_sticker_issued(application))
         messages.success(
             request,
             f'Sticker issued! Sticker ID: {sticker_id}, RFID: {rfid_uid}'
@@ -492,164 +528,10 @@ def issue_sticker(request, pk):
     })
 
 
-def build_username(id_number, full_name):
-    """
-    Build a unique username for a walk-in registrant.
-    Falls back to the person's name if they have no usable ID number.
-    """
-    base = ''.join(c for c in id_number.lower() if c.isalnum())
-    if not base:
-        base = ''.join(c for c in full_name.lower() if c.isalnum()) or 'walkin'
-    base = base[:140]
-
-    username = base
-    counter = 1
-    while User.objects.filter(username=username).exists():
-        counter += 1
-        username = f'{base}{counter}'
-    return username
-
-
-@role_required('admin')
-def quick_register(request):
-    """
-    Walk-in / emergency registration (spec 5.5).
-    Creates the applicant account and issues the sticker in one step,
-    bypassing the 3-step wizard and the appointment queue.
-    """
-    if request.method == 'POST':
-        data = {
-            'full_name': request.POST.get('full_name', '').strip(),
-            'id_number': request.POST.get('id_number', '').strip(),
-            'college_department': request.POST.get('college_department', '').strip(),
-            'classification': request.POST.get('classification', '').strip(),
-            'plate_number': request.POST.get('plate_number', '').strip().upper(),
-            'vehicle_type': request.POST.get('vehicle_type', '').strip(),
-            'vehicle_color': request.POST.get('vehicle_color', '').strip(),
-            'rfid_uid': request.POST.get('rfid_uid', '').strip(),
-        }
-
-        errors = []
-
-        # All fields are mandatory for a quick registration
-        labels = {
-            'full_name': 'Full name',
-            'id_number': 'ID number',
-            'college_department': 'College / Department',
-            'classification': 'Classification',
-            'plate_number': 'Plate number',
-            'vehicle_type': 'Vehicle type',
-            'vehicle_color': 'Vehicle color',
-            'rfid_uid': 'RFID tag UID',
-        }
-        for field, label in labels.items():
-            if not data[field]:
-                errors.append(f'{label} is required.')
-
-        # Only accept values that exist in the model's choice lists
-        valid_choices = {
-            'classification': StickerApplication.CLASSIFICATION_CHOICES,
-            'vehicle_type': StickerApplication.VEHICLE_TYPE_CHOICES,
-            'vehicle_color': StickerApplication.COLOR_CHOICES,
-        }
-        for field, choices in valid_choices.items():
-            if data[field] and data[field] not in [c[0] for c in choices]:
-                errors.append(f'{labels[field]} is not a valid choice.')
-
-        # Uniqueness checks — a rejected/expired application doesn't hold
-        # its plate number, so it's excluded here (see StickerApplication's
-        # unique_active_plate_number constraint).
-        if data['plate_number'] and StickerApplication.objects.filter(
-            plate_number__iexact=data['plate_number']
-        ).exclude(status__in=StickerApplication.INACTIVE_STATUSES).exists():
-            errors.append(
-                f'Plate number {data["plate_number"]} is already registered.'
-            )
-
-        if data['rfid_uid'] and StickerApplication.objects.filter(
-            rfid_uid=data['rfid_uid']
-        ).exists():
-            errors.append(
-                f'RFID tag {data["rfid_uid"]} is already assigned to another vehicle.'
-            )
-
-        if errors:
-            for error in errors:
-                messages.error(request, error)
-            return render(request, 'sticker_admin/quick_register.html', {
-                'form_data': data,
-                'classification_choices': StickerApplication.CLASSIFICATION_CHOICES,
-                'vehicle_type_choices': StickerApplication.VEHICLE_TYPE_CHOICES,
-                'color_choices': StickerApplication.COLOR_CHOICES,
-            })
-
-        # Reuse an existing account for this ID number if the person already
-        # self-registered — otherwise we'd create an orphaned duplicate with
-        # a predictable, unrelated username.
-        applicant = User.objects.filter(
-            id_number=data['id_number']
-        ).exclude(id_number='').first()
-
-        if not applicant:
-            # Create the applicant account that owns this record.
-            # No password is set — this is a walk-in record, not a portal login.
-            name_parts = data['full_name'].split()
-            applicant = User(
-                username=build_username(data['id_number'], data['full_name']),
-                first_name=name_parts[0],
-                last_name=' '.join(name_parts[1:]),
-                role='applicant',
-                college_department=data['college_department'],
-                id_number=data['id_number'],
-                classification=data['classification'],
-            )
-            applicant.set_unusable_password()
-            applicant.save()
-
-        sticker_id = f'PalSU-{uuid.uuid4().hex[:8].upper()}'
-
-        application = StickerApplication.objects.create(
-            applicant=applicant,
-            status='issued',
-            full_name=data['full_name'],
-            college_department=data['college_department'],
-            id_number=data['id_number'],
-            classification=data['classification'],
-            plate_number=data['plate_number'],
-            vehicle_type=data['vehicle_type'],
-            vehicle_color=data['vehicle_color'],
-            is_owner=True,
-            rfid_uid=data['rfid_uid'],
-            sticker_id=sticker_id,
-            submitted_at=timezone.now(),
-            issued_at=timezone.now(),
-        )
-
-        log_action(
-            request,
-            'sticker_issued',
-            f'Quick registration — sticker issued to {application.full_name}. '
-            f'Sticker ID: {sticker_id}, Plate: {application.plate_number}, '
-            f'RFID: {application.rfid_uid}',
-            target_user=applicant.username,
-            extra_data={
-                'application_id': application.pk,
-                'sticker_id': sticker_id,
-                'rfid_uid': application.rfid_uid,
-                'quick_register': True,
-            }
-        )
-
-        messages.success(
-            request,
-            f'{application.full_name} registered and sticker issued. '
-            f'Sticker ID: {sticker_id}'
-        )
-        return redirect('application_detail', pk=application.pk)
-
-    return render(request, 'sticker_admin/quick_register.html', {
-        'form_data': {},
-        'classification_choices': StickerApplication.CLASSIFICATION_CHOICES,
-        'vehicle_type_choices': StickerApplication.VEHICLE_TYPE_CHOICES,
-        'color_choices': StickerApplication.COLOR_CHOICES,
-    })
+# NOTE: the walk-in "Quick Register" flow (spec 5.5) was removed — it
+# created an applicant account and issued a sticker in one step, bypassing
+# document upload, the appointment queue, and admin review entirely. Every
+# sticker now goes through the normal apply → inspect → approve → issue
+# path, so there is exactly one way a vehicle can end up registered.
+# Records created by the old flow are ordinary issued applications and are
+# unaffected.

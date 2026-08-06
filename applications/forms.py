@@ -7,7 +7,12 @@ class ApplicationStep1Form(forms.Form):
 
     full_name = forms.CharField(
         max_length=100,
-        widget=forms.TextInput(attrs={'class': 'form-control'})
+        # autocomplete is a render attribute, like the class beside it.
+        # WCAG 2.1 AA 1.3.5 (Identify Input Purpose) requires it on fields
+        # collecting the user's own name, and a widget attr is the only place
+        # a template can't reach.
+        widget=forms.TextInput(attrs={'class': 'form-control',
+                                      'autocomplete': 'name'})
     )
     college_department = forms.CharField(
         max_length=100,

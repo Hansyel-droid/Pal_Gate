@@ -1,0 +1,20 @@
+Hi {{ user.first_name|default:user.username }},
+
+Someone — hopefully you — is creating a PalSU Gate System account with
+this email address.
+
+Your verification code is:
+
+    {{ code }}
+
+Enter it on the verification page to finish setting up your account.
+The code expires in {{ expiry_minutes }} minutes.
+
+If you did not try to create an account, you can ignore this message.
+Nothing was activated, and the unverified account will be removed
+automatically.
+
+--
+PalSU Gate System
+Palawan State University
+This is an automated message. Please do not reply.

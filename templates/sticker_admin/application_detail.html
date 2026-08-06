@@ -1,226 +1,321 @@
 {% extends 'base.html' %}
-{% block title %}Application Detail{% endblock %}
+{% block title %}{{ application.plate_number }} — Application Detail{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1><i class="bi bi-file-earmark-text text-primary" aria-hidden="true"></i> Application Detail</h1>
-    <a href="{% url 'application_list' %}" class="btn btn-outline-secondary">
-        <i class="bi bi-arrow-left" aria-hidden="true"></i> Back to List
-    </a>
-</div>
-
-<!-- Status Banner -->
-<div class="alert
-    {% if application.status == 'approved' %}alert-success
-    {% elif application.status == 'rejected' %}alert-danger
-    {% elif application.status == 'issued' %}alert-primary
-    {% elif application.status == 'scheduled' %}alert-info
-    {% else %}alert-secondary{% endif %}">
-    <strong>Status: {{ application.get_status_display }}</strong>
-    {% if application.status == 'rejected' and application.rejection_reason %}
-        — Reason: {{ application.rejection_reason }}
-    {% endif %}
-</div>
-
-<div class="row">
-    <!-- Left Column -->
-    <div class="col-md-6">
-        <!-- Personal Details -->
-        <div class="card shadow-sm mb-3">
-            <div class="card-header bg-white fw-bold">
-                <i class="bi bi-person-fill text-primary" aria-hidden="true"></i> Personal Details
+<div class="shell">
+    {% comment %} The record names itself: plate first, because that is the object the
+       whole chain of custody hangs on. {% endcomment %}
+    <div class="record-head">
+        <div>
+            <div class="record-title">
+                <h1>{{ application.full_name }}</h1>
+                <span class="status-badge badge-{{ application.status }}">
+                    {{ application.get_status_display }}
+                </span>
             </div>
-            <div class="card-body">
-                <table class="table table-sm table-bordered mb-0">
-                    <tr><th scope="row">Full Name</th><td>{{ application.full_name }}</td></tr>
-                    <tr><th scope="row">Classification</th><td>{{ application.get_classification_display }}</td></tr>
-                    <tr><th scope="row">ID Number</th><td>{{ application.id_number }}</td></tr>
-                    <tr><th scope="row">College/Dept</th><td>{{ application.college_department }}</td></tr>
-                    <tr><th scope="row">Applicant Account</th><td>{{ application.applicant.username }}</td></tr>
-                </table>
+            <div class="record-sub">
+                <span class="plate">{{ application.plate_number }}</span>
+                <span>{{ application.get_classification_display }}</span>
+                <span>ID {{ application.id_number }}</span>
+                <span>Submitted {{ application.submitted_at|date:"M d, Y"|default:"—" }}</span>
+            </div>
+        </div>
+        <a href="{% url 'application_list' %}" class="btn btn-secondary">
+            <svg class="ic" aria-hidden="true"><use href="#i-arrow-left"/></svg>
+            Back to list
+        </a>
+    </div>
+
+    {% if application.status == 'rejected' and application.rejection_reason %}
+    <div class="alert alert-danger" role="alert">
+        <svg class="ic" aria-hidden="true"><use href="#i-x-circle"/></svg>
+        <div>
+            <strong>Rejected.</strong> The applicant sees this reason verbatim:<br>
+            {{ application.rejection_reason }}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row g-4">
+        <!-- Left Column -->
+        <div class="col-lg-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <svg class="ic" aria-hidden="true"><use href="#i-user"/></svg>
+                        Personal details
+                    </h2>
+                </div>
+                <div class="card-body p-0">
+                    <table class="kv">
+                        <tr><th scope="row">Full name</th><td>{{ application.full_name }}</td></tr>
+                        <tr><th scope="row">Classification</th><td>{{ application.get_classification_display }}</td></tr>
+                        <tr><th scope="row">ID number</th><td>{{ application.id_number }}</td></tr>
+                        <tr><th scope="row">College / dept</th><td>{{ application.college_department }}</td></tr>
+                        <tr><th scope="row">Applicant account</th><td>{{ application.applicant.username }}</td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <svg class="ic" aria-hidden="true"><use href="#i-car"/></svg>
+                        Vehicle details
+                    </h2>
+                </div>
+                <div class="card-body p-0">
+                    <table class="kv">
+                        <tr>
+                            <th scope="row">Plate number</th>
+                            <td><span class="plate">{{ application.plate_number }}</span></td>
+                        </tr>
+                        <tr><th scope="row">Vehicle type</th><td>{{ application.get_vehicle_type_display }}</td></tr>
+                        <tr><th scope="row">Colour</th><td>{{ application.get_vehicle_color_display }}</td></tr>
+                        <tr>
+                            <th scope="row">Owner</th>
+                            <td>
+                                {% if application.is_owner %}
+                                    Yes
+                                {% else %}
+                                    No — authorisation letter required
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% if application.sticker_id %}
+                        <tr><th scope="row">Sticker ID</th><td><code>{{ application.sticker_id }}</code></td></tr>
+                        {% endif %}
+                        {% if application.rfid_uid %}
+                        <tr><th scope="row">RFID UID</th><td><code>{{ application.rfid_uid }}</code></td></tr>
+                        {% endif %}
+                    </table>
+                </div>
             </div>
         </div>
 
-        <!-- Vehicle Details -->
-        <div class="card shadow-sm mb-3">
-            <div class="card-header bg-white fw-bold">
-                <i class="bi bi-car-front-fill text-primary" aria-hidden="true"></i> Vehicle Details
+        <!-- Right Column -->
+        <div class="col-lg-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <svg class="ic" aria-hidden="true"><use href="#i-file"/></svg>
+                        Documents
+                    </h2>
+                    <span class="meta ms-auto">Open in a new tab</span>
+                </div>
+
+                {% comment %} target="_blank" is announced rather than silent — a reviewer
+                   opening four documents used to lose context four times with
+                   no warning. rel="noopener" is the safe default for it. {% endcomment %}
+                <div class="doc-row {% if not application.or_cr %}is-missing{% endif %}">
+                    <span class="doc-row-name">
+                        <svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg>
+                        OR/CR
+                    </span>
+                    {% if application.or_cr %}
+                        <a href="{% url 'serve_document' application.pk 'or_cr' %}"
+                           target="_blank" rel="noopener" class="btn btn-sm btn-secondary">
+                            <svg class="ic" aria-hidden="true"><use href="#i-eye"/></svg>
+                            View<span class="visually-hidden"> OR/CR (opens in a new tab)</span>
+                        </a>
+                    {% else %}
+                        <span class="status-badge badge-rejected">Not uploaded</span>
+                    {% endif %}
+                </div>
+
+                <div class="doc-row {% if not application.drivers_license %}is-missing{% endif %}">
+                    <span class="doc-row-name">
+                        <svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg>
+                        Driver's licence
+                    </span>
+                    {% if application.drivers_license %}
+                        <a href="{% url 'serve_document' application.pk 'drivers_license' %}"
+                           target="_blank" rel="noopener" class="btn btn-sm btn-secondary">
+                            <svg class="ic" aria-hidden="true"><use href="#i-eye"/></svg>
+                            View<span class="visually-hidden"> driver's licence (opens in a new tab)</span>
+                        </a>
+                    {% else %}
+                        <span class="status-badge badge-rejected">Not uploaded</span>
+                    {% endif %}
+                </div>
+
+                <div class="doc-row {% if not application.cor %}is-missing{% endif %}">
+                    <span class="doc-row-name">
+                        <svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg>
+                        COR
+                        <span class="tag tag-conditional">Students</span>
+                    </span>
+                    {% if application.cor %}
+                        <a href="{% url 'serve_document' application.pk 'cor' %}"
+                           target="_blank" rel="noopener" class="btn btn-sm btn-secondary">
+                            <svg class="ic" aria-hidden="true"><use href="#i-eye"/></svg>
+                            View<span class="visually-hidden"> COR (opens in a new tab)</span>
+                        </a>
+                    {% else %}
+                        <span class="meta">Not applicable</span>
+                    {% endif %}
+                </div>
+
+                <div class="doc-row {% if not application.authorization_letter %}is-missing{% endif %}">
+                    <span class="doc-row-name">
+                        <svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg>
+                        Authorisation letter
+                        <span class="tag tag-conditional">Non-owners</span>
+                    </span>
+                    {% if application.authorization_letter %}
+                        <a href="{% url 'serve_document' application.pk 'authorization_letter' %}"
+                           target="_blank" rel="noopener" class="btn btn-sm btn-secondary">
+                            <svg class="ic" aria-hidden="true"><use href="#i-eye"/></svg>
+                            View<span class="visually-hidden"> authorisation letter (opens in a new tab)</span>
+                        </a>
+                    {% else %}
+                        <span class="meta">Not applicable</span>
+                    {% endif %}
+                </div>
             </div>
-            <div class="card-body">
-                <table class="table table-sm table-bordered mb-0">
-                    <tr><th scope="row">Plate Number</th><td><strong>{{ application.plate_number }}</strong></td></tr>
-                    <tr><th scope="row">Vehicle Type</th><td>{{ application.get_vehicle_type_display }}</td></tr>
-                    <tr><th scope="row">Color</th><td>{{ application.get_vehicle_color_display }}</td></tr>
-                    <tr><th scope="row">Owner</th><td>{% if application.is_owner %}Yes{% else %}No{% endif %}</td></tr>
-                    {% if application.sticker_id %}
-                    <tr><th scope="row">Sticker ID</th><td><code>{{ application.sticker_id }}</code></td></tr>
+
+            <!-- Appointment -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <svg class="ic" aria-hidden="true"><use href="#i-calendar-check"/></svg>
+                        Appointment
+                    </h2>
+                </div>
+                <div class="card-body">
+                    {% if appointment %}
+                        <p class="lede mb-0">
+                            <strong>{{ appointment.slot.date|date:"l, F d, Y" }}</strong>
+                            at <strong>{{ appointment.time }}</strong>
+                        </p>
+                    {% else %}
+                        <p class="meta mb-0">No appointment assigned yet.</p>
                     {% endif %}
-                    {% if application.rfid_uid %}
-                    <tr><th scope="row">RFID UID</th><td><code>{{ application.rfid_uid }}</code></td></tr>
-                    {% endif %}
-                </table>
+
+                    <hr class="section-divider">
+
+                    <h3 class="mb-3" style="font-size:var(--fs-sm);">
+                        {% if appointment %}Change appointment{% else %}Set appointment{% endif %}
+                    </h3>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="set_appointment">
+                        <div class="row g-2">
+                            <div class="col-sm-6">
+                                <label for="id_slot_id" class="form-label">Date</label>
+                                <select id="id_slot_id" name="slot_id" class="form-select form-select-sm">
+                                    <option value="">— Select date —</option>
+                                    {% for slot in available_slots %}
+                                        <option value="{{ slot.pk }}">
+                                            {{ slot.date|date:"M d, Y" }} ({{ slot.slots_remaining }} left)
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-sm-6">
+                                <label for="id_time" class="form-label">Time</label>
+                                <select id="id_time" name="time" class="form-select form-select-sm">
+                                    <option value="">— Select time —</option>
+                                    {% for value, label in time_choices %}
+                                        <option value="{{ value }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-secondary btn-sm mt-3">
+                            <svg class="ic" aria-hidden="true"><use href="#i-calendar-plus"/></svg>
+                            {% if appointment %}Reassign{% else %}Set appointment{% endif %}
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Right Column -->
-    <div class="col-md-6">
-        <!-- Documents -->
-        <div class="card shadow-sm mb-3">
-            <div class="card-header bg-white fw-bold">
-                <i class="bi bi-file-earmark-fill text-primary" aria-hidden="true"></i> Documents
-            </div>
-            <div class="card-body">
-                <ul class="list-group list-group-flush">
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span>OR/CR</span>
-                        {% if application.or_cr %}
-                            <a href="{% url 'serve_document' application.pk 'or_cr' %}" target="_blank"
-                               class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-eye" aria-hidden="true"></i> View
-                            </a>
-                        {% else %}
-                            <span class="text-muted">Not uploaded</span>
-                        {% endif %}
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span>Driver's License</span>
-                        {% if application.drivers_license %}
-                            <a href="{% url 'serve_document' application.pk 'drivers_license' %}" target="_blank"
-                               class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-eye" aria-hidden="true"></i> View
-                            </a>
-                        {% else %}
-                            <span class="text-muted">Not uploaded</span>
-                        {% endif %}
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span>COR</span>
-                        {% if application.cor %}
-                            <a href="{% url 'serve_document' application.pk 'cor' %}" target="_blank"
-                               class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-eye" aria-hidden="true"></i> View
-                            </a>
-                        {% else %}
-                            <span class="text-muted">—</span>
-                        {% endif %}
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span>Authorization Letter</span>
-                        {% if application.authorization_letter %}
-                            <a href="{% url 'serve_document' application.pk 'authorization_letter' %}" target="_blank"
-                               class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-eye" aria-hidden="true"></i> View
-                            </a>
-                        {% else %}
-                            <span class="text-muted">—</span>
-                        {% endif %}
-                    </li>
-                </ul>
-            </div>
+    <!-- Decision -->
+    {% if application.status == 'scheduled' %}
+    <div class="card mt-4">
+        <div class="card-header">
+            <h2 class="card-title">
+                <svg class="ic" aria-hidden="true"><use href="#i-list-check"/></svg>
+                Decision
+            </h2>
         </div>
-
-        <!-- Appointment -->
-        <div class="card shadow-sm mb-3">
-            <div class="card-header bg-white fw-bold">
-                <i class="bi bi-calendar-check text-primary" aria-hidden="true"></i> Appointment
+        <div class="card-body">
+            <div class="note mb-4">
+                <svg class="ic" aria-hidden="true"><use href="#i-info"/></svg>
+                <div>
+                    Both actions are written to the audit log against your account.
+                    The applicant has no notification channel — whatever you record
+                    here is the only thing they will ever see.
+                </div>
             </div>
-            <div class="card-body">
-                {% if appointment %}
-                    <p class="mb-1">
-                        <strong>Date:</strong> {{ appointment.slot.date|date:"F d, Y" }}
-                        ({{ appointment.slot.date|date:"l" }})
-                    </p>
-                    <p><strong>Time:</strong> {{ appointment.time }}</p>
-                {% else %}
-                    <p class="text-muted">No appointment assigned yet.</p>
-                {% endif %}
 
-                <!-- Manual appointment assignment -->
-                <hr>
-                <p class="fw-bold small">Manually Set / Change Appointment:</p>
-                <form method="post">
+            <div class="d-flex gap-2 flex-wrap">
+                <form method="post" action="{% url 'approve_application' application.pk %}">
                     {% csrf_token %}
-                    <input type="hidden" name="action" value="set_appointment">
-                    <div class="mb-2">
-                        <label for="id_slot_id" class="form-label small">Date</label>
-                        <select id="id_slot_id" name="slot_id" class="form-select form-select-sm">
-                            <option value="">— Select Date —</option>
-                            {% for slot in available_slots %}
-                                <option value="{{ slot.pk }}">
-                                    {{ slot.date|date:"M d, Y" }} ({{ slot.slots_remaining }} slots left)
-                                </option>
-                            {% endfor %}
-                        </select>
+                    <button type="submit" class="btn btn-success"
+                            onclick="return confirm('Approve this application? The applicant will be told to pay at the cashier, then collect at the Sticker Station.')">
+                        <svg class="ic" aria-hidden="true"><use href="#i-check-circle"/></svg>
+                        Approve
+                    </button>
+                </form>
+
+                <button class="btn btn-outline-danger" data-bs-toggle="collapse"
+                        data-bs-target="#rejectForm" aria-expanded="false"
+                        aria-controls="rejectForm">
+                    <svg class="ic" aria-hidden="true"><use href="#i-x-circle"/></svg>
+                    Reject…
+                </button>
+            </div>
+
+            <!-- Rejection reason (revealed by the Reject control) -->
+            <div class="collapse mt-3" id="rejectForm">
+                <form method="post" action="{% url 'reject_application' application.pk %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label" for="rejection_reason">
+                            Reason for rejection *
+                        </label>
+                        <textarea id="rejection_reason" name="rejection_reason" class="form-control"
+                                  rows="3" aria-describedby="reject_help"
+                                  placeholder="e.g. The OR/CR is expired — upload a current one and reapply."
+                                  required></textarea>
+                        <p id="reject_help" class="form-text">
+                            The applicant reads this exact text, and it is the only
+                            explanation they receive. Name what was wrong and what
+                            would fix it.
+                        </p>
                     </div>
-                    <div class="mb-2">
-                        <label for="id_time" class="form-label small">Time</label>
-                        <select id="id_time" name="time" class="form-select form-select-sm">
-                            <option value="">— Select Time —</option>
-                            {% for value, label in time_choices %}
-                                <option value="{{ value }}">{{ label }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-sm btn-outline-primary">
-                        <i class="bi bi-calendar-plus" aria-hidden="true"></i> Set Appointment
+                    <button type="submit" class="btn btn-danger">
+                        <svg class="ic" aria-hidden="true"><use href="#i-x-circle"/></svg>
+                        Confirm rejection
                     </button>
                 </form>
             </div>
         </div>
     </div>
-</div>
+    {% endif %}
 
-<!-- Action Buttons -->
-{% if application.status == 'scheduled' %}
-<div class="card shadow-sm">
-    <div class="card-body d-flex gap-3">
-        <!-- Approve -->
-        <form method="post" action="{% url 'approve_application' application.pk %}">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-success"
-                    onclick="return confirm('Approve this application?')">
-                <i class="bi bi-check-circle" aria-hidden="true"></i> Approve
-            </button>
-        </form>
-
-        <!-- Reject -->
-        <button class="btn btn-danger" data-bs-toggle="collapse"
-                data-bs-target="#rejectForm">
-            <i class="bi bi-x-circle" aria-hidden="true"></i> Reject
-        </button>
+    {% if application.status == 'approved' %}
+    <div class="status-panel is-open mt-4 mb-0">
+        <span class="icon-plate success" aria-hidden="true">
+            <svg class="ic" aria-hidden="true"><use href="#i-check-circle"/></svg>
+        </span>
+        <div class="status-panel-body">
+            <h2>Approved and ready for issuance</h2>
+            <p>
+                The applicant pays at the cashier, then brings the receipt to the
+                Sticker Station to have an RFID tag bound to this plate.
+            </p>
+        </div>
+        <div class="status-panel-action">
+            <a href="{% url 'issue_sticker' application.pk %}" class="btn btn-primary">
+                <svg class="ic" aria-hidden="true"><use href="#i-badge-check"/></svg>
+                Issue sticker
+            </a>
+        </div>
     </div>
-
-    <!-- Rejection reason form (hidden until Reject is clicked) -->
-    <div class="collapse px-3 pb-3" id="rejectForm">
-        <form method="post" action="{% url 'reject_application' application.pk %}">
-            {% csrf_token %}
-            <div class="mb-2">
-                <label class="form-label" for="rejection_reason">
-                    Reason for Rejection <span class="text-danger">*</span>
-                </label>
-                <textarea id="rejection_reason" name="rejection_reason" class="form-control" rows="2"
-                          placeholder="Explain why this application is rejected — the applicant will see this exact text"
-                          required></textarea>
-            </div>
-            <button type="submit" class="btn btn-danger">
-                Confirm Rejection
-            </button>
-        </form>
-    </div>
+    {% endif %}
 </div>
-{% endif %}
-
-{% if application.status == 'approved' %}
-<div class="alert alert-success d-flex justify-content-between align-items-center">
-    <span>
-        <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
-        This application is approved and ready for sticker issuance.
-    </span>
-    <a href="{% url 'issue_sticker' application.pk %}"
-       class="btn btn-primary">
-        <i class="bi bi-patch-check" aria-hidden="true"></i> Go to Sticker Station
-    </a>
-</div>
-{% endif %}
 {% endblock %}

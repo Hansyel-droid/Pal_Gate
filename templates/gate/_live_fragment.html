@@ -1,13 +1,14 @@
 <!-- Dominant latest-scan hero: the one thing an officer at the gate needs
      to read at a glance while a vehicle is physically arriving. -->
-<div class="live-hero {% if latest_scan %}live-hero-{{ latest_scan.action }}{% endif %}" role="status" aria-live="polite">
+<div class="live-hero {% if latest_scan %}live-hero-{{ latest_scan.action }}{% else %}live-hero-empty-state{% endif %}"
+     role="status" aria-live="polite">
     {% if latest_scan %}
         <div class="live-hero-top">
             <span class="live-hero-verdict">
                 {% if latest_scan.action == 'denied' %}
-                    <i class="bi bi-x-octagon-fill" aria-hidden="true"></i> DENIED
+                    <svg class="ic" aria-hidden="true"><use href="#i-x-octagon"/></svg> DENIED
                 {% else %}
-                    <i class="bi bi-check-circle-fill" aria-hidden="true"></i> ALLOWED
+                    <svg class="ic" aria-hidden="true"><use href="#i-check-circle"/></svg> ALLOWED
                 {% endif %}
             </span>
             <span class="live-hero-action-badge">
@@ -32,7 +33,7 @@
         </div>
         {% if latest_scan.action == 'denied' and latest_scan.denial_reason %}
             <div class="live-hero-reason">
-                <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+                <svg class="ic" aria-hidden="true"><use href="#i-alert-triangle"/></svg>
                 {{ latest_scan.denial_reason }}
             </div>
         {% endif %}
@@ -41,8 +42,8 @@
         </div>
     {% else %}
         <div class="live-hero-empty">
-            <i class="bi bi-broadcast" aria-hidden="true"></i>
-            No scans recorded yet{% if gate_filter %} at {{ gate_filter }}{% endif %}.
+            <svg class="ic" aria-hidden="true"><use href="#i-broadcast"/></svg>
+            <div>No scans recorded yet{% if gate_filter %} at {{ gate_filter }}{% endif %}.</div>
         </div>
     {% endif %}
 </div>
@@ -53,7 +54,7 @@
 <div class="reader-status-row">
     {% for r in reader_statuses %}
         <span class="reader-chip reader-chip-{{ r.state }}">
-            <i class="bi bi-circle-fill" aria-hidden="true"></i>
+            <svg class="ic ic-solid" aria-hidden="true"><use href="#i-dot"/></svg>
             <strong>{{ r.gate }}</strong>
             {% if r.state == 'silent' %}
                 — no scans recorded yet
@@ -69,111 +70,121 @@
 
 <!-- Secondary counts strip — demoted below the hero and reader status,
      the two things that actually need distance-first prominence. -->
-<div class="row g-3 mb-4">
+<div class="row g-3 mb-4 live-counts">
     <div class="col-6 col-md-3">
         <div class="stat-card">
-            <div class="stat-label">Total {% if gate_filter %}at {{ gate_filter }}{% endif %} Today</div>
+            <span class="stat-label">Total {% if gate_filter %}at {{ gate_filter }}{% endif %} today</span>
             <div class="stat-value">{{ total_today }}</div>
         </div>
     </div>
     <div class="col-6 col-md-3">
         <div class="stat-card success">
-            <div class="stat-label">Entries Today</div>
+            <span class="stat-label">Entries today</span>
             <div class="stat-value">{{ entries_today }}</div>
         </div>
     </div>
     <div class="col-6 col-md-3">
         <div class="stat-card warning">
-            <div class="stat-label">Exits Today</div>
+            <span class="stat-label">Exits today</span>
             <div class="stat-value">{{ exits_today }}</div>
         </div>
     </div>
     <div class="col-6 col-md-3">
         <div class="stat-card info">
-            <div class="stat-label">Active Passes <span class="fw-normal">(campus-wide)</span></div>
+            <span class="stat-label">Active passes</span>
             <div class="stat-value">{{ active_passes }}</div>
+            <div class="stat-foot">Campus-wide, both gates</div>
         </div>
     </div>
 </div>
 
 <!-- Latest events -->
-<div class="card shadow-sm">
-    <div class="card-header bg-white fw-bold">
-        <i class="bi bi-list-ul text-primary" aria-hidden="true"></i> Latest 20 Gate Events
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <svg class="ic" aria-hidden="true"><use href="#i-list"/></svg>
+            Latest 20 gate events
+        </h2>
     </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-        <table class="table table-hover mb-0">
-            <thead>
-                <tr>
-                    <th scope="col">Time</th>
-                    <th scope="col">Plate</th>
-                    <th scope="col">Driver</th>
-                    <th scope="col">Action</th>
-                    <th scope="col">Gate</th>
-                    <th scope="col">Reason</th>
-                    <th scope="col"><span class="visually-hidden">Details</span></th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for log in latest_logs %}
-                <tr>
-                    <td class="text-muted small">
-                        {{ log.timestamp|date:"M d, H:i:s" }}
-                    </td>
-                    <td>
-                        {% if log.application %}
-                            <strong>{{ log.application.plate_number }}</strong>
-                        {% else %}
-                            <span class="text-muted">{{ log.rfid_uid }}</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if log.application %}
-                            {{ log.application.full_name }}
-                        {% else %}
-                            <span class="text-muted">Unknown</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if log.action == 'entry' %}
-                            <span class="status-badge badge-entry">
-                                <i class="bi bi-arrow-right-circle" aria-hidden="true"></i> Entry
-                            </span>
-                        {% elif log.action == 'exit' %}
-                            <span class="status-badge badge-exit">
-                                <i class="bi bi-arrow-left-circle" aria-hidden="true"></i> Exit
-                            </span>
-                        {% else %}
-                            <span class="status-badge badge-denied">
-                                <i class="bi bi-x-circle" aria-hidden="true"></i> Denied
-                            </span>
-                        {% endif %}
-                    </td>
-                    <td>{{ log.gate_location }}</td>
-                    <td class="small">
-                        {% if log.action == 'denied' %}
-                            {{ log.denial_reason|default:"—" }}
-                        {% else %}
-                            <span class="text-muted">—</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <a href="{% url 'incident_report' log.pk %}"
-                           class="btn btn-sm btn-outline-secondary">
-                            Details
-                        </a>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="7" class="text-center text-muted py-4">
-                        No gate events recorded yet{% if gate_filter %} at {{ gate_filter }}{% endif %}.
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        </div>
+    <div class="table-responsive">
+    <table class="table mb-0">
+        <thead>
+            <tr>
+                <th scope="col">Time</th>
+                <th scope="col">Plate</th>
+                <th scope="col">Driver</th>
+                <th scope="col">Action</th>
+                <th scope="col">Gate</th>
+                <th scope="col">Reason</th>
+                <th scope="col"><span class="visually-hidden">Details</span></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in latest_logs %}
+            <tr>
+                <td class="text-muted">
+                    <time>{{ log.timestamp|date:"M d, H:i:s" }}</time>
+                </td>
+                <td>
+                    {% if log.application %}
+                        <span class="plate">{{ log.application.plate_number }}</span>
+                    {% else %}
+                        <code>{{ log.rfid_uid }}</code>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if log.application %}
+                        {{ log.application.full_name }}
+                    {% else %}
+                        <span class="text-faint">Unknown</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if log.action == 'entry' %}
+                        <span class="status-badge badge-entry">
+                            <svg class="ic" aria-hidden="true"><use href="#i-arrow-right-circle"/></svg> Entry
+                        </span>
+                    {% elif log.action == 'exit' %}
+                        <span class="status-badge badge-exit">
+                            <svg class="ic" aria-hidden="true"><use href="#i-arrow-left-circle"/></svg> Exit
+                        </span>
+                    {% else %}
+                        <span class="status-badge badge-denied">
+                            <svg class="ic" aria-hidden="true"><use href="#i-x-circle"/></svg> Denied
+                        </span>
+                    {% endif %}
+                </td>
+                <td class="text-muted">{{ log.gate_location }}</td>
+                <td>
+                    {% if log.action == 'denied' %}
+                        {{ log.denial_reason|default:"—" }}
+                    {% else %}
+                        <span class="text-faint">—</span>
+                    {% endif %}
+                </td>
+                <td class="text-end">
+                    <a href="{% url 'incident_report' log.pk %}"
+                       class="btn btn-sm btn-secondary">
+                        Details
+                    </a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7">
+                    <div class="empty-state">
+                        <svg class="ic" aria-hidden="true"><use href="#i-inbox"/></svg>
+                        <h3>No gate events recorded yet{% if gate_filter %} at {{ gate_filter }}{% endif %}</h3>
+                        <p>
+                            Events appear here as vehicles are scanned. The gate
+                            readers are still being integrated, so this may stay
+                            empty until hardware is connected.
+                        </p>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
     </div>
 </div>

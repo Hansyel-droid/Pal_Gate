@@ -1,83 +1,118 @@
-from datetime import datetime, timedelta, time
+from datetime import datetime, timedelta
 from django.db import transaction
+from django.db.models import Count
 from .models import AppointmentSlot, Appointment
 from applications.models import RegistrationWindow
+from applications.notifications import notify_appointment_assigned
 
 
-def get_available_time_slots(slot):
+def _bookable_start_date():
     """
-    Returns a list of time strings (e.g. '08:00', '08:30')
-    that are NOT yet taken for a given AppointmentSlot.
+    The earliest date an applicant is allowed to book an inspection for —
+    the day after the current registration window closes, mirroring the
+    old rule that applicants apply during the window, then come in for
+    inspection once it's done. Falls back to tomorrow if no window is
+    active (shouldn't normally happen, since apply_step1 already blocks
+    submissions without an active window).
     """
-    all_times = [
-        '08:00', '08:30', '09:00', '09:30',
-        '10:00', '10:30', '11:00', '11:30',
-        '13:00', '13:30', '14:00', '14:30',
-        '15:00', '15:30', '16:00', '16:30',
-    ]
-    # Get times already booked for this slot
-    booked_times = slot.appointments.values_list('time', flat=True)
-    # Return only times that are not booked
-    return [t for t in all_times if t not in booked_times]
-
-
-def assign_appointment(application):
-    """
-    Automatically finds the next available appointment slot
-    and assigns it to the application.
-
-    Rules:
-    - Must be after the registration window ends
-    - Must be a weekday (Monday-Friday)
-    - Must be an activated AppointmentSlot
-    - Must have available capacity
-    - First-come, first-served
-    """
-
-    # Find the active registration window to know when it ends
     try:
         window = RegistrationWindow.objects.filter(is_active=True).latest('created_at')
-        # Appointments start the day after the window ends
-        start_from = window.end_date + timedelta(days=1)
+        return window.end_date + timedelta(days=1)
     except RegistrationWindow.DoesNotExist:
-        # If no window exists, start from tomorrow
-        start_from = datetime.today().date() + timedelta(days=1)
+        return datetime.today().date() + timedelta(days=1)
 
-    # Find all active slots that are after the registration window
-    # and still have capacity, ordered by date (earliest first).
-    # select_for_update() locks each slot row as we check it, so a burst of
-    # concurrent submissions can't all read "not full yet" and overbook it.
+
+def get_bookable_dates():
+    """
+    Active AppointmentSlot days an applicant can currently choose from.
+
+    Annotated with booked_count so the template can call .is_full and
+    .slots_remaining on every date without firing a COUNT per row — this
+    page renders one card per open date, so that adds up fast during a
+    registration rush.
+    """
+    return AppointmentSlot.objects.with_booked_count().filter(
+        is_active=True,
+        date__gte=_bookable_start_date(),
+    ).order_by('date')
+
+
+def get_bookable_slot(slot_id):
+    """
+    Fetches a slot by id, but only if it's actually one the applicant is
+    allowed to book right now. Returns None instead of raising, so callers
+    can treat "invalid" and "no longer bookable" the same way (e.g. an
+    admin deactivated it, or it's now in the past).
+    """
+    return get_bookable_dates().filter(pk=slot_id).first()
+
+
+def get_time_options(slot):
+    """
+    Every bookable time for this day, annotated with how many seats are
+    left — what the applicant-facing time picker renders.
+    """
+    booked_counts = dict(
+        slot.appointments.values('time')
+        .annotate(count=Count('id'))
+        .values_list('time', 'count')
+    )
+    options = []
+    for value, label in Appointment.TIME_CHOICES:
+        booked = booked_counts.get(value, 0)
+        remaining = max(slot.capacity - booked, 0)
+        options.append({
+            'value': value,
+            'label': label,
+            'remaining': remaining,
+            'is_full': remaining <= 0,
+        })
+    return options
+
+
+def book_appointment(application, slot_id, time):
+    """
+    Books the specific (date, time) the applicant chose earlier in the
+    wizard. Locks the parent AppointmentSlot row for the duration of the
+    check-then-create, so a burst of concurrent submissions targeting the
+    same day can't all read "still has room" for the same time and
+    overbook it past capacity.
+
+    Returns the created Appointment, or None if it's no longer available
+    (full, deactivated, or otherwise invalid) — the caller should send the
+    applicant back to the picker rather than assume success.
+    """
     with transaction.atomic():
-        available_slots = AppointmentSlot.objects.select_for_update().filter(
-            is_active=True,
-            date__gte=start_from,
-        ).order_by('date')
-
-        for slot in available_slots:
-            # Skip if this slot is already full
-            if slot.is_full():
-                continue
-
-            # Get available times for this slot
-            available_times = get_available_time_slots(slot)
-            if not available_times:
-                continue
-
-            # Take the first available time
-            assigned_time = available_times[0]
-
-            # Create the appointment
-            appointment = Appointment.objects.create(
-                application=application,
-                slot=slot,
-                time=assigned_time,
+        try:
+            slot = AppointmentSlot.objects.select_for_update().get(
+                pk=slot_id, is_active=True,
             )
+        except AppointmentSlot.DoesNotExist:
+            return None
 
-            # Update the application status
-            application.status = 'scheduled'
-            application.save()
+        valid_times = dict(Appointment.TIME_CHOICES)
+        if time not in valid_times:
+            return None
 
-            return appointment  # Success
+        booked = slot.appointments.filter(time=time).count()
+        if booked >= slot.capacity:
+            return None
 
-        # If we reach here, no slots were available
-        return None
+        appointment = Appointment.objects.create(
+            application=application,
+            slot=slot,
+            time=time,
+        )
+
+        application.status = 'scheduled'
+        application.save()
+
+        # Deferred until the transaction actually commits — if anything
+        # later in the caller's outer transaction (e.g.
+        # applications.views.apply_step4) rolls back, the applicant was
+        # never told about an appointment that doesn't exist.
+        transaction.on_commit(
+            lambda: notify_appointment_assigned(application, appointment)
+        )
+
+        return appointment

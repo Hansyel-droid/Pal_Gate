@@ -3,165 +3,228 @@
 
 {% block extra_css %}
 <style>
-    /* ── Header / scope control ─────────────────────── */
+    /* ══════════════════════════════════════════════════════════════════
+       LIVE GATE MONITOR — distance-first
+       This is the only surface in the product read from ~2m, on a fixed
+       guardhouse monitor, in daylight. PRODUCT.md makes that legibility a
+       commitment, so this screen is the one place that gets a saturated
+       field instead of the light hairline treatment used everywhere else.
+       Every foreground below is verified ≥8:1 against its own ground.
+       ══════════════════════════════════════════════════════════════════ */
+    .live-scope-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: var(--s3);
+        margin-bottom: var(--s4);
+    }
+
+    /* Segmented control for gate scope. An officer must be able to see which
+       gate they're reading without hunting for it. */
     .gate-scope {
         display: flex;
-        gap: 4px;
-        background: var(--card-bg);
+        gap: 2px;
+        background: var(--surface-sunk);
         border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 4px;
+        border-radius: var(--r2);
+        padding: 3px;
     }
     .gate-scope a {
-        padding: 6px 14px;
-        border-radius: 6px;
-        font-size: 0.85rem;
-        font-weight: 600;
+        padding: 5px 12px;
+        border-radius: var(--r1);
+        font-size: var(--fs-xs);
+        font-weight: 550;
         color: var(--text-muted);
-        text-decoration: none;
-    }
-    .gate-scope a[aria-current="page"] {
-        background: var(--navy-mid);
-        color: #fff;
+        transition: background var(--t-fast) var(--ease-soft),
+                    color var(--t-fast) var(--ease-soft);
     }
     .gate-scope a:hover:not([aria-current="page"]) {
-        background: var(--content-bg);
+        background: var(--surface);
+        color: var(--text-strong);
+    }
+    .gate-scope a[aria-current="page"] {
+        background: var(--surface);
+        color: var(--text-strong);
+        font-weight: 600;
+        box-shadow: var(--sh-1);
     }
 
     .live-pill {
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        padding: 5px 12px;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        background: #E8F7F0;
+        padding: 4px 10px;
+        border-radius: var(--rfull);
+        font-size: var(--fs-2xs);
+        font-weight: 550;
+        background: var(--success-bg);
+        border: 1px solid var(--success-line);
         color: var(--success-ink);
+        transition: background var(--t-mid) var(--ease-soft),
+                    color var(--t-mid) var(--ease-soft);
     }
     .live-pill.stale {
-        background: #FDECEA;
+        background: var(--danger-bg);
+        border-color: var(--danger-line);
         color: var(--danger-ink);
     }
     .live-pill .dot {
-        width: 8px; height: 8px; border-radius: 50%;
+        width: 7px; height: 7px;
+        border-radius: 50%;
         background: currentColor;
+        animation: livePulse 2s var(--ease-soft) infinite;
     }
+    .live-pill.stale .dot { animation: none; }
 
-    /* ── Dominant latest-scan hero ──────────────────── */
+    /* ── Latest scan: the dominant object on the screen ─────────────── */
     .live-hero {
-        border-radius: 12px;
-        padding: 28px 32px;
-        margin-bottom: 16px;
-        background: var(--card-bg);
+        --hero-ground: var(--surface);
+        --hero-ink: var(--text-strong);
+        --hero-ink-dim: var(--text-muted);
+        background: var(--hero-ground);
         border: 1px solid var(--border);
-        box-shadow: 0 1px 4px rgba(10,22,40,0.06);
+        border-radius: var(--r4);
+        padding: var(--s6) var(--s7);
+        margin-bottom: var(--s3);
+        box-shadow: var(--sh-1);
+        transition: background var(--t-slow) var(--ease-soft);
     }
-    .live-hero-entry, .live-hero-exit {
-        background: var(--success-ink);
-        border-color: var(--success-ink);
-    }
-    .live-hero-denied {
-        background: var(--danger-ink);
-        border-color: var(--danger-ink);
-    }
-    .live-hero-entry .live-hero-plate,
-    .live-hero-entry .live-hero-name,
-    .live-hero-entry .live-hero-meta,
-    .live-hero-exit .live-hero-plate,
-    .live-hero-exit .live-hero-name,
-    .live-hero-exit .live-hero-meta,
-    .live-hero-denied .live-hero-plate,
-    .live-hero-denied .live-hero-name,
-    .live-hero-denied .live-hero-meta {
-        color: #fff;
-    }
+    .live-hero-entry  { --hero-ground: #0F5137; --hero-ink: #FFFFFF; --hero-ink-dim: rgba(255,255,255,.82); border-color: #0F5137; }
+    .live-hero-exit   { --hero-ground: #6B4A02; --hero-ink: #FFFFFF; --hero-ink-dim: rgba(255,255,255,.82); border-color: #6B4A02; }
+    .live-hero-denied { --hero-ground: #8C1F1A; --hero-ink: #FFFFFF; --hero-ink-dim: rgba(255,255,255,.85); border-color: #8C1F1A; }
+
     .live-hero-top {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 8px;
+        gap: var(--s3);
+        margin-bottom: var(--s2);
     }
     .live-hero-verdict {
-        font-size: 1.1rem;
-        font-weight: 700;
-        letter-spacing: 0.04em;
-        color: #fff;
+        display: inline-flex;
+        align-items: center;
+        gap: var(--s2);
+        font-size: var(--fs-lg);
+        font-weight: 650;
+        letter-spacing: 0.02em;
+        color: var(--hero-ink);
     }
+    .live-hero-verdict .ic { stroke-width: 2.25; }
     .live-hero-action-badge {
-        font-size: 0.8rem;
-        font-weight: 700;
+        font-size: var(--fs-2xs);
+        font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 0.06em;
-        background: rgba(255,255,255,0.2);
-        color: #fff;
-        padding: 3px 12px;
-        border-radius: 20px;
+        letter-spacing: 0.09em;
+        background: rgba(255,255,255,.18);
+        border: 1px solid rgba(255,255,255,.26);
+        color: var(--hero-ink);
+        padding: 2px 10px;
+        border-radius: var(--rfull);
     }
-    .live-hero-plate {
-        font-family: var(--font-id);
-        font-size: clamp(2.5rem, 7vw, 5rem);
-        font-weight: 600;
-        line-height: 1.05;
-        color: var(--text-main);
-    }
-    .live-hero-name {
-        font-size: 1.15rem;
-        font-weight: 500;
-        color: var(--text-main);
-        margin-bottom: 4px;
-    }
-    .live-hero-reason {
-        display: inline-block;
-        background: rgba(255,255,255,0.15);
-        color: #fff;
-        padding: 6px 12px;
-        border-radius: 6px;
-        font-weight: 600;
-        margin-bottom: 8px;
-    }
-    .live-hero-meta {
-        font-size: 0.85rem;
+    /* On the neutral empty ground the translucent-white chip would vanish. */
+    .live-hero:not([class*="live-hero-"]) .live-hero-action-badge,
+    .live-hero-empty-state .live-hero-action-badge {
+        background: var(--surface-sunk);
+        border-color: var(--border);
         color: var(--text-muted);
-    }
-    .live-hero-empty {
-        text-align: center;
-        color: var(--text-muted);
-        font-size: 1.1rem;
-        padding: 24px 0;
     }
 
-    /* ── Reader status chips ─────────────────────────── */
+    /* The plate is the anchor object of the whole chain of custody. At the
+       guardhouse it is the single thing that must be readable across the
+       room, so it gets the largest type in the product. */
+    .live-hero-plate {
+        font-family: var(--font-id);
+        font-size: clamp(2.75rem, 7.5vw, 6rem);
+        font-weight: 600;
+        line-height: 1.02;
+        letter-spacing: 0.02em;
+        color: var(--hero-ink);
+        word-break: break-all;
+    }
+    .live-hero-name {
+        font-size: var(--fs-xl);
+        font-weight: 500;
+        letter-spacing: -0.018em;
+        color: var(--hero-ink);
+        margin-top: var(--s1);
+    }
+    .live-hero-reason {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(255,255,255,.16);
+        border: 1px solid rgba(255,255,255,.3);
+        color: var(--hero-ink);
+        padding: 5px 11px;
+        border-radius: var(--r2);
+        font-size: var(--fs-sm);
+        font-weight: 550;
+        margin-top: var(--s3);
+    }
+    .live-hero-meta {
+        font-size: var(--fs-xs);
+        font-weight: 500;
+        color: var(--hero-ink-dim);
+        margin-top: var(--s3);
+    }
+    .live-hero-empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: var(--s2);
+        padding: var(--s6) 0;
+        color: var(--text-muted);
+        font-size: var(--fs-md);
+    }
+    .live-hero-empty .ic { width: 28px; height: 28px; stroke-width: 1.5; color: var(--text-faint); }
+
+    /* ── Reader status ─────────────────────────────────────────────────
+       Derived only from real scan timestamps: this system has no hardware
+       heartbeat, so a long silence is described, never asserted as a fault. */
     .reader-status-row {
         display: flex;
         flex-wrap: wrap;
-        gap: 10px;
-        margin-bottom: 20px;
+        gap: var(--s2);
+        margin-bottom: var(--s4);
     }
     .reader-chip {
         display: inline-flex;
         align-items: center;
-        gap: 8px;
-        font-size: 0.85rem;
-        padding: 6px 14px;
-        border-radius: 20px;
-        background: var(--card-bg);
+        gap: 6px;
+        font-size: var(--fs-2xs);
+        padding: 4px 10px;
+        border-radius: var(--rfull);
+        background: var(--surface);
         border: 1px solid var(--border);
-        color: var(--text-main);
+        color: var(--text-muted);
     }
-    .reader-chip-active   { color: var(--success-ink); }
-    .reader-chip-stale    { color: var(--warning-ink); }
-    .reader-chip-silent   { color: var(--neutral-ink); }
-    .reader-chip i { font-size: 0.55rem; }
+    .reader-chip strong { color: var(--text-strong); font-weight: 600; }
+    .reader-chip .ic { width: .6em; height: .6em; }
+    .reader-chip-active { border-color: var(--success-line); background: var(--success-bg); color: var(--success-ink); }
+    .reader-chip-active .ic { animation: livePulse 2s var(--ease-soft) infinite; }
+    .reader-chip-stale  { border-color: var(--warning-line); background: var(--warning-bg); color: var(--warning-ink); }
+    .reader-chip-silent { border-color: var(--neutral-line); background: var(--neutral-bg); color: var(--neutral-ink); }
+
+    /* At guardhouse distance the counts strip is glanced, not read. */
+    @media (min-width: 992px) {
+        .live-counts .stat-value { font-size: 2.25rem; }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-    <h1><i class="bi bi-camera-video text-primary" aria-hidden="true"></i> Live Gate Monitor</h1>
-    <div class="d-flex align-items-center gap-3">
+<div class="live-scope-row">
+    <div>
+        <h1>Live gate monitor</h1>
+        <p class="page-sub">
+            The latest scan, as it happens. Counts and history sit below.
+        </p>
+    </div>
+    <div class="d-flex align-items-center gap-3 flex-wrap">
         <nav class="gate-scope" aria-label="Gate scope">
-            <a href="?" {% if not gate_filter %}aria-current="page"{% endif %}>All Gates</a>
+            <a href="?" {% if not gate_filter %}aria-current="page"{% endif %}>All gates</a>
             {% for g in known_gates %}
                 <a href="?gate={{ g|urlencode }}" {% if gate_filter == g %}aria-current="page"{% endif %}>{{ g }}</a>
             {% endfor %}
@@ -179,9 +242,12 @@
 
 <!-- Hourly Traffic — a seated, after-the-fact summary. Not part of the 5s
      live poll; refreshes only on a full page load or gate-scope change. -->
-<div class="card shadow-sm mt-4">
-    <div class="card-header bg-white fw-bold">
-        <i class="bi bi-graph-up text-primary" aria-hidden="true"></i> Hourly Traffic (Last 24 Hours, All Gates)
+<div class="card mt-4">
+    <div class="card-header">
+        <h2 class="card-title">
+            <svg class="ic" aria-hidden="true"><use href="#i-trend-up"/></svg>
+            Hourly traffic — last 24 hours, all gates
+        </h2>
     </div>
     <div class="card-body">
         <canvas id="trafficChart" height="80"></canvas>
@@ -197,6 +263,16 @@
     const entries = [{% for h in hourly_data %}{{ h.entries }},{% endfor %}];
     const exits = [{% for h in hourly_data %}{{ h.exits }},{% endfor %}];
 
+    // Chart colours come from the design tokens rather than Chart.js /
+    // Bootstrap defaults, so the graph belongs to the same palette as the
+    // entry and exit badges it describes.
+    const css = getComputedStyle(document.documentElement);
+    const tok = (name, fallback) => (css.getPropertyValue(name).trim() || fallback);
+    const ENTRY = tok('--success', '#1C8A5A');
+    const EXIT = tok('--warning', '#B87503');
+    const GRID = tok('--border', '#E4E7EC');
+    const LABEL = tok('--text-muted', '#667080');
+
     const ctx = document.getElementById('trafficChart').getContext('2d');
     new Chart(ctx, {
         type: 'line',
@@ -206,25 +282,57 @@
                 {
                     label: 'Entries',
                     data: entries,
-                    borderColor: '#198754',
-                    backgroundColor: 'rgba(25, 135, 84, 0.1)',
+                    borderColor: ENTRY,
+                    backgroundColor: 'rgba(28, 138, 90, 0.10)',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    pointHitRadius: 12,
                     fill: true,
-                    tension: 0.4,
+                    tension: 0.35,
                 },
                 {
                     label: 'Exits',
                     data: exits,
-                    borderColor: '#ffc107',
-                    backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                    borderColor: EXIT,
+                    backgroundColor: 'rgba(184, 117, 3, 0.10)',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    pointHitRadius: 12,
                     fill: true,
-                    tension: 0.4,
+                    tension: 0.35,
                 }
             ]
         },
         options: {
             responsive: true,
-            plugins: { legend: { position: 'top' } },
-            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: {
+                    position: 'top',
+                    align: 'end',
+                    labels: {
+                        boxWidth: 8,
+                        boxHeight: 8,
+                        usePointStyle: true,
+                        pointStyle: 'circle',
+                        color: LABEL,
+                        font: { family: "'IBM Plex Sans', sans-serif", size: 12 }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    border: { display: false },
+                    grid: { display: false },
+                    ticks: { color: LABEL, font: { family: "'IBM Plex Sans', sans-serif", size: 11 } }
+                },
+                y: {
+                    beginAtZero: true,
+                    border: { display: false },
+                    grid: { color: GRID, drawTicks: false },
+                    ticks: { stepSize: 1, color: LABEL, padding: 8, font: { family: "'IBM Plex Mono', monospace", size: 11 } }
+                }
+            }
         }
     });
 

@@ -1,0 +1,18 @@
+Hi {{ applicant.first_name|default:application.full_name }},
+
+Your PalSU Gate vehicle sticker application for plate {{ application.plate_number }} has been received. Your physical inspection appointment is now scheduled:
+
+Date: {{ appointment.slot.date|date:"F j, Y" }}
+Time: {{ appointment.time }}
+
+Please bring the following ORIGINAL documents for verification at the Sticker Station on campus:
+
+- OR/CR (Official Receipt / Certificate of Registration)
+- Driver's License
+{% if application.classification == 'student' %}- Certificate of Registration (COR){% endif %}
+{% if not application.is_owner %}- Authorization Letter{% endif %}
+
+You can check your application status anytime by logging in to the PalSU Gate portal.
+
+— PalSU Gate System
+This is an automated message. Please do not reply to this email.

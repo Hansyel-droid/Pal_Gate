@@ -1,0 +1,34 @@
+{% comment %}
+Four-step application progress. Included by step1–step4 with the current
+step number, so the markup exists once instead of being copy-pasted into
+each screen where the four copies could drift apart.
+
+Usage: {% include 'applications/_wizard.html' with step=2 %}
+{% endcomment %}
+<nav class="wizard-wrap" aria-label="Application progress">
+    <ol class="wizard-steps">
+        {% for s in "1234" %}
+            {% if not forloop.first %}
+            <li class="wizard-connector{% if forloop.counter0 < step %} is-done{% endif %}" aria-hidden="true"></li>
+            {% endif %}
+            <li class="wizard-step
+                       {% if forloop.counter < step %}done{% elif forloop.counter == step %}active{% endif %}"
+                {% if forloop.counter == step %}aria-current="step"{% endif %}>
+                <span class="step-num">
+                    {% if forloop.counter < step %}
+                        <svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>
+                    {% else %}
+                        {{ forloop.counter }}
+                    {% endif %}
+                </span>
+                <span>
+                    {% if forloop.counter == 1 %}Personal details
+                    {% elif forloop.counter == 2 %}Vehicle &amp; documents
+                    {% elif forloop.counter == 3 %}Appointment
+                    {% else %}Review &amp; confirm{% endif %}
+                </span>
+                {% if forloop.counter < step %}<span class="visually-hidden">(completed)</span>{% endif %}
+            </li>
+        {% endfor %}
+    </ol>
+</nav>

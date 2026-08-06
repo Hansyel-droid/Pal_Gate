@@ -2,144 +2,170 @@
 {% block title %}Dashboard — Admin{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1>Dashboard</h1>
-    <p class="page-sub">
-        Welcome back, {{ user.get_full_name|default:user.username }} —
-        {{ now|date:"l, F d, Y" }}
-    </p>
-</div>
+<div class="shell">
+    <div class="page-header">
+        <h1>Dashboard</h1>
+        {% comment %}
+        This view does not put `now` in the context, so `{{ now }}` rendered
+        empty and left a dangling em-dash. `{% now %}` is a built-in tag and
+        needs nothing from the view.
+        {% endcomment %}
+        <p class="page-sub">
+            Welcome back, {{ user.get_full_name|default:user.username }} —
+            {% now "l, F d, Y" %}
+        </p>
+    </div>
 
-<!-- Stat Cards -->
-<div class="row g-3 mb-4">
-    <div class="col-sm-6 col-xl-4">
-        <div class="stat-card warning">
-            <div class="d-flex justify-content-between align-items-start">
-                <div>
-                    <div class="stat-label">Pending Review</div>
-                    <div class="stat-value">{{ stats.pending }}</div>
+    {% comment %} Colour here means "needs action", not "is a category". Rejected is a
+       historical count and reads neutral; High Priority is the one that should
+       pull the eye. Previously both were danger, encoding two unrelated
+       meanings in the same red. {% endcomment %}
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-lg-4">
+            <div class="stat-card warning">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <span class="stat-label">Pending review</span>
+                        <div class="stat-value">{{ stats.pending }}</div>
+                    </div>
+                    <svg class="ic stat-icon" aria-hidden="true"><use href="#i-hourglass"/></svg>
                 </div>
-                <i class="bi bi-hourglass-split stat-icon" aria-hidden="true"></i>
-            </div>
-            <div style="margin-top:10px;">
-                <a href="{% url 'application_list' %}?status=scheduled"
-                   style="font-size:0.78rem; color:var(--warning); font-weight:600;">
-                    View all <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                <a href="{% url 'application_list' %}?status=scheduled" class="stat-link">
+                    Review queue
+                    <svg class="ic" aria-hidden="true"><use href="#i-arrow-right"/></svg>
                 </a>
             </div>
         </div>
-    </div>
-    <div class="col-sm-6 col-xl-4">
-        <div class="stat-card success">
-            <div class="d-flex justify-content-between align-items-start">
-                <div>
-                    <div class="stat-label">Approved Today</div>
-                    <div class="stat-value">{{ stats.approved_today }}</div>
+
+        <div class="col-sm-6 col-lg-4">
+            <div class="stat-card danger">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <span class="stat-label">High priority — 3+ days</span>
+                        <div class="stat-value">{{ stats.high_priority }}</div>
+                    </div>
+                    <svg class="ic stat-icon" aria-hidden="true"><use href="#i-alert-triangle"/></svg>
                 </div>
-                <i class="bi bi-check-circle stat-icon" aria-hidden="true"></i>
-            </div>
-        </div>
-    </div>
-    <div class="col-sm-6 col-xl-4">
-        <div class="stat-card info">
-            <div class="d-flex justify-content-between align-items-start">
-                <div>
-                    <div class="stat-label">Waiting for Claim</div>
-                    <div class="stat-value">{{ stats.waiting_claim }}</div>
-                </div>
-                <i class="bi bi-person-check stat-icon" aria-hidden="true"></i>
-            </div>
-            <div style="margin-top:10px;">
-                <a href="{% url 'sticker_station' %}"
-                   style="font-size:0.78rem; color:var(--info); font-weight:600;">
-                    Go to station <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                <a href="{% url 'application_list' %}?status=scheduled" class="stat-link">
+                    Oldest first
+                    <svg class="ic" aria-hidden="true"><use href="#i-arrow-right"/></svg>
                 </a>
             </div>
         </div>
-    </div>
-    <div class="col-sm-6 col-xl-4">
-        <div class="stat-card danger">
-            <div class="d-flex justify-content-between align-items-start">
-                <div>
-                    <div class="stat-label">Rejected</div>
-                    <div class="stat-value">{{ stats.rejected }}</div>
-                </div>
-                <i class="bi bi-x-circle stat-icon" aria-hidden="true"></i>
-            </div>
-        </div>
-    </div>
-    <div class="col-sm-6 col-xl-4">
-        <div class="stat-card danger">
-            <div class="d-flex justify-content-between align-items-start">
-                <div>
-                    <div class="stat-label">High Priority (3+ days)</div>
-                    <div class="stat-value">{{ stats.high_priority }}</div>
-                </div>
-                <i class="bi bi-exclamation-triangle stat-icon" aria-hidden="true"></i>
-            </div>
-        </div>
-    </div>
-    <div class="col-sm-6 col-xl-4">
-        <div class="stat-card">
-            <div class="d-flex justify-content-between align-items-start">
-                <div>
-                    <div class="stat-label">Stickers Issued</div>
-                    <div class="stat-value">{{ stats.issued }}</div>
-                </div>
-                <i class="bi bi-patch-check stat-icon" aria-hidden="true"></i>
-            </div>
-        </div>
-    </div>
-</div>
 
-<!-- Recent Activity -->
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-clock-history me-2"
-                 style="color:var(--gold);" aria-hidden="true"></i>Recent Activity</span>
-        <a href="{% url 'application_list' %}"
-           style="font-size:0.78rem; color:var(--navy-mid); font-weight:600;">
-            View all <i class="bi bi-arrow-right" aria-hidden="true"></i>
-        </a>
+        <div class="col-sm-6 col-lg-4">
+            <div class="stat-card info">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <span class="stat-label">Waiting for claim</span>
+                        <div class="stat-value">{{ stats.waiting_claim }}</div>
+                    </div>
+                    <svg class="ic stat-icon" aria-hidden="true"><use href="#i-user-check"/></svg>
+                </div>
+                <a href="{% url 'sticker_station' %}" class="stat-link">
+                    Sticker station
+                    <svg class="ic" aria-hidden="true"><use href="#i-arrow-right"/></svg>
+                </a>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-4">
+            <div class="stat-card success">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <span class="stat-label">Approved today</span>
+                        <div class="stat-value">{{ stats.approved_today }}</div>
+                    </div>
+                    <svg class="ic stat-icon" aria-hidden="true"><use href="#i-check-circle"/></svg>
+                </div>
+                <div class="stat-foot">Approved but not yet issued</div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-4">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <span class="stat-label">Stickers issued</span>
+                        <div class="stat-value">{{ stats.issued }}</div>
+                    </div>
+                    <svg class="ic stat-icon" aria-hidden="true"><use href="#i-badge-check"/></svg>
+                </div>
+                <div class="stat-foot">Bound to an RFID tag, all time</div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-4">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <span class="stat-label">Rejected</span>
+                        <div class="stat-value">{{ stats.rejected }}</div>
+                    </div>
+                    <svg class="ic stat-icon" aria-hidden="true"><use href="#i-x-circle"/></svg>
+                </div>
+                <div class="stat-foot">All time</div>
+            </div>
+        </div>
     </div>
-    <table class="table mb-0">
-        <thead>
-            <tr>
-                <th scope="col">Name</th>
-                <th scope="col">Plate</th>
-                <th scope="col">Status</th>
-                <th scope="col">Last Updated</th>
-                <th scope="col"></th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for app in recent %}
-            <tr>
-                <td style="font-weight:500;">{{ app.full_name }}</td>
-                <td><code>{{ app.plate_number }}</code></td>
-                <td>
-                    <span class="status-badge badge-{{ app.status }}">
-                        {{ app.get_status_display }}
-                    </span>
-                </td>
-                <td style="color:var(--text-muted);">
-                    {{ app.updated_at|date:"M d, Y H:i" }}
-                </td>
-                <td>
-                    <a href="{% url 'application_detail' app.pk %}"
-                       class="btn btn-outline-secondary btn-sm">
-                        View
-                    </a>
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="5" class="text-center text-muted py-4">
-                    No recent activity yet.
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+
+    <!-- Recent Activity -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <svg class="ic" aria-hidden="true"><use href="#i-clock-history"/></svg>
+                Recent activity
+            </h2>
+            <a href="{% url 'application_list' %}" class="field-link ms-auto">View all</a>
+        </div>
+        <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Plate</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Last updated</th>
+                    <th scope="col"><span class="visually-hidden">Open application</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for app in recent %}
+                <tr>
+                    <td class="text-strong fw-medium">{{ app.full_name }}</td>
+                    <td><span class="plate">{{ app.plate_number }}</span></td>
+                    <td>
+                        <span class="status-badge badge-{{ app.status }}">
+                            {{ app.get_status_display }}
+                        </span>
+                    </td>
+                    <td class="text-muted">
+                        <time>{{ app.updated_at|date:"M d, Y H:i" }}</time>
+                    </td>
+                    <td class="text-end">
+                        <a href="{% url 'application_detail' app.pk %}"
+                           class="btn btn-secondary btn-sm">
+                            View
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5">
+                        <div class="empty-state">
+                            <svg class="ic" aria-hidden="true"><use href="#i-inbox"/></svg>
+                            <h3>No activity yet</h3>
+                            <p>
+                                Applications appear here as applicants submit them
+                                during an open registration window.
+                            </p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
 </div>
 {% endblock %}

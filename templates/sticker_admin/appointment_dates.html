@@ -3,35 +3,35 @@
 
 {% block content %}
 <div class="page-header">
-    <h1>Appointment Dates</h1>
+    <h1>Appointment dates</h1>
     <p class="page-sub">
         Activate inspection dates for applicants. Weekends are skipped automatically.
     </p>
 </div>
 
-<!-- Summary Bar -->
+<!-- Summary -->
 <div class="row g-3 mb-4">
     <div class="col-6 col-md-3">
         <div class="stat-card">
-            <div class="stat-label">Total Dates</div>
+            <span class="stat-label">Total dates</span>
             <div class="stat-value">{{ total }}</div>
         </div>
     </div>
     <div class="col-6 col-md-3">
         <div class="stat-card success">
-            <div class="stat-label">Active</div>
+            <span class="stat-label">Active</span>
             <div class="stat-value">{{ active }}</div>
         </div>
     </div>
     <div class="col-6 col-md-3">
         <div class="stat-card warning">
-            <div class="stat-label">Fully Booked</div>
+            <span class="stat-label">Fully booked</span>
             <div class="stat-value">{{ full }}</div>
         </div>
     </div>
     <div class="col-6 col-md-3">
         <div class="stat-card info">
-            <div class="stat-label">Total Booked Slots</div>
+            <span class="stat-label">Booked slots</span>
             <div class="stat-value">{{ booked }}</div>
         </div>
     </div>
@@ -39,16 +39,20 @@
 
 <div class="row g-4">
 
-    <!-- Left: Activate Range Form -->
+    <!-- Activate range -->
     <div class="col-lg-4">
         <div class="card h-100">
             <div class="card-header">
-                <i class="bi bi-calendar-plus me-2" style="color:var(--gold);" aria-hidden="true"></i>
-                Activate Date Range
+                <h2 class="card-title">
+                    <svg class="ic" aria-hidden="true"><use href="#i-calendar-plus"/></svg>
+                    Activate a date range
+                </h2>
             </div>
-            <div class="card-body" style="padding:20px;">
-                <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:16px;">
-                    All weekdays between these two dates will be activated as inspection dates.
+            <div class="card-body">
+                <p class="meta mb-4">
+                    Every weekday between these dates becomes an inspection date.
+                    Applicants pick their own time; each day allows up to
+                    20 applicants per 30-minute slot, 8:00 AM–4:00 PM.
                 </p>
                 <form method="post">
                     {% csrf_token %}
@@ -62,45 +66,39 @@
                         <input id="id_range_end" type="date" name="range_end" class="form-control" required>
                     </div>
                     <button type="submit" class="btn btn-primary w-100">
-                        <i class="bi bi-plus-circle me-1" aria-hidden="true"></i> Activate Dates
+                        <svg class="ic" aria-hidden="true"><use href="#i-plus-circle"/></svg>
+                        Activate dates
                     </button>
                 </form>
 
                 <hr class="section-divider">
 
-                <!-- Bulk Actions -->
-                <p style="font-size:0.75rem; font-weight:700; text-transform:uppercase;
-                          letter-spacing:0.06em; color:var(--text-muted); margin-bottom:10px;">
-                    Bulk Actions
-                </p>
+                <p class="micro-label mb-2">Bulk actions</p>
                 <div class="d-flex flex-column gap-2">
                     <form method="post">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="activate_all">
-                        <button type="submit" class="btn btn-outline-secondary w-100"
-                                style="font-size:0.82rem; text-align:left;">
-                            <i class="bi bi-check-all me-2" style="color:var(--success);" aria-hidden="true"></i>
-                            Activate All Dates
+                        <button type="submit" class="btn btn-secondary w-100 justify-content-start">
+                            <svg class="ic" aria-hidden="true"><use href="#i-check-all"/></svg>
+                            Activate all dates
                         </button>
                     </form>
                     <form method="post">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="deactivate_all">
-                        <button type="submit" class="btn btn-outline-secondary w-100"
-                                style="font-size:0.82rem; text-align:left;"
-                                onclick="return confirm('Deactivate all dates?')">
-                            <i class="bi bi-dash-circle me-2" style="color:var(--warning);" aria-hidden="true"></i>
-                            Deactivate All Dates
+                        <button type="submit" class="btn btn-secondary w-100 justify-content-start"
+                                onclick="return confirm('Deactivate all dates? Applicants will not be able to book any inspection date until you activate one again.')">
+                            <svg class="ic" aria-hidden="true"><use href="#i-minus-circle"/></svg>
+                            Deactivate all dates
                         </button>
                     </form>
                     <form method="post">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="delete_all_empty">
-                        <button type="submit" class="btn btn-outline-secondary w-100"
-                                style="font-size:0.82rem; text-align:left;"
-                                onclick="return confirm('Delete all dates with no bookings?')">
-                            <i class="bi bi-trash me-2" style="color:var(--danger);" aria-hidden="true"></i>
-                            Delete All Empty Dates
+                        <button type="submit" class="btn btn-outline-danger w-100 justify-content-start"
+                                onclick="return confirm('Delete every date with no bookings? Dates that already have appointments are kept.')">
+                            <svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg>
+                            Delete all empty dates
                         </button>
                     </form>
                 </div>
@@ -108,43 +106,36 @@
         </div>
     </div>
 
-    <!-- Right: Dates Table -->
+    <!-- Dates table -->
     <div class="col-lg-8">
         <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span>
-                    <i class="bi bi-list-check me-2" style="color:var(--gold);" aria-hidden="true"></i>
-                    Activated Dates
-                    <span style="font-size:0.78rem; font-weight:400;
-                                 color:var(--text-muted); margin-left:6px;">
-                        {{ total }} total
-                    </span>
-                </span>
-
-                <!-- Delete Selected Button (shown when checkboxes selected) -->
-                <form method="post" id="bulk-delete-form">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="delete_selected">
-                    <button type="submit" id="delete-selected-btn"
-                            class="btn btn-danger btn-sm"
-                            style="display:none;"
-                            onclick="return confirm('Delete selected dates?')">
-                        <i class="bi bi-trash me-1" aria-hidden="true"></i>
-                        Delete Selected
-                        (<span id="selected-count">0</span>)
-                    </button>
+            <div class="card-header">
+                <h2 class="card-title">
+                    <svg class="ic" aria-hidden="true"><use href="#i-list-check"/></svg>
+                    Activated dates
+                </h2>
+                <span class="meta ms-2">{{ total }} total</span>
+                <!-- Revealed once rows are selected -->
+                <form method="post" id="bulk-delete-form" class="ms-auto">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete_selected">
+                <button type="submit" id="delete-selected-btn"
+                class="btn btn-outline-danger btn-sm d-none"
+                onclick="return confirm('Delete the selected dates?')">
+                <svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg>
+                Delete selected (<span id="selected-count">0</span>)
+                </button>
                 </form>
             </div>
 
             {% if slots %}
-            <div style="max-height:520px; overflow-y:auto;">
+            <div class="table-responsive" style="max-height:520px; overflow-y:auto;">
                 <table class="table mb-0" id="slots-table">
                     <thead style="position:sticky; top:0; z-index:1;">
                         <tr>
                             <th scope="col" style="width:40px;">
-                                <input type="checkbox" id="select-all"
-                                       class="form-check-input"
-                                       title="Select all">
+                                <input type="checkbox" id="select-all" class="form-check-input"
+                                       aria-label="Select all deletable dates">
                             </th>
                             <th scope="col">Date</th>
                             <th scope="col">Day</th>
@@ -155,40 +146,34 @@
                     </thead>
                     <tbody>
                         {% for slot in slots %}
-                        <tr {% if not slot.is_active %}style="opacity:0.55;"{% endif %}>
+                        <tr {% if not slot.is_active %}class="is-inactive"{% endif %}>
                             <td>
                                 <input type="checkbox"
                                        class="form-check-input slot-checkbox"
                                        name="selected_slots"
                                        value="{{ slot.pk }}"
                                        form="bulk-delete-form"
-                                       {% if slot.appointments.exists %}
-                                           disabled title="Has bookings"
+                                       aria-label="Select {{ slot.date|date:'M d, Y' }}"
+                                       {% if slot.has_bookings %}
+                                           disabled title="Has bookings — cannot be deleted"
                                        {% endif %}>
                             </td>
-                            <td style="font-weight:500;">
-                                {{ slot.date|date:"M d, Y" }}
+                            <td class="cell-strong text-strong fw-medium">
+                                <time>{{ slot.date|date:"M d, Y" }}</time>
                             </td>
-                            <td style="color:var(--text-muted); font-size:0.82rem;">
-                                {{ slot.date|date:"l" }}
-                            </td>
+                            <td class="text-muted">{{ slot.date|date:"l" }}</td>
                             <td>
-                                <div style="display:flex; align-items:center; gap:6px;">
-                                    <!-- Mini progress bar -->
-                                    <div style="width:60px; height:6px; background:var(--border);
-                                                border-radius:3px; overflow:hidden;">
-                                        <div style="height:100%; border-radius:3px;
-                                                    width:{% widthratio slot.appointments.count slot.capacity 100 %}%;
-                                                    background:{% if slot.is_full %}var(--danger){% else %}var(--success){% endif %};"></div>
+                                <div class="capacity">
+                                    <div class="capacity-track">
+                                        <div class="capacity-fill {% if slot.is_full %}is-full{% endif %}"
+                                             style="width:{% widthratio slot.total_booked slot.total_capacity 100 %}%;"></div>
                                     </div>
-                                    <span style="font-size:0.8rem; color:var(--text-muted);">
-                                        {{ slot.appointments.count }}/{{ slot.capacity }}
+                                    <span class="capacity-count"
+                                          title="{{ slot.capacity }} seats per time slot">
+                                        {{ slot.total_booked }}/{{ slot.total_capacity }}
                                     </span>
                                     {% if slot.is_full %}
-                                        <span class="status-badge badge-rejected"
-                                              style="font-size:0.72rem; padding:2px 6px;">
-                                            Full
-                                        </span>
+                                        <span class="status-badge badge-rejected">Full</span>
                                     {% endif %}
                                 </div>
                             </td>
@@ -201,42 +186,37 @@
                             </td>
                             <td>
                                 <div class="d-flex gap-1">
-                                    <!-- Toggle -->
                                     <form method="post" class="d-inline">
                                         {% csrf_token %}
                                         <input type="hidden" name="action" value="toggle">
                                         <input type="hidden" name="slot_id" value="{{ slot.pk }}">
-                                        <button type="submit"
-                                                class="btn btn-outline-secondary btn-sm"
-                                                style="font-size:0.75rem; padding:3px 8px;"
+                                        <button type="submit" class="btn btn-secondary btn-sm btn-icon"
+                                                aria-label="{% if slot.is_active %}Deactivate{% else %}Activate{% endif %} {{ slot.date|date:'M d, Y' }}"
                                                 title="{% if slot.is_active %}Deactivate{% else %}Activate{% endif %}">
                                             {% if slot.is_active %}
-                                                <i class="bi bi-pause-fill" aria-hidden="true"></i>
+                                                <svg class="ic" aria-hidden="true"><use href="#i-pause"/></svg>
                                             {% else %}
-                                                <i class="bi bi-play-fill" aria-hidden="true"></i>
+                                                <svg class="ic" aria-hidden="true"><use href="#i-play"/></svg>
                                             {% endif %}
                                         </button>
                                     </form>
-                                    <!-- Delete single -->
-                                    {% if not slot.appointments.exists %}
+                                    {% if not slot.has_bookings %}
                                     <form method="post" class="d-inline">
                                         {% csrf_token %}
                                         <input type="hidden" name="action" value="delete">
                                         <input type="hidden" name="slot_id" value="{{ slot.pk }}">
-                                        <button type="submit"
-                                                class="btn btn-outline-secondary btn-sm"
-                                                style="font-size:0.75rem; padding:3px 8px; color:var(--danger);"
+                                        <button type="submit" class="btn btn-secondary btn-sm btn-icon is-danger"
+                                                aria-label="Delete {{ slot.date|date:'M d, Y' }}"
                                                 title="Delete"
                                                 onclick="return confirm('Delete {{ slot.date }}?')">
-                                            <i class="bi bi-trash" aria-hidden="true"></i>
+                                            <svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg>
                                         </button>
                                     </form>
                                     {% else %}
-                                    <button class="btn btn-outline-secondary btn-sm"
-                                            style="font-size:0.75rem; padding:3px 8px;
-                                                   opacity:0.4; cursor:not-allowed;"
-                                            disabled title="Has bookings — cannot delete">
-                                        <i class="bi bi-trash" aria-hidden="true"></i>
+                                    <button class="btn btn-secondary btn-sm btn-icon" disabled
+                                            aria-label="Cannot delete {{ slot.date|date:'M d, Y' }} — it has bookings"
+                                            title="Has bookings — cannot delete">
+                                        <svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg>
                                     </button>
                                     {% endif %}
                                 </div>
@@ -247,14 +227,13 @@
                 </table>
             </div>
             {% else %}
-            <div style="padding:48px; text-align:center; color:var(--text-muted);">
-                <i class="bi bi-calendar-x"
-                   style="font-size:2.5rem; display:block; margin-bottom:12px;
-                          color:var(--border);" aria-hidden="true"></i>
-                No appointment dates activated yet.<br>
-                <span style="font-size:0.82rem;">
-                    Use the form on the left to add dates.
-                </span>
+            <div class="empty-state">
+                <svg class="ic" aria-hidden="true"><use href="#i-calendar-x"/></svg>
+                <h3>No appointment dates yet</h3>
+                <p>
+                    Applicants cannot be given an inspection appointment until at
+                    least one date is active. Use the form on the left to add a range.
+                </p>
             </div>
             {% endif %}
         </div>
@@ -264,30 +243,36 @@
 
 {% block extra_js %}
 <script>
-    const selectAll = document.getElementById('select-all');
-    const checkboxes = document.querySelectorAll('.slot-checkbox:not([disabled])');
-    const deleteBtn = document.getElementById('delete-selected-btn');
-    const selectedCount = document.getElementById('selected-count');
+    // Guarded: on the empty state there is no #select-all and no checkboxes,
+    // and the previous unguarded version threw TypeError: null on the first
+    // screen a new administrator ever sees.
+    (function () {
+        const selectAll = document.getElementById('select-all');
+        const deleteBtn = document.getElementById('delete-selected-btn');
+        const selectedCount = document.getElementById('selected-count');
+        const checkboxes = document.querySelectorAll('.slot-checkbox:not([disabled])');
 
-    function updateDeleteButton() {
-        const checked = document.querySelectorAll('.slot-checkbox:checked').length;
-        selectedCount.textContent = checked;
-        deleteBtn.style.display = checked > 0 ? 'inline-block' : 'none';
-    }
+        if (!selectAll || !deleteBtn || !selectedCount || !checkboxes.length) return;
 
-    // Select all toggle
-    selectAll.addEventListener('change', () => {
-        checkboxes.forEach(cb => cb.checked = selectAll.checked);
-        updateDeleteButton();
-    });
+        function updateDeleteButton() {
+            const checked = document.querySelectorAll('.slot-checkbox:checked').length;
+            selectedCount.textContent = checked;
+            deleteBtn.classList.toggle('d-none', checked === 0);
+        }
 
-    // Individual checkbox change
-    checkboxes.forEach(cb => {
-        cb.addEventListener('change', () => {
-            const allChecked = [...checkboxes].every(c => c.checked);
-            selectAll.checked = allChecked;
+        selectAll.addEventListener('change', function () {
+            checkboxes.forEach(function (cb) { cb.checked = selectAll.checked; });
             updateDeleteButton();
         });
-    });
+
+        checkboxes.forEach(function (cb) {
+            cb.addEventListener('change', function () {
+                selectAll.checked = [].every.call(checkboxes, function (c) { return c.checked; });
+                updateDeleteButton();
+            });
+        });
+
+        updateDeleteButton();
+    })();
 </script>
 {% endblock %}
