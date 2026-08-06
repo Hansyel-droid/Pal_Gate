@@ -1,6 +1,4 @@
 import logging
-import os
-import shutil
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -50,25 +48,53 @@ def get_active_window():
         return None
 
 
-def save_temp_file(uploaded_file, username, field_name):
+def temp_path_for(user, field_name):
+    """
+    Where a given applicant's in-progress upload for `field_name` lives.
+
+    Keyed on the user's primary key, never their username: Django's
+    UnicodeUsernameValidator accepts '.' (so '..' is a legal username) and
+    RegisterForm doesn't narrow that, which made a legal account able to
+    push a traversing path into storage. Django itself blocks the traversal,
+    but it does so by raising SuspiciousFileOperation, which nothing here
+    caught — a 500 on Step 2 for that applicant, every time.
+
+    The name deliberately carries NO extension. It used to, which meant
+    re-uploading or_cr as a .png after a .pdf wrote a second file instead of
+    replacing the first, orphaning the original until cleanup ran. The real
+    extension is preserved in the session's `original_name` and restored
+    when the file is copied onto the model at submit.
+    """
+    return f'temp_uploads/{user.pk}/{field_name}'
+
+
+def save_temp_file(uploaded_file, user, field_name):
     """
     Saves an uploaded file to a temporary folder.
     Returns the temp file path so we can retrieve it later.
     """
     if not uploaded_file:
         return None
-    # e.g. temp_uploads/hans/or_cr_myfile.pdf
-    ext = uploaded_file.name.split('.')[-1]
-    temp_path = f'temp_uploads/{username}/{field_name}.{ext}'
+    temp_path = temp_path_for(user, field_name)
     # If a temp file already exists for this field, delete it first
     if default_storage.exists(temp_path):
         default_storage.delete(temp_path)
-    # Save the new file
-    default_storage.save(temp_path, ContentFile(uploaded_file.read()))
-    return temp_path
+    # Save the new file. Trust storage's returned name rather than assuming
+    # it took the one we asked for.
+    return default_storage.save(temp_path, ContentFile(uploaded_file.read()))
 
 
-def copy_document_to_temp(file_field, username, field_name):
+def delete_temp_file(file_data):
+    """
+    Removes a temp file recorded in session, if it's still there. Takes the
+    session's {'path', 'original_name'} entry (or None) so callers don't
+    have to unpack it themselves.
+    """
+    if file_data and default_storage.exists(file_data['path']):
+        default_storage.delete(file_data['path'])
+
+
+def copy_document_to_temp(file_field, user, field_name):
     """
     Copies an already-uploaded document from a previous (expired)
     application into temp storage for a new one — used by apply_renew so a
@@ -79,14 +105,13 @@ def copy_document_to_temp(file_field, username, field_name):
     """
     if not file_field:
         return None
-    ext = file_field.name.rsplit('.', 1)[-1] if '.' in file_field.name else 'dat'
-    temp_path = f'temp_uploads/{username}/{field_name}.{ext}'
+    temp_path = temp_path_for(user, field_name)
     if default_storage.exists(temp_path):
         default_storage.delete(temp_path)
     with file_field.open('rb') as source:
-        default_storage.save(temp_path, ContentFile(source.read()))
+        saved_path = default_storage.save(temp_path, ContentFile(source.read()))
     original_name = file_field.name.rsplit('/', 1)[-1]
-    return {'path': temp_path, 'original_name': original_name}
+    return {'path': saved_path, 'original_name': original_name}
 
 
 @role_required('applicant')
@@ -151,15 +176,15 @@ def apply_renew(request, pk):
         'is_owner': 'yes' if old_application.is_owner else 'no',
     }
 
-    username = request.user.username
+    user = request.user
     request.session['app_temp_files'] = {
-        'or_cr': copy_document_to_temp(old_application.or_cr, username, 'or_cr'),
+        'or_cr': copy_document_to_temp(old_application.or_cr, user, 'or_cr'),
         'drivers_license': copy_document_to_temp(
-            old_application.drivers_license, username, 'drivers_license'
+            old_application.drivers_license, user, 'drivers_license'
         ),
-        'cor': copy_document_to_temp(old_application.cor, username, 'cor'),
+        'cor': copy_document_to_temp(old_application.cor, user, 'cor'),
         'authorization_letter': copy_document_to_temp(
-            old_application.authorization_letter, username, 'authorization_letter'
+            old_application.authorization_letter, user, 'authorization_letter'
         ),
     }
     # Read by apply_step4 only to enrich the audit log description below —
@@ -206,20 +231,26 @@ def apply_step2(request):
         messages.warning(request, 'Please complete Step 1 first.')
         return redirect('apply_step1')
 
+    classification = request.session['app_step1'].get('classification', '')
+
+    # Documents the applicant has already given us on an earlier pass
+    # through this step: a renewal seeded by apply_renew, or a return trip
+    # via the "Change" links on Step 3 and Step 4.
+    existing_files = {
+        name: data
+        for name, data in (request.session.get('app_temp_files') or {}).items()
+        if data
+    }
+
     if request.method == 'POST':
-        form = ApplicationStep2Form(request.POST, request.FILES)
+        form = ApplicationStep2Form(
+            request.POST, request.FILES, existing_files=existing_files
+        )
         form.data = form.data.copy()
-        form.data['step1_classification'] = request.session['app_step1'].get('classification', '')
+        form.data['step1_classification'] = classification
 
         if form.is_valid():
-            # Extra server-side safety: clear fields that shouldn't be submitted
-            classification = request.session['app_step1'].get('classification', '')
             is_owner = form.cleaned_data.get('is_owner')
-
-            if classification != 'student':
-                form.cleaned_data['cor'] = None
-            if is_owner == 'yes':
-                form.cleaned_data['authorization_letter'] = None
 
             # Save vehicle data to session
             request.session['app_step2'] = {
@@ -229,33 +260,55 @@ def apply_step2(request):
                 'is_owner': form.cleaned_data['is_owner'],
             }
 
-            # Save uploaded files to temp storage
-            # so user does NOT need to re-upload in step 3
-            username = request.user.username
-            temp_paths = {}
+            # Which documents this application actually needs. Server-side
+            # authority over the template's JS, and it also decides whether
+            # a document held from an earlier pass is still wanted.
+            applies = {
+                'or_cr': True,
+                'drivers_license': True,
+                'cor': classification == 'student',
+                'authorization_letter': is_owner == 'no',
+            }
 
-            for field_name in ['or_cr', 'drivers_license', 'cor', 'authorization_letter']:
+            # Save uploaded files to temp storage so the applicant does NOT
+            # need to re-upload on a later step. A field left blank keeps
+            # whatever is already on file rather than dropping it.
+            temp_paths = {}
+            for field_name in ApplicationStep2Form.DOCUMENT_FIELDS:
                 uploaded = request.FILES.get(field_name)
-                if uploaded:
-                    path = save_temp_file(uploaded, username, field_name)
+                previous = existing_files.get(field_name)
+
+                if not applies[field_name]:
+                    delete_temp_file(previous)
+                    temp_paths[field_name] = None
+                elif uploaded:
+                    path = save_temp_file(uploaded, request.user, field_name)
                     temp_paths[field_name] = {
                         'path': path,
                         'original_name': uploaded.name,
                     }
                 else:
-                    temp_paths[field_name] = None
+                    temp_paths[field_name] = previous
 
             # Store the temp paths in the session
             request.session['app_temp_files'] = temp_paths
             request.session.modified = True
             return redirect('apply_step3')
     else:
-        form = ApplicationStep2Form()
+        # Seed from session so returning to this step shows what was already
+        # entered instead of a blank form that silently discards it.
+        form = ApplicationStep2Form(
+            initial=request.session.get('app_step2'),
+            existing_files=existing_files,
+        )
 
     return render(request, 'applications/step2.html', {
         'form': form,
         'step': 2,
         'step1_data': request.session.get('app_step1', {}),
+        'existing_file_names': {
+            name: data['original_name'] for name, data in existing_files.items()
+        },
     })
 
 
@@ -479,9 +532,8 @@ def apply_step4(request):
             })
 
         # Clean up temp files from storage (only after a successful commit)
-        for field_name, file_data in temp_files.items():
-            if file_data and default_storage.exists(file_data['path']):
-                default_storage.delete(file_data['path'])
+        for file_data in temp_files.values():
+            delete_temp_file(file_data)
 
         # Clear session
         for key in [
@@ -538,8 +590,20 @@ def serve_document(request, pk, field_name):
     if not file_field:
         raise Http404('No document uploaded for this field.')
 
+    # A row can outlive its file — media wiped, restored from a DB-only
+    # backup, storage remounted. That's a missing document, not a server
+    # fault, so it gets a 404 instead of an uncaught FileNotFoundError 500.
+    try:
+        handle = file_field.open('rb')
+    except FileNotFoundError:
+        logger.warning(
+            'serve_document: application %s field %s points at missing file %s',
+            pk, field_name, file_field.name,
+        )
+        raise Http404('This document is no longer available.')
+
     return FileResponse(
-        file_field.open('rb'),
+        handle,
         filename=file_field.name.rsplit('/', 1)[-1],
     )
 

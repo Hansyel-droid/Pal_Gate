@@ -68,7 +68,13 @@
 
                         <div class="note mb-4">
                             <svg class="ic" aria-hidden="true"><use href="#i-info"/></svg>
-                            <div>One file per field. Bring the originals to your inspection appointment.</div>
+                            <div>
+                                One file per field. Bring the originals to your inspection appointment.
+                                {% if existing_file_names %}
+                                Files already on this application stay as they are unless you
+                                choose a new one.
+                                {% endif %}
+                            </div>
                         </div>
 
                         <div class="mb-3">
@@ -76,6 +82,9 @@
                                 OR/CR <span class="tag tag-required">Required</span>
                             </label>
                             {{ form.or_cr }}
+                            {% if existing_file_names.or_cr %}
+                            <p class="form-text">On file: {{ existing_file_names.or_cr }}</p>
+                            {% endif %}
                             {{ form.or_cr.errors }}
                         </div>
 
@@ -84,6 +93,9 @@
                                 Driver's licence <span class="tag tag-required">Required</span>
                             </label>
                             {{ form.drivers_license }}
+                            {% if existing_file_names.drivers_license %}
+                            <p class="form-text">On file: {{ existing_file_names.drivers_license }}</p>
+                            {% endif %}
                             {{ form.drivers_license.errors }}
                         </div>
 
@@ -92,6 +104,9 @@
                                 COR <span class="tag tag-conditional">Students</span>
                             </label>
                             {{ form.cor }}
+                            {% if existing_file_names.cor %}
+                            <p class="form-text">On file: {{ existing_file_names.cor }}</p>
+                            {% endif %}
                             <p id="cor_hint" class="form-text"></p>
                             {{ form.cor.errors }}
                         </div>
@@ -101,6 +116,9 @@
                                 Authorisation letter <span class="tag tag-conditional">Non-owners</span>
                             </label>
                             {{ form.authorization_letter }}
+                            {% if existing_file_names.authorization_letter %}
+                            <p class="form-text">On file: {{ existing_file_names.authorization_letter }}</p>
+                            {% endif %}
                             <p id="auth_hint" class="form-text"></p>
                             {{ form.authorization_letter.errors }}
                         </div>
@@ -134,8 +152,16 @@
 {% endblock %}
 
 {% block extra_js %}
+{{ existing_file_names|json_script:"existing-files" }}
 <script>
     const classification = "{{ step1_data.classification|default:'' }}";
+    // Documents already held in temp storage from an earlier pass through
+    // this step. The server has already dropped `required` for these; the
+    // browser must agree or the form can't be submitted without re-picking
+    // a file the applicant already gave us.
+    const existingFiles = JSON.parse(
+        document.getElementById('existing-files').textContent
+    );
     const isOwnerSelect = document.getElementById('id_is_owner');
     const corInput = document.getElementById('id_cor');
     const authInput = document.getElementById('id_authorization_letter');
@@ -149,7 +175,7 @@
     // state now rides on .field-na plus the input's own :disabled styling.
     function setApplicable(wrapper, input, hint, applies, reason) {
         input.disabled = !applies;
-        input.required = applies;
+        input.required = applies && !existingFiles[input.name];
         if (!applies) input.value = '';
         wrapper.classList.toggle('field-na', !applies);
         hint.textContent = applies ? '' : reason;

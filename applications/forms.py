@@ -31,6 +31,8 @@ class ApplicationStep1Form(forms.Form):
 class ApplicationStep2Form(forms.Form):
     """Step 2: Vehicle Details and Document Uploads"""
 
+    DOCUMENT_FIELDS = ['or_cr', 'drivers_license', 'cor', 'authorization_letter']
+
     ALLOWED_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png']
     MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
@@ -80,6 +82,28 @@ class ApplicationStep2Form(forms.Form):
         widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf,.jpg,.jpeg,.png'})
     )
 
+    def __init__(self, *args, existing_files=None, **kwargs):
+        """
+        `existing_files` maps document field names to the {'path',
+        'original_name'} entry already sitting in temp storage from an
+        earlier pass through this step — a renewal seeded by apply_renew, or
+        the applicant arriving via the "Change" links on Step 3 and Step 4.
+
+        A document we already hold stops being required. Without this,
+        revisiting Step 2 to correct a typo in the plate number forced a
+        re-upload of every required document, and the renewal flow — which
+        explicitly tells applicants to come back here — could not be
+        completed at all without re-uploading what apply_renew just copied.
+        """
+        super().__init__(*args, **kwargs)
+        self.existing_files = {
+            name: data
+            for name, data in (existing_files or {}).items()
+            if data and name in self.DOCUMENT_FIELDS
+        }
+        for field_name in self.existing_files:
+            self.fields[field_name].required = False
+
     def validate_file_extension(self, file):
         """Check that the uploaded file is PDF, JPG, JPEG, or PNG — by both
         extension and actual file content, and enforce a size cap."""
@@ -118,7 +142,7 @@ class ApplicationStep2Form(forms.Form):
         is_owner = cleaned_data.get('is_owner')
 
         # Validate file types for all uploaded files
-        for field_name in ['or_cr', 'drivers_license', 'cor', 'authorization_letter']:
+        for field_name in self.DOCUMENT_FIELDS:
             file = cleaned_data.get(field_name)
             if file:
                 try:
@@ -126,9 +150,10 @@ class ApplicationStep2Form(forms.Form):
                 except forms.ValidationError as e:
                     self.add_error(field_name, e)
 
-        # COR is required ONLY for students
+        # COR is required ONLY for students — and only if we don't already
+        # hold one from an earlier pass through this step.
         if classification == 'student':
-            if not cleaned_data.get('cor'):
+            if not cleaned_data.get('cor') and 'cor' not in self.existing_files:
                 self.add_error('cor', 'COR is required for student applicants.')
         else:
             # Not a student — clear any COR that was somehow submitted
@@ -136,7 +161,8 @@ class ApplicationStep2Form(forms.Form):
 
         # Authorization letter required ONLY if not the owner
         if is_owner == 'no':
-            if not cleaned_data.get('authorization_letter'):
+            if (not cleaned_data.get('authorization_letter')
+                    and 'authorization_letter' not in self.existing_files):
                 self.add_error(
                     'authorization_letter',
                     'Authorization letter is required if you are not the vehicle owner.'

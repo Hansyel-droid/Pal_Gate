@@ -18,7 +18,11 @@ class Command(BaseCommand):
         errors = 0
 
         try:
-            _, folders = default_storage.listdir(temp_dir)
+            # listdir() returns (directories, files) — the per-applicant
+            # folders are the FIRST element. Reading the second one handed
+            # back the (always empty) list of loose files sitting directly
+            # in temp_uploads/, so this command silently deleted nothing.
+            folders, _ = default_storage.listdir(temp_dir)
         except Exception:
             logger.exception('cleanup_temp_files: could not list %s', temp_dir)
             self.stdout.write(f'Deleted {deleted} temp file(s), 0 error(s) (no temp_uploads directory).')
