@@ -48,6 +48,36 @@ class ApiKeyAuthTests(TestCase):
         self.assertFalse(body['allowed'])
         self.assertEqual(body['action'], 'denied')
 
+    def test_non_ascii_key_is_rejected_not_crashed(self):
+        # secrets.compare_digest refuses to compare str values holding
+        # non-ASCII characters — it raises TypeError rather than returning
+        # False. Django decodes request headers as latin-1, so a header of
+        # raw high bytes reaches the comparison as a non-ASCII str and takes
+        # the whole endpoint down with an unhandled 500, before any rate
+        # limit applies and while writing a traceback to logs/errors.log on
+        # every attempt. A bad key is a 401, whatever bytes it is made of.
+        response = self.client.post(
+            reverse('api_scan'),
+            data=json.dumps({'uid': 'ABC123', 'gate': 'Main Gate'}),
+            content_type='application/json',
+            HTTP_X_API_KEY='vàlid-test-kéy',
+        )
+        self.assertEqual(response.status_code, 401)
+
+    def test_non_ascii_key_is_rejected_on_every_hardware_endpoint(self):
+        response = self.client.post(
+            reverse('api_register_uid'),
+            data=json.dumps({'uid': 'NEWTAG001'}),
+            content_type='application/json',
+            HTTP_X_API_KEY='\xff\xfe',
+        )
+        self.assertEqual(response.status_code, 401)
+
+        response = self.client.get(
+            reverse('api_gate_status'), HTTP_X_API_KEY='\xff\xfe'
+        )
+        self.assertEqual(response.status_code, 401)
+
     def test_register_uid_requires_key(self):
         response = self.client.post(
             reverse('api_register_uid'),
