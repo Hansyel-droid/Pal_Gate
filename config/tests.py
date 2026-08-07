@@ -139,6 +139,27 @@ class ReverseProxySettingsTests(SimpleTestCase):
         self.assertEqual(resolved['audit_resolves'], '127.0.0.1')
 
 
+class StaticFilesStorageTests(SimpleTestCase):
+    """
+    Asserts the backend Django ACTUALLY resolves, not the setting we wrote.
+
+    This is the whole point: the project carried
+    STATICFILES_STORAGE = 'whitenoise...CompressedManifestStaticFilesStorage'
+    for however long, and it did nothing at all. Django removed that setting
+    in 5.1 in favour of STORAGES and ignores it silently, so the site ran on
+    the plain StaticFilesStorage with compression and cache-busting hashes
+    both switched off, and nothing anywhere said so.
+    """
+
+    def test_whitenoise_manifest_storage_is_the_one_in_use(self):
+        from django.core.files.storage import storages
+        from whitenoise.storage import CompressedManifestStaticFilesStorage
+
+        self.assertIsInstance(
+            storages['staticfiles'], CompressedManifestStaticFilesStorage
+        )
+
+
 class CookieSecuritySettingsTests(SimpleTestCase):
     """The flags that ride on HTTPS_ENABLED."""
 

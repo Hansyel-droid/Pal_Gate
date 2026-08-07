@@ -175,7 +175,23 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# STATICFILES_STORAGE used to live here and had stopped doing anything:
+# Django removed that setting in 5.1 in favour of STORAGES, and silently
+# ignores it, so this project was running on the plain StaticFilesStorage
+# with WhiteNoise's compression and cache-busting hashes both inactive.
+#
+# The manifest backend requires `collectstatic` to have run before anything
+# resolving a static file will render — DEPLOYMENT.md already does this in
+# both the first-install and the update path.
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+    },
+}
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
