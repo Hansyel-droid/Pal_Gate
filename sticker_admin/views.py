@@ -19,7 +19,7 @@ from applications.notifications import (
 )
 from appointments.models import AppointmentSlot, Appointment
 from gate.audit import log_action
-from gate.models import GateLog
+from gate.models import GateLog, PendingRFID
 
 logger = logging.getLogger('django')
 
@@ -503,6 +503,12 @@ def issue_sticker(request, pk):
                 application.status = 'issued'
                 application.issued_at = timezone.now()
                 application.save()
+
+                # This tag is spoken for now. Inside the transaction so it
+                # can't be retired by an issue that then rolls back, and
+                # so the issuing station stops offering a UID the moment
+                # it has actually been bound to an application.
+                PendingRFID.claim(rfid_uid)
         except IntegrityError:
             messages.error(
                 request,

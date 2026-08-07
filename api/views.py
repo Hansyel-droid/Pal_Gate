@@ -195,14 +195,15 @@ def latest_pending_uid(request):
     so this is protected by login + role instead of the API key.
     Returns the most recently scanned unclaimed UID.
 
+    Only scans from the last PendingRFID.OFFER_TTL are offered — see the
+    comment on that constant for why a scan going stale matters.
+
     Returns:
     {
         "uid": "AB12CD34"   (or null if none pending)
     }
     """
-    pending = PendingRFID.objects.filter(
-        claimed=False
-    ).order_by('-registered_at').first()
+    pending = PendingRFID.latest_offerable()
 
     if pending:
         return JsonResponse({'uid': pending.uid})

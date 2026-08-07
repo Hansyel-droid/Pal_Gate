@@ -1,9 +1,12 @@
 import json
+from datetime import timedelta
 
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from accounts.models import User
+from gate.models import PendingRFID
 
 
 @override_settings(API_KEYS=['valid-test-key'])
@@ -111,3 +114,56 @@ class ApiKeyAuthTests(TestCase):
         self.client.force_login(admin)
         response = self.client.get(reverse('api_latest_pending_uid'))
         self.assertEqual(response.status_code, 200)
+
+
+class PendingUidStalenessTests(TestCase):
+    """
+    The issuing station polls latest_pending_uid every 3 seconds and
+    auto-fills the RFID field from it, so whatever this endpoint returns is
+    what a member of staff is about to bind to somebody's application.
+    """
+
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            username='admin1', password='pw-1234567', role='admin'
+        )
+        self.client.force_login(self.admin)
+
+    def scanned_at(self, uid, ago):
+        # registered_at is auto_now_add, so it has to be pushed back after
+        # the fact rather than passed in.
+        pending = PendingRFID.objects.create(uid=uid, claimed=False)
+        PendingRFID.objects.filter(pk=pending.pk).update(
+            registered_at=timezone.now() - ago
+        )
+        return pending
+
+    def offered_uid(self):
+        response = self.client.get(reverse('api_latest_pending_uid'))
+        self.assertEqual(response.status_code, 200)
+        return response.json()['uid']
+
+    def test_a_fresh_scan_is_offered(self):
+        self.scanned_at('FRESH-TAG', timedelta(seconds=30))
+        self.assertEqual(self.offered_uid(), 'FRESH-TAG')
+
+    def test_a_scan_past_the_ttl_is_not_offered(self):
+        # Before the TTL this returned the newest unclaimed row however old
+        # it was, so staff opening the page the next morning were handed
+        # yesterday's UID with no indication it was stale.
+        self.scanned_at('YESTERDAYS-TAG', PendingRFID.OFFER_TTL + timedelta(minutes=1))
+        self.assertIsNone(self.offered_uid())
+
+    def test_a_stale_scan_does_not_mask_a_fresh_one(self):
+        self.scanned_at('OLD-TAG', PendingRFID.OFFER_TTL + timedelta(hours=3))
+        self.scanned_at('NEW-TAG', timedelta(seconds=5))
+        self.assertEqual(self.offered_uid(), 'NEW-TAG')
+
+    def test_planted_uid_expires_instead_of_waiting_for_staff(self):
+        # The attack the TTL is really for: anyone who can reach
+        # /api/register-uid/ parks a UID of their choosing and waits for the
+        # next person to issue a sticker, which would bind their own tag to
+        # a legitimate application. It now has to be within OFFER_TTL of
+        # someone actually issuing.
+        self.scanned_at('PLANTED-TAG', PendingRFID.OFFER_TTL + timedelta(seconds=1))
+        self.assertIsNone(self.offered_uid())

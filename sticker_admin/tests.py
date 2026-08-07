@@ -12,7 +12,7 @@ from django.utils import timezone
 from accounts.models import User
 from applications.models import StickerApplication
 from appointments.models import AppointmentSlot
-from gate.models import AuditLog
+from gate.models import AuditLog, PendingRFID
 
 
 def make_doc(name='doc.pdf'):
@@ -158,6 +158,38 @@ class RfidDoubleIssuanceTests(TestCase):
         self.assertEqual(self.pending.status, 'issued')
         self.assertEqual(self.pending.rfid_uid, 'FREE-UID-456')
         self.assertTrue(self.pending.sticker_id.startswith('PalSU-'))
+
+    def test_issuing_retires_the_pending_scan(self):
+        # The registration scanner's row for this tag has to stop being
+        # offered once the tag is actually bound to an application.
+        # Nothing used to mark it claimed, so the issuing station kept
+        # auto-filling a UID that was already spoken for.
+        scan = PendingRFID.objects.create(uid='FREE-UID-456', claimed=False)
+        self.client.force_login(self.admin)
+
+        self.client.post(
+            reverse('issue_sticker', args=[self.pending.pk]),
+            data={'rfid_uid': 'FREE-UID-456'},
+        )
+
+        scan.refresh_from_db()
+        self.assertTrue(scan.claimed)
+        self.assertIsNone(PendingRFID.latest_offerable())
+
+    def test_rejected_issuance_leaves_the_pending_scan_alone(self):
+        # The claim happens inside issue_sticker's transaction, so an
+        # issuance that bounces must not burn the scan — staff need to be
+        # able to retry with the same tag on their next attempt.
+        scan = PendingRFID.objects.create(uid='CLAIMED-UID-123', claimed=False)
+        self.client.force_login(self.admin)
+
+        self.client.post(
+            reverse('issue_sticker', args=[self.pending.pk]),
+            data={'rfid_uid': 'CLAIMED-UID-123'},
+        )
+
+        scan.refresh_from_db()
+        self.assertFalse(scan.claimed)
 
     def test_only_admin_can_issue_stickers(self):
         applicant = User.objects.create_user(
