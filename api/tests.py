@@ -6,7 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import User
-from gate.models import PendingRFID
+from gate.models import GateLog, PendingRFID
 
 
 @override_settings(API_KEYS=['valid-test-key'])
@@ -167,3 +167,60 @@ class PendingUidStalenessTests(TestCase):
         # someone actually issuing.
         self.scanned_at('PLANTED-TAG', PendingRFID.OFFER_TTL + timedelta(seconds=1))
         self.assertIsNone(self.offered_uid())
+
+
+@override_settings(API_KEYS=['valid-test-key'])
+class HardwareInputBoundsTests(TestCase):
+    """
+    uid and gate arrive as free-form JSON from the ESP32 and land straight
+    in GateLog. SQLite doesn't enforce varchar length and
+    Model.objects.create() skips full_clean(), so nothing in the stack was
+    holding these to the lengths the model declares.
+    """
+
+    def post_scan(self, **body):
+        return self.client.post(
+            reverse('api_scan'),
+            data=json.dumps(body),
+            content_type='application/json',
+            HTTP_X_API_KEY='valid-test-key',
+        )
+
+    def test_oversized_uid_is_rejected(self):
+        response = self.post_scan(uid='A' * 5000, gate='Main Gate')
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(GateLog.objects.exists())
+
+    def test_oversized_gate_is_rejected(self):
+        # gate_location is echoed onto the live dashboard's scope control,
+        # which builds its list from the distinct values actually logged.
+        response = self.post_scan(uid='ABC123', gate='G' * 5000)
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(GateLog.objects.exists())
+
+    def test_oversized_uid_is_rejected_on_register(self):
+        response = self.client.post(
+            reverse('api_register_uid'),
+            data=json.dumps({'uid': 'A' * 5000}),
+            content_type='application/json',
+            HTTP_X_API_KEY='valid-test-key',
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(PendingRFID.objects.exists())
+
+    def test_non_string_uid_is_rejected_not_crashed(self):
+        # {"uid": 12345} used to reach .strip() on an int and 500 — an
+        # authenticated crash, but a crash a misflashed reader could cause
+        # by itself without anyone attacking anything.
+        response = self.post_scan(uid=12345, gate='Main Gate')
+        self.assertEqual(response.status_code, 400)
+
+    def test_ordinary_values_still_pass(self):
+        # The bound must not narrow what real hardware sends: a normal tag
+        # UID at a gate name that isn't one of the two hardcoded ones (a
+        # third reader should not need a code change to start scanning).
+        response = self.post_scan(uid='04A2B3C4D5', gate='Service Gate')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(
+            GateLog.objects.filter(gate_location='Service Gate').exists()
+        )

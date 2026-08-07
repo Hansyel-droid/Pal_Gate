@@ -12,6 +12,33 @@ from applications.models import StickerApplication
 from gate.audit import log_action
 from gate.models import GateLog, PendingRFID
 
+# Mirror the model fields these values land in (GateLog.rfid_uid,
+# GateLog.gate_location, PendingRFID.uid). Nothing else was holding them to
+# those lengths: SQLite doesn't enforce varchar length and
+# Model.objects.create() skips full_clean(), so an oversized value was
+# stored verbatim. gate_location matters most — the live dashboard builds
+# its gate scope control from the distinct values actually logged, so
+# anything written here is echoed back onto that screen.
+MAX_UID_LENGTH = 100
+MAX_GATE_LENGTH = 50
+
+
+def bounded_text(data, key, max_length, default=''):
+    """
+    Pull one string field out of a decoded JSON body.
+
+    Raises ValueError with a message that is safe to hand back to the
+    caller. The isinstance check is not redundant — a JSON body of
+    {"uid": 12345} used to reach .strip() on an int and 500.
+    """
+    value = data.get(key, default)
+    if not isinstance(value, str):
+        raise ValueError(f'{key} must be a string.')
+    value = value.strip()
+    if len(value) > max_length:
+        raise ValueError(f'{key} must be at most {max_length} characters.')
+    return value
+
 
 @csrf_exempt
 @require_api_key
@@ -45,8 +72,11 @@ def scan_tag(request):
             status=400
         )
 
-    uid = data.get('uid', '').strip()
-    gate = data.get('gate', 'Main Gate').strip()
+    try:
+        uid = bounded_text(data, 'uid', MAX_UID_LENGTH)
+        gate = bounded_text(data, 'gate', MAX_GATE_LENGTH, default='Main Gate')
+    except ValueError as exc:
+        return JsonResponse({'error': str(exc)}, status=400)
 
     if not uid:
         return JsonResponse(
@@ -163,7 +193,10 @@ def register_uid(request):
             status=400
         )
 
-    uid = data.get('uid', '').strip()
+    try:
+        uid = bounded_text(data, 'uid', MAX_UID_LENGTH)
+    except ValueError as exc:
+        return JsonResponse({'error': str(exc)}, status=400)
 
     if not uid:
         return JsonResponse(
