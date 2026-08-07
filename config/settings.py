@@ -286,9 +286,46 @@ AXES_VERBOSE = False
 # ── Reverse Proxy ────────────────────────────────────────────────────────────
 # There is no reverse proxy in front of Django yet (see DEPLOYMENT.md), so by
 # default we do NOT trust the X-Forwarded-For header — anyone could forge it
-# to spoof their IP in the audit log. Flip this only once a trusted proxy
-# (nginx, etc.) is actually terminating requests and setting that header itself.
+# to spoof their IP. Flip this only once a trusted proxy (nginx, etc.) is
+# actually terminating requests and setting that header itself.
+#
+# This is a single switch for "is there exactly one trusted proxy in front of
+# us", and EVERYTHING that needs to know the client's real address hangs off
+# it. It used to feed only gate.audit.get_client_ip, which left the two
+# libraries that matter most reading REMOTE_ADDR — see below.
 TRUST_X_FORWARDED_FOR = config('TRUST_X_FORWARDED_FOR', default=False, cast=bool)
+
+if TRUST_X_FORWARDED_FOR:
+    # nginx terminates TLS and proxies to us over plain http, so the only
+    # evidence the original request was HTTPS is this header. Without it
+    # request.is_secure() is False behind the proxy, and SECURE_SSL_REDIRECT
+    # (below, under HTTPS_ENABLED) 301s to https -> nginx forwards that back
+    # to us as http -> we 301 again, forever. The site becomes unreachable at
+    # exactly the moment HTTPS is switched on.
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+    # django-ratelimit and django-axes each resolve the client IP
+    # themselves, and both default to REMOTE_ADDR — neither has ever
+    # consulted TRUST_X_FORWARDED_FOR. Behind nginx REMOTE_ADDR is 127.0.0.1
+    # for every request on campus, which collapses every per-IP throttle into
+    # one shared bucket. Concretely: AXES_LOCKOUT_PARAMETERS includes
+    # 'ip_address', so five bad logins from any one person would lock out
+    # every account in the system for AXES_COOLOFF_TIME, and the 10/m login
+    # limit would be a campus-wide quota rather than a per-attacker one.
+    #
+    # Both are pointed at our own resolver rather than configured separately.
+    # The tempting knobs don't actually work here:
+    #   - AXES_IPWARE_PROXY_COUNT is inert unless django-ipware is installed,
+    #     and it isn't (not in requirements.txt) — axes then falls back to a
+    #     hardcoded REMOTE_ADDR that no axes setting can override.
+    #   - RATELIMIT_IP_META_KEY='HTTP_X_FORWARDED_FOR' passes the *raw* header
+    #     through, so a proxied request hands "1.2.3.4, 10.0.0.5" to
+    #     ipaddress.ip_network() and raises.
+    # A dotted path is resolved and called with the request by both libraries,
+    # which sidesteps both problems and keeps one implementation of "who is
+    # the client" shared with the audit log.
+    AXES_CLIENT_IP_CALLABLE = 'gate.audit.throttle_client_ip'
+    RATELIMIT_IP_META_KEY = 'gate.audit.throttle_client_ip'
 
 # ── API Keys ─────────────────────────────────────────────────────────────────
 # No insecure fallback on purpose: a missing .env value must fail loudly,
