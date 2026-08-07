@@ -3,6 +3,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
 from .forms import RegisterForm, LoginForm, OTPVerifyForm
@@ -35,7 +36,7 @@ def _pending_user(request):
     return user
 
 
-def _release_abandoned_signups(username, email):
+def _release_abandoned_signups(request, username, email):
     """
     Delete half-finished sign-ups holding the username or email being
     submitted, so an abandoned attempt doesn't lock the address out.
@@ -46,6 +47,17 @@ def _release_abandoned_signups(username, email):
     legacy walk-in record with no password — fails at least one of those,
     so this can't be used to delete somebody else's account by guessing
     their username.
+
+    That still wasn't narrow enough. This runs on raw POST data before the
+    form has been validated, so it acted on any username a caller cared to
+    type — including one belonging to somebody sitting on the verification
+    page right then. Knowing a username was enough to delete their
+    in-progress sign-up and strand them.
+
+    So a match is only released when it is genuinely abandoned — its
+    verification code has expired, which is the point the sign-up stops
+    being completable on its own — or when it belongs to this very session,
+    which covers the ordinary "start over" case in the same browser.
     """
     if not (username or email):
         return
@@ -71,8 +83,27 @@ def _release_abandoned_signups(username, email):
             .values_list('pk', flat=True)
         )
 
-    if matched_ids:
-        User.objects.filter(pk__in=matched_ids).delete()
+    if not matched_ids:
+        return
+
+    # Anyone holding a code that is still live is mid-verification, and
+    # this request has no business deleting them unless it IS them.
+    still_verifying = set(
+        EmailOTP.objects.filter(
+            user_id__in=matched_ids,
+            purpose=EmailOTP.PURPOSE_REGISTER,
+            used_at__isnull=True,
+            expires_at__gt=timezone.now(),
+        ).values_list('user_id', flat=True)
+    )
+    own_pending_id = request.session.get(PENDING_SESSION_KEY)
+
+    releasable = {
+        pk for pk in matched_ids
+        if pk not in still_verifying or pk == own_pending_id
+    }
+    if releasable:
+        User.objects.filter(pk__in=releasable).delete()
 
 
 @ratelimit(key='ip', rate='10/m', method='POST', block=True)
@@ -87,6 +118,7 @@ def register_view(request):
 
     if request.method == 'POST':
         _release_abandoned_signups(
+            request,
             request.POST.get('username', ''),
             request.POST.get('email', ''),
         )

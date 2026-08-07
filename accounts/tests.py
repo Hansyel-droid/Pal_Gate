@@ -308,16 +308,59 @@ class RegistrationOTPFlowTests(TestCase):
         self.assertRedirects(response, '/accounts/register/')
         self.assertFalse(self._applicant().is_active)
 
+    def _expire_pending_code(self):
+        """Age out the outstanding code, i.e. the sign-up is now abandoned
+        rather than in progress."""
+        EmailOTP.objects.filter(user=self._applicant()).update(
+            expires_at=timezone.now() - timedelta(minutes=1)
+        )
+
     def test_abandoned_signup_does_not_lock_the_username_forever(self):
         self._register()
         first_id = self._applicant().pk
+        self._expire_pending_code()
 
-        # Same person, fresh browser, trying again.
+        # Same person, fresh browser, trying again once the code they never
+        # used has expired.
         Client().post('/accounts/register/', self.FORM)
 
         user = self._applicant()
         self.assertNotEqual(user.pk, first_id)
         self.assertFalse(user.is_active)
+
+    def test_starting_over_in_the_same_browser_releases_the_username(self):
+        # The common case: they mistyped the address, so they go back and
+        # register again rather than waiting ten minutes for the code to
+        # lapse. Their own session owns the pending account, so it goes.
+        self._register()
+        first_id = self._applicant().pk
+
+        self._register()
+
+        self.assertNotEqual(self._applicant().pk, first_id)
+        self.assertFalse(User.objects.filter(pk=first_id).exists())
+
+    def test_in_progress_signup_cannot_be_deleted_by_a_stranger(self):
+        # This cleanup runs on raw POST data before the form is validated,
+        # so it acted on any username a caller typed. Someone sitting on
+        # the verification page with a live code must survive a stranger
+        # submitting their username, or knowing a username is enough to
+        # strand them mid-sign-up.
+        self._register()
+        victim_id = self._applicant().pk
+        code = self._sent_code()
+
+        Client().post('/accounts/register/', {
+            **self.FORM, 'email': 'attacker@psu.palawan.edu.ph',
+        })
+
+        self.assertTrue(User.objects.filter(pk=victim_id).exists())
+        # And their code still works.
+        response = self.client.post(
+            '/accounts/register/verify/', {'code': code}
+        )
+        self.assertRedirects(response, '/accounts/login/')
+        self.assertTrue(User.objects.get(pk=victim_id).is_active)
 
     def test_verified_account_is_not_released_by_a_re_registration(self):
         self._register()
