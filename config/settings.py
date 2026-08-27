@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'crispy_forms',
     'crispy_bootstrap5',
     'axes',
+    'anymail',
     # Your apps
     'accounts',
     'applications',
@@ -297,11 +298,24 @@ REGISTRATION_EMAIL_DOMAIN = config(
 # ── Email ────────────────────────────────────────────────────────────────────
 # Default is the console backend — emails print to the server log/terminal
 # instead of actually sending, which is fine for local dev and for campus
-# LAN deployments that haven't set up real SMTP yet. To send real email in
-# production, set EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
-# in .env and fill in the EMAIL_HOST_* values below (e.g. a university
-# mail relay or a transactional provider). Nothing breaks if these are left
-# blank while still on the console backend.
+# LAN deployments that haven't set up real SMTP yet.
+#
+# Two ways to send real email, and which one works depends on where this
+# runs:
+#
+# - SMTP (EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend): works
+#   on a real server or a campus LAN box with unrestricted outbound traffic.
+#   Does NOT work on Render's free tier — Render blocks outbound traffic to
+#   SMTP ports (25/465/587) on free web services to fight spam abuse, so
+#   this backend will hang and 500 every request that tries to send email.
+#
+# - Brevo via Anymail (EMAIL_BACKEND=anymail.backends.brevo.EmailBackend):
+#   sends over Brevo's HTTPS API instead of SMTP, so it works anywhere,
+#   including Render's free tier. Requires BREVO_API_KEY in .env and a
+#   sender address verified in the Brevo dashboard (Settings → Senders,
+#   Domains & Dedicated IPs) — verifying a single sender address is enough,
+#   you do NOT need to prove DNS control of the whole domain. Free tier is
+#   300 emails/day, no expiry, no card required.
 EMAIL_BACKEND = config(
     'EMAIL_BACKEND',
     default='django.core.mail.backends.console.EmailBackend'
@@ -311,6 +325,12 @@ EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+
+# Only read when EMAIL_BACKEND is the Brevo/Anymail backend above — harmless
+# to leave blank otherwise.
+ANYMAIL = {
+    'BREVO_API_KEY': config('BREVO_API_KEY', default=''),
+}
 # Everything the system sends — sign-up codes, password reset links,
 # application status notices — goes out from the university's own domain.
 # A .local address is not deliverable and, more to the point, mail asking
