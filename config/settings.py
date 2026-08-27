@@ -483,6 +483,14 @@ ADMIN_SITE_TITLE = 'PalawanSU Admin'
 ADMIN_INDEX_TITLE = 'System Administration'
 
 # ── Logging ──────────────────────────────────────────────────────────────────
+# The 'logs' directory isn't tracked in git (git doesn't track empty folders),
+# so a fresh clone — like Render's build — won't have it. The FileHandler
+# below fails immediately with FileNotFoundError if the directory is missing,
+# which crashes every manage.py command including collectstatic/migrate
+# during deploy. Creating it here, before LOGGING is defined, guarantees it
+# exists no matter where or how many times the repo is cloned.
+(BASE_DIR / 'logs').mkdir(parents=True, exist_ok=True)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
