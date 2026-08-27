@@ -52,6 +52,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'accounts.middleware.IdleTimeoutMiddleware',
+    'accounts.middleware.CampusPolicyMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -163,6 +164,10 @@ AUTH_PASSWORD_VALIDATORS = [
      'OPTIONS': {'min_length': 10}},
     {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+    # Ours: none of the above knows what the account's password already
+    # is, so a "reset" that types the old password back used to succeed
+    # and report the password changed.
+    {'NAME': 'accounts.validators.NotCurrentPasswordValidator'},
 ]
 
 # ── Localisation ─────────────────────────────────────────────────────────────
@@ -207,6 +212,14 @@ LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/dashboard/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
 
+# The university's mail domain. Defined ahead of the email block below
+# because it is the domain the system's own addresses are built from,
+# as well as the one applicant self-registration is restricted to.
+REGISTRATION_EMAIL_DOMAIN = config(
+    'REGISTRATION_EMAIL_DOMAIN',
+    default='psu.palawan.edu.ph'
+)
+
 # ── Email ────────────────────────────────────────────────────────────────────
 # Default is the console backend — emails print to the server log/terminal
 # instead of actually sending, which is fine for local dev and for campus
@@ -224,20 +237,41 @@ EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+# Everything the system sends — sign-up codes, password reset links,
+# application status notices — goes out from the university's own domain.
+# A .local address is not deliverable and, more to the point, mail asking
+# someone to click a link and set a password is exactly the mail people
+# are trained to distrust when it arrives from an address that has
+# nothing to do with the institution. Override in .env with whatever
+# mailbox the campus relay is willing to send as.
 DEFAULT_FROM_EMAIL = config(
     'DEFAULT_FROM_EMAIL',
-    default='PalSU Gate System <noreply@palsu-gate.local>'
+    default=f'PalawanSU Gate System <noreply@{REGISTRATION_EMAIL_DOMAIN}>'
+)
+
+# Where to send a person the automated flows cannot help: staff accounts
+# with no address on file, and applicants locked out of the mailbox they
+# signed up with. Printed on the password reset page and in the reset
+# email, so it has to be a mailbox somebody actually reads.
+SUPPORT_EMAIL = config(
+    'SUPPORT_EMAIL',
+    default=f'gate-support@{REGISTRATION_EMAIL_DOMAIN}'
+)
+
+# How long a password reset link stays good. Django's default is three
+# days, which is a long time for a single-click account takeover to sit
+# in an inbox — and nobody who has just clicked "forgot password" needs
+# three days. One hour is stated verbatim in the email we send.
+PASSWORD_RESET_TIMEOUT = config(
+    'PASSWORD_RESET_TIMEOUT', default=3600, cast=int
 )
 
 # ── Applicant Registration (campus email + one-time code) ────────────────────
-# Self-registration is limited to official PalSU addresses, and the account
-# stays inactive until the applicant types back the code we email them. That
-# gives every portal account a verified, reachable address — which the whole
-# status-notification flow (applications/notifications.py) depends on.
-REGISTRATION_EMAIL_DOMAIN = config(
-    'REGISTRATION_EMAIL_DOMAIN',
-    default='psu.palawan.edu.ph'
-)
+# Self-registration is limited to REGISTRATION_EMAIL_DOMAIN above, and the
+# account stays inactive until the applicant types back the code we email
+# them. That gives every portal account a verified, reachable address — which
+# both the status-notification flow (applications/notifications.py) and
+# password recovery depend on.
 OTP_LENGTH = 6
 OTP_EXPIRY_MINUTES = config('OTP_EXPIRY_MINUTES', default=10, cast=int)
 OTP_MAX_ATTEMPTS = config('OTP_MAX_ATTEMPTS', default=5, cast=int)
@@ -348,9 +382,30 @@ if TRUST_X_FORWARDED_FOR:
 # not silently fall back to a key that's sitting in source control history.
 API_KEYS = config('API_KEYS', cast=Csv())
 
+# ── RFID tag authentication ──────────────────────────────────────────────────
+# Master key for deriving each NTAG215's PWD_AUTH password from its UID.
+# See api/rfid_auth.py for the derivation and the reasoning behind it.
+#
+# No fallback, for the same reason as API_KEYS above — but the consequences
+# of getting this one wrong are worse, so two warnings:
+#
+#   1. THIS VALUE MUST NEVER CHANGE ONCE TAGS ARE IN THE FIELD. Every issued
+#      tag is physically locked with a password derived from this key. Change
+#      it and the server starts deriving passwords that no existing tag will
+#      accept, while the tags stay locked with the old one — which nothing
+#      can now compute. There is no remote recovery: each tag would have to
+#      be collected and unlocked with its old password, and if that password
+#      is gone the tag's user memory is unreachable for good. Rotating this
+#      is a physical recall, not a config change.
+#   2. It is a different secret from API_KEYS and must not be set to the same
+#      value. API keys are handed out per gate device and get reflashed when
+#      one is suspected compromised; this key is the root of every tag
+#      password in the system and belongs only on the server.
+RFID_MASTER_KEY = config('RFID_MASTER_KEY')
+
 # ── Admin Branding ───────────────────────────────────────────────────────────
-ADMIN_SITE_HEADER = 'PalSU Gate System Administration'
-ADMIN_SITE_TITLE = 'PalSU Admin'
+ADMIN_SITE_HEADER = 'PalawanSU Gate System Administration'
+ADMIN_SITE_TITLE = 'PalawanSU Admin'
 ADMIN_INDEX_TITLE = 'System Administration'
 
 # ── Logging ──────────────────────────────────────────────────────────────────

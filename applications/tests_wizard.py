@@ -37,25 +37,25 @@ def png(name='doc.png'):
 @override_settings(MEDIA_ROOT=MEDIA)
 class CleanupCommandTests(TestCase):
     def test_deletes_old_temp_files(self):
-        default_storage.save('temp_uploads/7/or_cr', ContentFile(b'old'))
-        self.assertTrue(default_storage.exists('temp_uploads/7/or_cr'))
+        default_storage.save('temp_uploads/7/official_receipt', ContentFile(b'old'))
+        self.assertTrue(default_storage.exists('temp_uploads/7/official_receipt'))
 
         # Backdate it well past the 24h cutoff.
         import os
-        p = default_storage.path('temp_uploads/7/or_cr')
+        p = default_storage.path('temp_uploads/7/official_receipt')
         old = (timezone.now() - timedelta(hours=48)).timestamp()
         os.utime(p, (old, old))
 
         call_command('cleanup_temp_files')
         self.assertFalse(
-            default_storage.exists('temp_uploads/7/or_cr'),
+            default_storage.exists('temp_uploads/7/official_receipt'),
             'cleanup_temp_files did not delete an expired temp file',
         )
 
     def test_keeps_fresh_temp_files(self):
-        default_storage.save('temp_uploads/8/or_cr', ContentFile(b'new'))
+        default_storage.save('temp_uploads/8/official_receipt', ContentFile(b'new'))
         call_command('cleanup_temp_files')
-        self.assertTrue(default_storage.exists('temp_uploads/8/or_cr'))
+        self.assertTrue(default_storage.exists('temp_uploads/8/official_receipt'))
 
 
 @override_settings(MEDIA_ROOT=MEDIA)
@@ -83,7 +83,9 @@ class Step2RevisitTests(TestCase):
         data = {
             'plate_number': 'ABC 123', 'vehicle_type': 'four_wheels',
             'vehicle_color': 'blue', 'is_owner': 'yes',
-            'or_cr': doc('or_cr.pdf'), 'drivers_license': doc('dl.pdf'),
+            'official_receipt': doc('or.pdf'),
+            'vehicle_registration': doc('cr.pdf'),
+            'drivers_license': doc('dl.pdf'),
             'cor': doc('cor.pdf'),
         }
         data.update(extra)
@@ -93,15 +95,30 @@ class Step2RevisitTests(TestCase):
         r = self.post_step2()
         self.assertRedirects(r, reverse('apply_step3'))
         files = self.client.session['app_temp_files']
-        self.assertEqual(files['or_cr']['original_name'], 'or_cr.pdf')
+        self.assertEqual(files['official_receipt']['original_name'], 'or.pdf')
         # Path keyed on pk, not username, and carries no extension.
-        self.assertEqual(files['or_cr']['path'], f'temp_uploads/{self.user.pk}/or_cr')
+        self.assertEqual(
+            files['official_receipt']['path'],
+            f'temp_uploads/{self.user.pk}/official_receipt',
+        )
+        # The CR is stored separately, under its own name — the whole point
+        # of the split is that these two never share a slot.
+        self.assertEqual(files['vehicle_registration']['original_name'], 'cr.pdf')
+        self.assertEqual(
+            files['vehicle_registration']['path'],
+            f'temp_uploads/{self.user.pk}/vehicle_registration',
+        )
+        self.assertNotEqual(
+            files['official_receipt']['path'],
+            files['vehicle_registration']['path'],
+        )
 
     def test_get_seeds_from_session(self):
         self.post_step2()
         r = self.client.get(reverse('apply_step2'))
         self.assertContains(r, 'ABC 123')
-        self.assertContains(r, 'On file: or_cr.pdf')
+        self.assertContains(r, 'On file: or.pdf')
+        self.assertContains(r, 'On file: cr.pdf')
 
     def test_revisit_without_reuploading_documents(self):
         self.post_step2()
@@ -114,19 +131,39 @@ class Step2RevisitTests(TestCase):
         self.assertRedirects(r, reverse('apply_step3'))
         self.assertEqual(self.client.session['app_step2']['plate_number'], 'XYZ 999')
         after = self.client.session['app_temp_files']
-        self.assertEqual(after['or_cr'], before['or_cr'])
+        self.assertEqual(after['official_receipt'], before['official_receipt'])
+        self.assertEqual(after['vehicle_registration'], before['vehicle_registration'])
         self.assertEqual(after['drivers_license'], before['drivers_license'])
         self.assertEqual(after['cor'], before['cor'])
 
     def test_reupload_different_extension_replaces(self):
         self.post_step2()
-        first = self.client.session['app_temp_files']['or_cr']['path']
-        self.post_step2(or_cr=png('or_cr.png'))
+        first = self.client.session['app_temp_files']['official_receipt']['path']
+        self.post_step2(official_receipt=png('or.png'))
         second = self.client.session['app_temp_files']
-        self.assertEqual(second['or_cr']['path'], first, 'orphaned the old temp file')
-        self.assertEqual(second['or_cr']['original_name'], 'or_cr.png')
+        self.assertEqual(
+            second['official_receipt']['path'], first, 'orphaned the old temp file'
+        )
+        self.assertEqual(second['official_receipt']['original_name'], 'or.png')
         _, files = default_storage.listdir(f'temp_uploads/{self.user.pk}')
-        self.assertEqual(sorted(files), ['cor', 'drivers_license', 'or_cr'])
+        self.assertEqual(
+            sorted(files),
+            ['cor', 'drivers_license', 'official_receipt', 'vehicle_registration'],
+        )
+
+    def test_replacing_the_or_leaves_the_cr_alone(self):
+        """
+        The two documents share a code path but must not share a file. Before
+        the split there was only one slot, so this could not be asked.
+        """
+        self.post_step2()
+        cr_before = self.client.session['app_temp_files']['vehicle_registration']
+
+        self.post_step2(official_receipt=png('new-or.png'))
+
+        after = self.client.session['app_temp_files']
+        self.assertEqual(after['official_receipt']['original_name'], 'new-or.png')
+        self.assertEqual(after['vehicle_registration'], cr_before)
 
     def test_dotdot_username_does_not_crash(self):
         dots = User.objects.create_user(
@@ -143,7 +180,8 @@ class Step2RevisitTests(TestCase):
         r = self.client.post(reverse('apply_step2'), {
             'plate_number': 'DOT 001', 'vehicle_type': 'four_wheels',
             'vehicle_color': 'blue', 'is_owner': 'yes',
-            'or_cr': doc(), 'drivers_license': doc('dl.pdf'),
+            'official_receipt': doc(), 'vehicle_registration': doc(),
+            'drivers_license': doc('dl.pdf'),
         })
         self.assertRedirects(r, reverse('apply_step3'))
 
@@ -163,8 +201,8 @@ class Step2RevisitTests(TestCase):
         )
         body = b'%PDF-1.4 ' + b'payload-' * 5000
         self.post_step2(
-            or_cr=SimpleUploadedFile('my or cr.pdf', body,
-                                     content_type='application/pdf')
+            official_receipt=SimpleUploadedFile('my or.pdf', body,
+                                                content_type='application/pdf')
         )
         self.client.post(reverse('apply_step3'), {
             'slot_id': slot.pk, 'time': '08:00',
@@ -173,14 +211,23 @@ class Step2RevisitTests(TestCase):
         self.assertRedirects(r, reverse('my_applications'))
 
         app = StickerApplication.objects.get(plate_number='ABC 123')
-        self.assertTrue(app.or_cr.name.endswith('.pdf'), app.or_cr.name)
-        with app.or_cr.open('rb') as f:
+        self.assertTrue(
+            app.official_receipt.name.endswith('.pdf'), app.official_receipt.name
+        )
+        with app.official_receipt.open('rb') as f:
             self.assertEqual(f.read(), body)
 
-        # Temp storage is emptied once the submission commits.
-        self.assertFalse(
-            default_storage.exists(f'temp_uploads/{self.user.pk}/or_cr')
+        # The CR landed on its own field, from its own temp file.
+        self.assertTrue(app.vehicle_registration.name)
+        self.assertNotEqual(
+            app.official_receipt.name, app.vehicle_registration.name
         )
+
+        # Temp storage is emptied once the submission commits.
+        for field in ('official_receipt', 'vehicle_registration'):
+            self.assertFalse(
+                default_storage.exists(f'temp_uploads/{self.user.pk}/{field}')
+            )
 
     def test_form_still_requires_docs_on_a_fresh_form(self):
         form = ApplicationStep2Form(data={
@@ -190,8 +237,21 @@ class Step2RevisitTests(TestCase):
         form.data = form.data.copy()
         form.data['step1_classification'] = 'student'
         self.assertFalse(form.is_valid())
-        for f in ('or_cr', 'drivers_license', 'cor'):
+        for f in ('official_receipt', 'vehicle_registration',
+                  'drivers_license', 'cor'):
             self.assertIn(f, form.errors)
+
+    def test_the_cr_alone_is_not_enough(self):
+        """Uploading only one of the two no longer satisfies the pair."""
+        form = ApplicationStep2Form(data={
+            'plate_number': 'A 1', 'vehicle_type': 'four_wheels',
+            'vehicle_color': 'blue', 'is_owner': 'yes',
+        }, files={'vehicle_registration': doc('cr.pdf')})
+        form.data = form.data.copy()
+        form.data['step1_classification'] = 'faculty'
+        self.assertFalse(form.is_valid())
+        self.assertIn('official_receipt', form.errors)
+        self.assertNotIn('vehicle_registration', form.errors)
 
 
 @override_settings(MEDIA_ROOT=MEDIA)
@@ -204,11 +264,14 @@ class ServeMissingDocumentTests(TestCase):
             applicant=owner, full_name='O', college_department='C',
             id_number='1', classification='student', plate_number='GONE-1',
             vehicle_type='four_wheels', vehicle_color='blue', is_owner=True,
-            or_cr=doc('or_cr.pdf'), drivers_license=doc('dl.pdf'), status='draft',
+            official_receipt=doc('or.pdf'), vehicle_registration=doc('cr.pdf'),
+            drivers_license=doc('dl.pdf'), status='draft',
         )
         import os
-        os.remove(app.or_cr.path)
+        os.remove(app.official_receipt.path)
 
         self.client.force_login(owner)
-        r = self.client.get(reverse('serve_document', args=[app.pk, 'or_cr']))
+        r = self.client.get(
+            reverse('serve_document', args=[app.pk, 'official_receipt'])
+        )
         self.assertEqual(r.status_code, 404)

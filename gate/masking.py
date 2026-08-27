@@ -14,14 +14,21 @@ def mask_rfid(uid):
 
 
 def mask_sticker_id(sticker_id):
-    """PalSU-A1B2C3D4 → PalSU-****C3D4"""
+    """PalawanSU-A1B2C3D4 → PalawanSU-****C3D4
+
+    The prefix is carried through from the value we were given rather than
+    written back as a constant. Stickers issued before the rename still sit
+    in the database as `PalSU-…`, and reprinting them under today's prefix
+    would show an officer an identifier that isn't on the physical sticker
+    in front of them.
+    """
     if not sticker_id:
         return '—'
     parts = sticker_id.split('-')
     if len(parts) == 2:
-        code = parts[1]
+        prefix, code = parts
         masked = '*' * (len(code) - 4) + code[-4:] if len(code) > 4 else '****'
-        return f'PalSU-{masked}'
+        return f'{prefix}-{masked}'
     return sticker_id
 
 

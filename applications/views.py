@@ -22,7 +22,21 @@ from gate.audit import log_action
 
 logger = logging.getLogger('django')
 
-DOCUMENT_FIELDS = {'or_cr', 'drivers_license', 'cor', 'authorization_letter'}
+DOCUMENT_FIELDS = {
+    'official_receipt', 'vehicle_registration',
+    'drivers_license', 'cor', 'authorization_letter',
+}
+
+# What each document is called when shown to the person who uploaded it.
+# Step 4's review screen used to print the raw field name, which was already
+# poor ("or_cr") and would now be worse ("vehicle_registration").
+DOCUMENT_LABELS = {
+    'official_receipt': 'Official Receipt (OR)',
+    'vehicle_registration': 'Certificate of Registration (CR)',
+    'drivers_license': "Driver's licence",
+    'cor': 'COR',
+    'authorization_letter': 'Authorisation letter',
+}
 
 
 class AppointmentNoLongerAvailable(Exception):
@@ -60,8 +74,8 @@ def temp_path_for(user, field_name):
     caught — a 500 on Step 2 for that applicant, every time.
 
     The name deliberately carries NO extension. It used to, which meant
-    re-uploading or_cr as a .png after a .pdf wrote a second file instead of
-    replacing the first, orphaning the original until cleanup ran. The real
+    re-uploading a document as a .png after a .pdf wrote a second file instead
+    of replacing the first, orphaning the original until cleanup ran. The real
     extension is preserved in the session's `original_name` and restored
     when the file is copied onto the model at submit.
     """
@@ -183,7 +197,12 @@ def apply_renew(request, pk):
 
     user = request.user
     request.session['app_temp_files'] = {
-        'or_cr': copy_document_to_temp(old_application.or_cr, user, 'or_cr'),
+        'official_receipt': copy_document_to_temp(
+            old_application.official_receipt, user, 'official_receipt'
+        ),
+        'vehicle_registration': copy_document_to_temp(
+            old_application.vehicle_registration, user, 'vehicle_registration'
+        ),
         'drivers_license': copy_document_to_temp(
             old_application.drivers_license, user, 'drivers_license'
         ),
@@ -269,7 +288,8 @@ def apply_step2(request):
             # authority over the template's JS, and it also decides whether
             # a document held from an earlier pass is still wanted.
             applies = {
-                'or_cr': True,
+                'official_receipt': True,
+                'vehicle_registration': True,
                 'drivers_license': True,
                 'cor': classification == 'student',
                 'authorization_letter': is_owner == 'no',
@@ -410,13 +430,12 @@ def apply_step4(request):
         appointment_choice['time'], appointment_choice['time']
     )
 
-    # Build a display-friendly version of the file names
+    # Build a display-friendly version of the file names, keyed by the label
+    # the applicant saw on Step 2 rather than the field name.
     files_info = {}
     for field_name, file_data in temp_files.items():
-        if file_data:
-            files_info[field_name] = file_data['original_name']
-        else:
-            files_info[field_name] = None
+        label = DOCUMENT_LABELS.get(field_name, field_name)
+        files_info[label] = file_data['original_name'] if file_data else None
 
     if request.method == 'POST':
         if 'go_back' in request.POST:
@@ -449,11 +468,12 @@ def apply_step4(request):
                     file_data['original_name'], File(handle), save=False
                 )
 
-        # or_cr and drivers_license are always required. If a temp file
-        # went missing (e.g. cleaned up by the scheduled task while the
-        # applicant was mid-wizard), don't silently save a broken record —
+        # The OR, the CR and the driver's licence are always required. If a
+        # temp file went missing (e.g. cleaned up by the scheduled task while
+        # the applicant was mid-wizard), don't silently save a broken record —
         # send them back to re-upload.
-        if not temp_file_available('or_cr') or not temp_file_available('drivers_license'):
+        if not all(temp_file_available(name) for name in (
+                'official_receipt', 'vehicle_registration', 'drivers_license')):
             messages.error(
                 request,
                 'One or more of your required documents could not be found '
@@ -477,7 +497,10 @@ def apply_step4(request):
                     submitted_at=timezone.now(),
                 )
 
-                attach_document(application.or_cr, 'or_cr')
+                attach_document(application.official_receipt, 'official_receipt')
+                attach_document(
+                    application.vehicle_registration, 'vehicle_registration'
+                )
                 attach_document(application.drivers_license, 'drivers_license')
                 attach_document(application.cor, 'cor')
                 attach_document(

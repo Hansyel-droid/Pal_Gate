@@ -27,11 +27,11 @@
             </span>
         </div>
         <div class="status-panel-action">
-            <form method="post">
+            <form method="post" data-confirm="closeWindowConfirm"
+                  data-confirm-fallback="Close registration now? It is scheduled to run until {{ current_window.end_date|date:'M d, Y' }}. Applicants will immediately be unable to submit new applications.">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="close">
-                <button type="submit" class="btn btn-outline-danger"
-                        onclick="return confirm('Close registration now? Applicants will immediately be unable to submit new applications.')">
+                <button type="submit" class="btn btn-outline-danger">
                     <svg class="ic" aria-hidden="true"><use href="#i-x-circle"/></svg>
                     Close now
                 </button>
@@ -94,5 +94,53 @@
             </form>
         </div>
     </div>
+
+    {% comment %} Outside the close form — a form cannot contain another, and
+       this holds its own method="dialog" form. Rendered only alongside the
+       button that opens it, i.e. only while a window is actually open.
+       See the component note at the bottom of base.html. {% endcomment %}
+    {% if current_window %}
+    <dialog class="confirm-dialog" id="closeWindowConfirm"
+            aria-labelledby="closeWindowTitle" aria-describedby="closeWindowBody">
+        <div class="confirm-head">
+            <span class="confirm-mark danger" aria-hidden="true">
+                <svg class="ic" aria-hidden="true"><use href="#i-x-circle"/></svg>
+            </span>
+            <h2 class="confirm-title" id="closeWindowTitle">
+                Close registration now?
+            </h2>
+        </div>
+
+        <div class="confirm-body" id="closeWindowBody">
+            <div class="confirm-record">
+                <span class="confirm-record-name">Registration is open</span>
+                <span class="confirm-record-meta">
+                    <span>
+                        {{ current_window.start_date|date:"M d, Y" }} —
+                        {{ current_window.end_date|date:"M d, Y" }}
+                    </span>
+                </span>
+            </div>
+            <p>
+                This window is set to run until
+                {{ current_window.end_date|date:"M d, Y" }}. Closing it now
+                means applicants immediately cannot submit new applications —
+                anyone part-way through keeps their saved entries but cannot
+                submit. Applications already in the system are unaffected. To
+                reopen, set a new window below.
+            </p>
+        </div>
+
+        <form method="dialog" class="confirm-actions">
+            <button type="submit" value="cancel" class="btn btn-secondary" autofocus>
+                Cancel
+            </button>
+            <button type="submit" value="confirm" class="btn btn-danger">
+                <svg class="ic" aria-hidden="true"><use href="#i-x-circle"/></svg>
+                Close registration
+            </button>
+        </form>
+    </dialog>
+    {% endif %}
 </div>
 {% endblock %}

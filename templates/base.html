@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light">
-    <title>{% block title %}PalSU Gate System{% endblock %}</title>
+    <title>{% block title %}PalawanSU Gate System{% endblock %}</title>
 
     <!-- Fonts. IBM Plex Sans carries the interface; IBM Plex Mono carries
          identifiers — plate numbers, sticker IDs, RFID UIDs — which are the
@@ -126,17 +126,29 @@
             /* Radii */
             --r1: 4px; --r2: 6px; --r3: 8px; --r4: 12px; --rfull: 999px;
 
-            /* Type scale. Floor is 0.6875rem (11px) and only for uppercase
-               tracked micro-labels — nothing renders below it. */
-            --fs-micro: 0.6875rem;  /* 11px */
-            --fs-2xs:   0.75rem;    /* 12px */
-            --fs-xs:    0.8125rem;  /* 13px */
-            --fs-sm:    0.875rem;   /* 14px — body baseline */
-            --fs-md:    0.9375rem;  /* 15px */
-            --fs-lg:    1.0625rem;  /* 17px */
-            --fs-xl:    1.25rem;    /* 20px */
-            --fs-2xl:   1.5rem;     /* 24px */
-            --fs-3xl:   1.875rem;   /* 30px */
+            /* Type scale. Every size in the app resolves through these nine
+               tokens — nothing hard-codes a font-size — so the whole product
+               scales from here.
+
+               The scale sat one step lower (11–30px on a 14px body), which
+               read as cramped on a desktop monitor: the label, table and
+               button tiers all landed at 13px, and the uppercase micro-labels
+               at 11px were below what WCAG-minded practice treats as a
+               comfortable floor for tracked, all-caps text. Each step moved
+               up ~1px. The floor is now 0.75rem (12px) and is still reserved
+               for uppercase tracked micro-labels; body is 15px and the
+               densest running text (tables, form labels, buttons) is 14px.
+               Values stay in rem, so a reader who raises their browser's
+               default font size still scales the entire interface. */
+            --fs-micro: 0.75rem;    /* 12px — uppercase micro-labels only */
+            --fs-2xs:   0.8125rem;  /* 13px */
+            --fs-xs:    0.875rem;   /* 14px */
+            --fs-sm:    0.9375rem;  /* 15px — body baseline */
+            --fs-md:    1rem;       /* 16px */
+            --fs-lg:    1.125rem;   /* 18px */
+            --fs-xl:    1.375rem;   /* 22px */
+            --fs-2xl:   1.625rem;   /* 26px */
+            --fs-3xl:   2rem;       /* 32px */
 
             --lh-tight: 1.2;
             --lh-snug:  1.35;
@@ -286,7 +298,7 @@
             z-index: 1000;
         }
 
-        /* Wordmark. PRODUCT.md records that no official PalSU seal exists, so
+        /* Wordmark. PRODUCT.md records that no official PalawanSU seal exists, so
            this is lettering plus a drawn barrier — the actual object at the
            gate — never a shield or crest that would read as a seal. */
         .brand {
@@ -1139,6 +1151,118 @@
         .alert-secondary { background: var(--neutral-bg); color: var(--neutral-ink); border-color: var(--neutral-line); }
 
         /* ═══════════════════════════════════════════════════════════════
+           CONFIRM DIALOG
+           A consequential action gets one interstitial that restates the
+           record it is about to change — the point is recognition, not
+           friction. Built on native <dialog>, so the focus trap, Escape,
+           inert background and focus restoration are the platform's and
+           not a reimplementation of them.
+           ═══════════════════════════════════════════════════════════════ */
+        .confirm-dialog {
+            width: min(440px, calc(100vw - 2 * var(--s4)));
+            padding: 0;
+            margin: auto;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r4);
+            box-shadow: var(--sh-pop);
+            color: var(--text-main);
+            font-family: var(--font-ui);
+            font-size: var(--fs-sm);
+            line-height: var(--lh-body);
+        }
+        .confirm-dialog::backdrop { background: rgba(16,20,25,.32); }
+        /* Both halves animate in; neither is left invisible if the animation
+           never runs, because `both` only holds a state the keyframes reach. */
+        .confirm-dialog[open] { animation: confirmIn var(--t-slow) var(--ease) both; }
+        .confirm-dialog[open]::backdrop { animation: backdropIn var(--t-mid) var(--ease-soft) both; }
+        @keyframes confirmIn {
+            from { opacity: 0; transform: translate3d(0, 6px, 0) scale(.985); }
+            to   { opacity: 1; transform: none; }
+        }
+        @keyframes backdropIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .confirm-head {
+            display: flex;
+            align-items: flex-start;
+            gap: var(--s3);
+            padding: var(--s5) var(--s5) var(--s3);
+        }
+        /* Tone matches the button that opened it, so the dialog reads as the
+           same act continued rather than a new one. */
+        .confirm-mark {
+            display: grid;
+            place-items: center;
+            width: 34px; height: 34px;
+            flex: none;
+            border-radius: var(--r2);
+            background: var(--neutral-bg);
+            border: 1px solid var(--neutral-line);
+            color: var(--neutral-ink);
+            font-size: var(--fs-lg);
+        }
+        .confirm-mark.success { background: var(--success-bg); border-color: var(--success-line); color: var(--success-ink); }
+        .confirm-mark.danger  { background: var(--danger-bg);  border-color: var(--danger-line);  color: var(--danger-ink); }
+        .confirm-title {
+            font-size: var(--fs-md);
+            font-weight: 620;
+            letter-spacing: -0.016em;
+            line-height: var(--lh-snug);
+            margin: 0;
+            padding-top: 3px;
+        }
+
+        .confirm-body { padding: 0 var(--s5); }
+        .confirm-body p {
+            font-size: var(--fs-xs);
+            color: var(--text-muted);
+            line-height: var(--lh-snug);
+            margin: 0;
+        }
+
+        /* The record being acted on, restated in the same faces the list and
+           detail screens use it in — the plate in the identifier face, because
+           that is what the administrator actually cross-checks against. */
+        .confirm-record {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: var(--s2) var(--s3);
+            background: var(--surface-sunk);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--r2);
+            padding: var(--s3);
+            margin-bottom: var(--s3);
+        }
+        .confirm-record-name {
+            font-size: var(--fs-sm);
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            color: var(--text-strong);
+        }
+        .confirm-record-meta {
+            width: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--s1) var(--s3);
+            font-size: var(--fs-2xs);
+            color: var(--text-muted);
+        }
+
+        .confirm-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: var(--s2);
+            margin: 0;
+            padding: var(--s4) var(--s5) var(--s5);
+        }
+        @media (max-width: 420px) {
+            /* Stacked, confirm on top: the safe control keeps thumb reach. */
+            .confirm-actions { flex-direction: column-reverse; }
+            .confirm-actions .btn { width: 100%; }
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
            WIZARD
            ═══════════════════════════════════════════════════════════════ */
         .wizard-wrap {
@@ -1691,7 +1815,7 @@
         }
         /* A hairline plate, not a bordered navy tile — a gold-edged shield
            reads as an institutional seal, and PRODUCT.md records that no
-           official PalSU seal exists. */
+           official PalawanSU seal exists. */
         .auth-mark {
             width: 42px; height: 42px;
             margin: 0 auto var(--s4);
@@ -1724,8 +1848,36 @@
         .field-link { font-size: var(--fs-2xs); font-weight: 500; color: var(--text-muted); }
         .field-link:hover { color: var(--accent-700); }
 
+        /* The short "what happens next" list on an auth confirmation
+           screen. An icon per line rather than a bullet, hung in its own
+           column so wrapped text lines up under the first word instead of
+           under the icon. */
+        .auth-notes {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: grid;
+            gap: var(--s3);
+        }
+        .auth-notes li {
+            display: flex;
+            gap: var(--s3);
+            align-items: flex-start;
+            font-size: var(--fs-xs);
+            line-height: var(--lh-snug);
+            color: var(--text-muted);
+        }
+        .auth-notes .ic {
+            margin-top: 0.15em;
+            color: var(--accent-700);
+        }
+
         /* One-time code: monospaced and tracked out, because it is copied
            character by character from an email. */
+        /* One-time code, no-JS fallback: monospaced and tracked out,
+           because it is copied character by character from an email. The
+           script at the foot of this file replaces it with the boxes
+           below; this is what remains if that never runs. */
         .otp-input {
             text-align: center;
             font-family: var(--font-id);
@@ -1734,6 +1886,43 @@
             letter-spacing: 0.3em;
             padding: 10px;
             text-indent: 0.3em;
+        }
+
+        /* One box per digit. The code is read off an email one character
+           at a time, and boxes both give each character somewhere to land
+           and say how many are coming before you start. */
+        .otp-group {
+            display: flex;
+            gap: var(--s2);
+            justify-content: center;
+        }
+        .otp-cell {
+            width: 100%;
+            min-width: 0;
+            max-width: 54px;
+            height: 54px;
+            padding: 0;
+            text-align: center;
+            font-family: var(--font-id);
+            font-size: var(--fs-xl);
+            font-weight: 600;
+            color: var(--text-strong);
+        }
+        /* A filled box holds its accent border, so a half-typed code
+           shows how far along it is at a glance rather than only under
+           the caret. */
+        .otp-cell.is-filled {
+            border-color: var(--accent-500);
+            background: var(--accent-50);
+        }
+        /* Once the last digit lands the form submits itself, so the boxes
+           stop taking input. Dimming them is the only signal that the
+           code went somewhere. */
+        .otp-group.is-submitting { opacity: .6; }
+
+        @media (max-width: 380px) {
+            .otp-group { gap: var(--s1); }
+            .otp-cell { height: 46px; font-size: var(--fs-lg); }
         }
 
         /* Empty states are first-class here: hardware is partial and the scan
@@ -1943,7 +2132,7 @@
   STORY: The visitor sees what happened, what to do next, and which physical
   object it concerns — without reading a legend.
   FIRST VIEWPORT: Hairline topbar with typographic wordmark (no seal — none
-  exists), light rail sidebar, page title at 24px/650 over a 13px sub, content
+  exists), light rail sidebar, page title at 26px/650 over a 14px sub, content
   on a 4px grid.
   FORM: Pinned brief — Vercel/Linear/Stripe canon executed straight, no roll.
   FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
@@ -2043,7 +2232,7 @@ rendering the topbar there put the product name on the page twice.
             <svg class="ic" aria-hidden="true"><use href="#i-barrier"/></svg>
         </span>
         <span class="brand-text">
-            <span class="brand-name">PalSU Gate System</span>
+            <span class="brand-name">PalawanSU Gate System</span>
             <span class="brand-sub">Palawan State University</span>
         </span>
     </div>
@@ -2088,6 +2277,10 @@ rendering the topbar there put the product name on the page twice.
             <a href="{% url 'my_applications' %}" class="sidebar-link {% if request.resolver_match.url_name == 'my_applications' %}active{% endif %}"
                {% if request.resolver_match.url_name == 'my_applications' %}aria-current="page"{% endif %}>
                 <svg class="ic" aria-hidden="true"><use href="#i-layers"/></svg> My Applications
+            </a>
+            <a href="{% url 'campus_policy' %}" class="sidebar-link {% if request.resolver_match.url_name == 'campus_policy' %}active{% endif %}"
+               {% if request.resolver_match.url_name == 'campus_policy' %}aria-current="page"{% endif %}>
+                <svg class="ic" aria-hidden="true"><use href="#i-book"/></svg> Campus Access Policy
             </a>
         </div>
 
@@ -2239,6 +2432,287 @@ rendering the topbar there put the product name on the page twice.
                 btn.setAttribute('aria-label', nowShowing ? 'Hide password' : 'Show password');
                 btn.innerHTML = nowShowing ? EYE_OFF : EYE;
             });
+        });
+    })();
+
+    // Live countdown on a "send it again" button.
+    //
+    // The wait is enforced on the server; this only reflects it. Until
+    // now the number was rendered once and then sat there, so a button
+    // that said "(43s)" stayed disabled at 43 forever and the only way to
+    // reach a working resend was to know to reload the page — which is
+    // indistinguishable, from the outside, from there being no resend.
+    //
+    // Shared by the sign-up code screen and the password reset screen:
+    // both mail the same person the same way and owe them the same wait.
+    (function () {
+        document.querySelectorAll('[data-resend-in]').forEach(function (button) {
+            var remaining = parseInt(button.getAttribute('data-resend-in'), 10);
+            var label = button.getAttribute('data-resend-label')
+                || button.textContent.trim();
+
+            function ready() {
+                button.disabled = false;
+                button.textContent = label;
+            }
+
+            if (!(remaining > 0)) {
+                ready();
+                return;
+            }
+
+            button.disabled = true;
+            button.textContent = label + ' (' + remaining + 's)';
+
+            var tick = setInterval(function () {
+                remaining -= 1;
+                if (remaining > 0) {
+                    button.textContent = label + ' (' + remaining + 's)';
+                    return;
+                }
+                clearInterval(tick);
+                ready();
+            }, 1000);
+        });
+    })();
+
+    // One-time code: split the single code field into one box per digit,
+    // and submit as soon as the last one is filled.
+    //
+    // Built here rather than written into the template so the field keeps
+    // working when this script does not run: the server contract is
+    // unchanged — the original input is still the one that carries the
+    // value and still posts under the same name — and without JS the
+    // page simply renders that one field, which is what it did before.
+    //
+    // Driven by data-otp-length so the number of boxes follows
+    // settings.OTP_LENGTH through the template, instead of a 6 hardcoded
+    // here that quietly disagrees with the code we emailed.
+    (function () {
+        var source = document.querySelector('input[data-otp-length]');
+        if (!source || !source.form) return;
+
+        var length = parseInt(source.getAttribute('data-otp-length'), 10);
+        if (!(length > 0)) return;
+
+        var form = source.form;
+        var group = document.createElement('div');
+        group.className = 'otp-group';
+        group.setAttribute('role', 'group');
+        group.setAttribute('aria-label', 'Verification code, ' + length + ' digits');
+        source.parentNode.insertBefore(group, source);
+
+        var describedBy = source.getAttribute('aria-describedby');
+        var cells = [];
+
+        for (var i = 0; i < length; i++) {
+            var cell = document.createElement('input');
+            cell.type = 'text';
+            cell.className = 'form-control otp-cell';
+            cell.id = 'otp_cell_' + i;
+            cell.inputMode = 'numeric';
+            cell.maxLength = 1;
+            // Only the first box advertises itself to the OS one-time-code
+            // autofill. Offering it on all six invites the whole code into
+            // each box; landing it in the first is handled by fill(), which
+            // spreads a multi-character value across the row.
+            cell.autocomplete = (i === 0) ? 'one-time-code' : 'off';
+            cell.setAttribute('aria-label', 'Digit ' + (i + 1) + ' of ' + length);
+            if (describedBy) cell.setAttribute('aria-describedby', describedBy);
+            group.appendChild(cell);
+            cells.push(cell);
+        }
+
+        // The visible label pointed at a field nobody can click any more.
+        var label = document.querySelector('label[for="' + source.id + '"]');
+        if (label) label.setAttribute('for', cells[0].id);
+
+        // type=hidden rather than display:none: a hidden input is barred
+        // from constraint validation, so the `required` on it cannot fail
+        // on an element the browser is unable to focus and report against.
+        var hadAutofocus = source.autofocus;
+        source.type = 'hidden';
+
+        var submitted = false;
+
+        function sync() {
+            var code = '';
+            cells.forEach(function (cell) {
+                code += cell.value;
+                cell.classList.toggle('is-filled', cell.value !== '');
+            });
+            source.value = code;
+            return code;
+        }
+
+        function focusCell(index) {
+            var cell = cells[Math.max(0, Math.min(index, length - 1))];
+            cell.focus();
+            cell.select();
+        }
+
+        // Spread `digits` across the boxes from `startAt`. One path for
+        // every way more than one character can arrive at once: a paste, an
+        // autofilled code, or a phone keyboard emitting a whole string.
+        function fill(digits, startAt) {
+            var index = startAt;
+            for (var d = 0; d < digits.length && index < length; d++, index++) {
+                cells[index].value = digits.charAt(d);
+            }
+            sync();
+            focusCell(index);
+        }
+
+        function submitWhenComplete() {
+            if (submitted) return;
+            if (sync().length !== length) return;
+
+            submitted = true;
+            group.classList.add('is-submitting');
+            cells.forEach(function (cell) { cell.readOnly = true; });
+            document.activeElement.blur();
+
+            // requestSubmit, not submit: it fires the submit event and runs
+            // validation the way the button does. submit() skips both.
+            if (form.requestSubmit) {
+                form.requestSubmit();
+            } else {
+                form.submit();
+            }
+        }
+
+        cells.forEach(function (cell, index) {
+            cell.addEventListener('input', function () {
+                var digits = cell.value.replace(/\D/g, '');
+                cell.value = '';
+                if (!digits) {
+                    sync();
+                    return;
+                }
+                fill(digits, index);
+                submitWhenComplete();
+            });
+
+            cell.addEventListener('keydown', function (event) {
+                if (event.key === 'Backspace' && cell.value === '' && index > 0) {
+                    // Backspace in a box already empty steps back and
+                    // clears the one before it, which is what deleting a
+                    // wrong digit means when each digit is its own field.
+                    event.preventDefault();
+                    cells[index - 1].value = '';
+                    sync();
+                    focusCell(index - 1);
+                } else if (event.key === 'ArrowLeft' && index > 0) {
+                    event.preventDefault();
+                    focusCell(index - 1);
+                } else if (event.key === 'ArrowRight' && index < length - 1) {
+                    event.preventDefault();
+                    focusCell(index + 1);
+                }
+            });
+
+            cell.addEventListener('paste', function (event) {
+                event.preventDefault();
+                var clipboard = event.clipboardData || window.clipboardData;
+                var text = clipboard ? clipboard.getData('text') : '';
+                // Tolerates the "123 456" people paste out of an email, the
+                // same way the server-side form does.
+                fill(text.replace(/\D/g, ''), index);
+                submitWhenComplete();
+            });
+
+            cell.addEventListener('focus', function () { cell.select(); });
+        });
+
+        if (hadAutofocus) focusCell(0);
+    })();
+
+    // Confirmation interstitial for a consequential form.
+    //
+    //   <form ... data-confirm="approveConfirm">   → the dialog's id
+    //   <dialog class="confirm-dialog" id="approveConfirm"> … </dialog>
+    //     <form method="dialog"> with a button[value="confirm"]
+    //
+    // The dialog's markup lives in the template rather than being built
+    // here, so each call site states the record in real, auto-escaped
+    // Django markup instead of smuggling a sentence through an attribute.
+    //
+    // This listens for `submit`, not for a click on the button: submit is
+    // what every path to sending the form ends in — mouse, Enter on a
+    // focused button, Enter in a field — so none of them can slip past.
+    //
+    // One dialog can serve many forms. A table of dates would otherwise
+    // need one <dialog> per row to name that row's date, so a form may
+    // instead hand values to a shared dialog:
+    //
+    //   <form data-confirm="deleteDateConfirm"
+    //         data-confirm-field-date="Aug 21, 2026">
+    //   <dialog …><span data-confirm-field="date"></span></dialog>
+    //
+    // Values are written with textContent, so a date or a name that
+    // contains markup is text and stays text.
+    (function () {
+        // Which form opened a given dialog. With a shared dialog the close
+        // handler must send that one form and no other — and must therefore
+        // be registered once per dialog, not once per form, or every form
+        // sharing it would fire on a single confirmation.
+        var pending = new WeakMap();
+        var wired = new WeakSet();
+
+        function fill(dialog, form) {
+            dialog.querySelectorAll('[data-confirm-field]').forEach(function (el) {
+                var name = el.dataset.confirmField;
+                var key = 'confirmField' + name.charAt(0).toUpperCase() + name.slice(1);
+                if (key in form.dataset) el.textContent = form.dataset[key];
+            });
+        }
+
+        function send(form) {
+            form.dataset.confirmed = 'yes';
+            if (form.requestSubmit) {
+                form.requestSubmit();
+            } else {
+                form.submit();
+            }
+        }
+
+        document.querySelectorAll('form[data-confirm]').forEach(function (form) {
+            var dialog = document.getElementById(form.dataset.confirm);
+            if (!dialog) return;
+
+            // Pre-2022 browsers have no <dialog>. Rather than silently
+            // dropping the confirmation, fall back to the platform one —
+            // uglier, but this guard is the point of the feature.
+            var native = typeof dialog.showModal === 'function';
+
+            form.addEventListener('submit', function (event) {
+                if (form.dataset.confirmed === 'yes') return;  // second pass
+                event.preventDefault();
+                fill(dialog, form);
+
+                if (!native) {
+                    // The form's own text first: a shared dialog's generic
+                    // fallback cannot name the row that opened it.
+                    if (window.confirm(form.dataset.confirmFallback ||
+                                       dialog.dataset.confirmFallback ||
+                                       'Confirm this action?')) send(form);
+                    return;
+                }
+                pending.set(dialog, form);
+                dialog.returnValue = '';
+                dialog.showModal();
+            });
+
+            // Cancel — Escape, the backdrop's close, or the Cancel button —
+            // leaves returnValue anything but 'confirm', and nothing is sent.
+            if (native && !wired.has(dialog)) {
+                wired.add(dialog);
+                dialog.addEventListener('close', function () {
+                    var opener = pending.get(dialog);
+                    pending.delete(dialog);
+                    if (opener && dialog.returnValue === 'confirm') send(opener);
+                });
+            }
         });
     })();
 </script>

@@ -77,15 +77,35 @@
                             </div>
                         </div>
 
+                        {% comment %} The OR and the CR are two separate papers from
+                           the LTO, so they get two separate fields. Merged into one
+                           upload, an applicant holding two files had to combine them
+                           first, and a reviewer could not tell which document they
+                           were looking at. {% endcomment %}
                         <div class="mb-3">
-                            <label for="{{ form.or_cr.id_for_label }}" class="form-label">
-                                OR/CR <span class="tag tag-required">Required</span>
+                            <label for="{{ form.official_receipt.id_for_label }}" class="form-label">
+                                Official Receipt (OR) <span class="tag tag-required">Required</span>
                             </label>
-                            {{ form.or_cr }}
-                            {% if existing_file_names.or_cr %}
-                            <p class="form-text">On file: {{ existing_file_names.or_cr }}</p>
+                            {{ form.official_receipt }}
+                            {% if existing_file_names.official_receipt %}
+                            <p class="form-text">On file: {{ existing_file_names.official_receipt }}</p>
                             {% endif %}
-                            {{ form.or_cr.errors }}
+                            {{ form.official_receipt.errors }}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.vehicle_registration.id_for_label }}" class="form-label">
+                                Certificate of Registration (CR) <span class="tag tag-required">Required</span>
+                            </label>
+                            {{ form.vehicle_registration }}
+                            {% if existing_file_names.vehicle_registration %}
+                            <p class="form-text">On file: {{ existing_file_names.vehicle_registration }}</p>
+                            {% endif %}
+                            <p class="form-text">
+                                The vehicle's registration from the LTO — not your
+                                school COR.
+                            </p>
+                            {{ form.vehicle_registration.errors }}
                         </div>
 
                         <div class="mb-3">

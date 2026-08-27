@@ -92,7 +92,7 @@ def _email_code(user, code):
             'expiry_minutes': settings.OTP_EXPIRY_MINUTES,
         })
         send_mail(
-            subject=f'PalSU Gate — Your verification code is {code}',
+            subject=f'PalawanSU Gate — Your verification code is {code}',
             message=body,
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[user.email],

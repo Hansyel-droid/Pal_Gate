@@ -1,8 +1,11 @@
 from datetime import timedelta
 from django.db import models
 from django.db.models import Q
-from accounts.models import User
-from .utils import upload_or_cr, upload_license, upload_cor, upload_auth
+from accounts.models import COLLEGE_CHOICES, User
+from .utils import (
+    upload_official_receipt, upload_vehicle_registration,
+    upload_license, upload_cor, upload_auth,
+)
 
 # A sticker is valid for one academic year from the day it was handed out.
 # Mirrors the constant in applications/management/commands/expire_stickers.py.
@@ -84,7 +87,12 @@ class StickerApplication(models.Model):
 
     # --- Step 1: Personal Details ---
     full_name = models.CharField(max_length=100)
-    college_department = models.CharField(max_length=100)
+    # One of the university's colleges — see COLLEGE_CHOICES in accounts.models
+    # for why the full name is stored rather than a code.
+    college_department = models.CharField(
+        max_length=100,
+        choices=COLLEGE_CHOICES
+    )
     id_number = models.CharField(max_length=50)
     classification = models.CharField(
         max_length=20,
@@ -107,8 +115,18 @@ class StickerApplication(models.Model):
     is_owner = models.BooleanField(default=True)
 
     # --- Step 2: Document Uploads ---
-    # OR/CR is always required
-    or_cr = models.FileField(upload_to=upload_or_cr)
+    # The OR and the CR are two separate LTO documents and are uploaded
+    # separately. They used to share one `or_cr` field, which forced an
+    # applicant holding two files to merge them and left a reviewer unable
+    # to tell which of the two they were actually looking at.
+    #
+    # NAMING TRAP: `cor` below is the *school's* Certificate of Registration
+    # (proof of enrolment, students only). `vehicle_registration` is the
+    # LTO's Certificate of Registration for the vehicle. Different documents,
+    # both abbreviated "CR" in conversation — hence the longer field name
+    # here rather than a second `cr`.
+    official_receipt = models.FileField(upload_to=upload_official_receipt)
+    vehicle_registration = models.FileField(upload_to=upload_vehicle_registration)
     # Driver's license is always required
     drivers_license = models.FileField(upload_to=upload_license)
     # COR is required for students only

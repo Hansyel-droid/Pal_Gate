@@ -26,6 +26,9 @@ class MaskingTests(TestCase):
         self.assertEqual(mask_rfid('AB12CD34'), 'AB12****')
 
     def test_mask_sticker_id_reveals_only_last_four_of_code(self):
+        self.assertEqual(mask_sticker_id('PalawanSU-A1B2C3D4'), 'PalawanSU-****C3D4')
+        # Stickers issued before the PalSU → PalawanSU rename keep their own
+        # prefix, so what is masked matches what is printed on the sticker.
         self.assertEqual(mask_sticker_id('PalSU-A1B2C3D4'), 'PalSU-****C3D4')
         self.assertEqual(mask_sticker_id(None), '—')
 

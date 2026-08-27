@@ -51,7 +51,7 @@
                         <tr><th scope="row">Full name</th><td>{{ application.full_name }}</td></tr>
                         <tr><th scope="row">Classification</th><td>{{ application.get_classification_display }}</td></tr>
                         <tr><th scope="row">ID number</th><td>{{ application.id_number }}</td></tr>
-                        <tr><th scope="row">College / dept</th><td>{{ application.college_department }}</td></tr>
+                        <tr><th scope="row">College</th><td>{{ application.college_department }}</td></tr>
                         <tr><th scope="row">Applicant account</th><td>{{ application.applicant.username }}</td></tr>
                     </table>
                 </div>
@@ -107,16 +107,37 @@
                 {% comment %} target="_blank" is announced rather than silent — a reviewer
                    opening four documents used to lose context four times with
                    no warning. rel="noopener" is the safe default for it. {% endcomment %}
-                <div class="doc-row {% if not application.or_cr %}is-missing{% endif %}">
+                {% comment %} OR and CR are separate LTO documents and are held
+                   separately. An application submitted before that split has one
+                   combined file under the OR, and its CR reads "Not uploaded" —
+                   which is the honest statement: we hold one file and cannot
+                   prove it is the CR. {% endcomment %}
+                <div class="doc-row {% if not application.official_receipt %}is-missing{% endif %}">
                     <span class="doc-row-name">
                         <svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg>
-                        OR/CR
+                        Official Receipt (OR)
                     </span>
-                    {% if application.or_cr %}
-                        <a href="{% url 'serve_document' application.pk 'or_cr' %}"
+                    {% if application.official_receipt %}
+                        <a href="{% url 'serve_document' application.pk 'official_receipt' %}"
                            target="_blank" rel="noopener" class="btn btn-sm btn-secondary">
                             <svg class="ic" aria-hidden="true"><use href="#i-eye"/></svg>
-                            View<span class="visually-hidden"> OR/CR (opens in a new tab)</span>
+                            View<span class="visually-hidden"> Official Receipt (opens in a new tab)</span>
+                        </a>
+                    {% else %}
+                        <span class="status-badge badge-rejected">Not uploaded</span>
+                    {% endif %}
+                </div>
+
+                <div class="doc-row {% if not application.vehicle_registration %}is-missing{% endif %}">
+                    <span class="doc-row-name">
+                        <svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg>
+                        Certificate of Registration (CR)
+                    </span>
+                    {% if application.vehicle_registration %}
+                        <a href="{% url 'serve_document' application.pk 'vehicle_registration' %}"
+                           target="_blank" rel="noopener" class="btn btn-sm btn-secondary">
+                            <svg class="ic" aria-hidden="true"><use href="#i-eye"/></svg>
+                            View<span class="visually-hidden"> Certificate of Registration (opens in a new tab)</span>
                         </a>
                     {% else %}
                         <span class="status-badge badge-rejected">Not uploaded</span>
@@ -141,8 +162,11 @@
 
                 <div class="doc-row {% if not application.cor %}is-missing{% endif %}">
                     <span class="doc-row-name">
+                        {% comment %} Named "enrolment" now that a vehicle CR row sits
+                           two rows above: both are a "Certificate of Registration",
+                           one from the LTO and one from the university. {% endcomment %}
                         <svg class="ic" aria-hidden="true"><use href="#i-file-text"/></svg>
-                        COR
+                        COR (enrolment)
                         <span class="tag tag-conditional">Students</span>
                     </span>
                     {% if application.cor %}
@@ -252,10 +276,14 @@
             </div>
 
             <div class="d-flex gap-2 flex-wrap">
-                <form method="post" action="{% url 'approve_application' application.pk %}">
+                {% comment %} data-confirm hands this form to the confirmation
+                   dialog below — see the component note in base.html. The
+                   interstitial is purely client-side; the endpoint it guards
+                   is unchanged and still does its own status and role checks. {% endcomment %}
+                <form method="post" action="{% url 'approve_application' application.pk %}"
+                      data-confirm="approveConfirm">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-success"
-                            onclick="return confirm('Approve this application? The applicant will be told to pay at the cashier, then collect at the Sticker Station.')">
+                    <button type="submit" class="btn btn-success">
                         <svg class="ic" aria-hidden="true"><use href="#i-check-circle"/></svg>
                         Approve
                     </button>
@@ -279,7 +307,7 @@
                         </label>
                         <textarea id="rejection_reason" name="rejection_reason" class="form-control"
                                   rows="3" aria-describedby="reject_help"
-                                  placeholder="e.g. The OR/CR is expired — upload a current one and reapply."
+                                  placeholder="e.g. The OR is expired — upload a current one and reapply."
                                   required></textarea>
                         <p id="reject_help" class="form-text">
                             The applicant reads this exact text, and it is the only
@@ -295,6 +323,57 @@
             </div>
         </div>
     </div>
+
+    {% comment %} Sits outside the approve <form> — a form cannot contain
+       another, and this holds its own method="dialog" form. Approval is the
+       one irreversible step on this screen: it releases the applicant to the
+       cashier, so a misclick is recovered from at a counter, not in the UI.
+       The dialog names the person and the plate so the check is recognition
+       of the right record, not a reflex past a speed bump. {% endcomment %}
+    <dialog class="confirm-dialog" id="approveConfirm"
+            aria-labelledby="approveConfirmTitle"
+            aria-describedby="approveConfirmBody"
+            data-confirm-fallback="Approve {{ application.full_name }}'s application for {{ application.plate_number }}?">
+        <div class="confirm-head">
+            <span class="confirm-mark success" aria-hidden="true">
+                <svg class="ic" aria-hidden="true"><use href="#i-check-circle"/></svg>
+            </span>
+            <h2 class="confirm-title" id="approveConfirmTitle">
+                Approve {{ application.full_name }}'s application for {{ application.plate_number }}?
+            </h2>
+        </div>
+
+        <div class="confirm-body" id="approveConfirmBody">
+            <div class="confirm-record">
+                <span class="confirm-record-name">{{ application.full_name }}</span>
+                <span class="plate">{{ application.plate_number }}</span>
+                <span class="confirm-record-meta">
+                    <span>{{ application.get_classification_display }}</span>
+                    <span>ID {{ application.id_number }}</span>
+                    <span>{{ application.get_vehicle_type_display }}</span>
+                </span>
+            </div>
+            <p>
+                The applicant will be told to pay at the cashier, then collect
+                at the Sticker Station. This is written to the audit log
+                against your account.
+            </p>
+        </div>
+
+        {% comment %} method="dialog" closes on either button and carries which
+           one was pressed in returnValue — no JavaScript needed to cancel, so
+           cancelling cannot accidentally send anything. Cancel holds initial
+           focus: Enter on an untouched dialog must not approve anyone. {% endcomment %}
+        <form method="dialog" class="confirm-actions">
+            <button type="submit" value="cancel" class="btn btn-secondary" autofocus>
+                Cancel
+            </button>
+            <button type="submit" value="confirm" class="btn btn-success">
+                <svg class="ic" aria-hidden="true"><use href="#i-check-circle"/></svg>
+                Approve application
+            </button>
+        </form>
+    </dialog>
     {% endif %}
 
     {% if application.status == 'approved' %}

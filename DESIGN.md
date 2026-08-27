@@ -59,13 +59,19 @@ IBM Plex Sans for interface, IBM Plex Mono for identifiers. Mono is not a
 costume here — it carries plate numbers, sticker IDs and RFID UIDs, which are
 compared character by character and read aloud at a gate.
 
-Scale, with an 11px floor reserved for uppercase tracked micro-labels:
-`--fs-micro` 11 · `--fs-2xs` 12 · `--fs-xs` 13 · `--fs-sm` 14 (body) ·
-`--fs-md` 15 · `--fs-lg` 17 · `--fs-xl` 20 · `--fs-2xl` 24 · `--fs-3xl` 30.
+Scale, with a 12px floor reserved for uppercase tracked micro-labels:
+`--fs-micro` 12 · `--fs-2xs` 13 · `--fs-xs` 14 · `--fs-sm` 15 (body) ·
+`--fs-md` 16 · `--fs-lg` 18 · `--fs-xl` 22 · `--fs-2xl` 26 · `--fs-3xl` 32.
+
+The scale sat a step lower (11–30 on a 14px body) and read as cramped on a
+desktop monitor — labels, table cells and buttons all landed at 13px, and the
+tracked all-caps micro-labels at 11px sat below a comfortable floor. Every
+step moved up ~1px. Sizes stay in rem, so raising the browser's default font
+size still scales the whole interface.
 
 Hierarchy steps size, weight and tracking together so a heading level is
-legible without comparison: h1 24/650/-0.025em, h2 20/620/-0.022em,
-h3 17/600. Line height `1.2` tight, `1.35` snug, `1.55` body.
+legible without comparison: h1 26/650/-0.025em, h2 22/620/-0.022em,
+h3 18/600. Line height `1.2` tight, `1.35` snug, `1.55` body.
 
 ## Space and depth
 
@@ -139,7 +145,7 @@ grounds in deep semantic colour — entry `#0F5137` (9.32:1), exit `#6B4A02`
 
 Verified across all 22 rendered pages (including form-error states) at
 1440 / 390 / 320px: zero contrast failures, zero horizontal overflow, zero
-text under 11px, zero duplicate ids, zero dangling ARIA references, zero
+text under 12px, zero duplicate ids, zero dangling ARIA references, zero
 heading skips, zero unlabelled controls, zero unnamed icon-only controls.
 
 ## Rules that are load-bearing
@@ -152,14 +158,19 @@ heading skips, zero unlabelled controls, zero unnamed icon-only controls.
   which is single-line only and otherwise renders as visible body text.
 - `--text-faint` is for icons. Words that a person reads use
   `--text-absent` or darker.
-- No fabricated institutional identity. PRODUCT.md records that no official
-  PalSU seal or logo exists, so the mark is a typographic wordmark beside a
-  drawn barrier — the actual object at the gate. A shield or crest would read
-  as a seal regardless of what it is made of.
+- No fabricated institutional identity. The app's mark is a typographic
+  wordmark beside a drawn barrier — the actual object at the gate. A shield or
+  crest would read as a seal regardless of what it is made of.
+- The real University seal (`static/img/PSU_seal.png`) appears on exactly one
+  surface: the Campus Access Policy letterhead, at 64px above "Republic of the
+  Philippines". There it is part of the memorandum being reproduced. It is
+  kept out of the topbar and the auth screens on purpose — a seal on the
+  chrome claims institutional endorsement of the software, which is a
+  different claim from reproducing a document the University issued.
 
 ## Verified
 
 All 20 rendered surfaces, at 390 / 1024 / 1440px: zero horizontal page
-overflow, zero text below 11px, zero contrast failures against WCAG AA
+overflow, zero text below 12px, zero contrast failures against WCAG AA
 (4.5:1 body, 3:1 large). Design detector clean. All 28 templates compile;
 all 64 icon references resolve with no unused symbols.

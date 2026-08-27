@@ -1,0 +1,1116 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Campus Access Policy{% endblock %}
+
+{% comment %}
+  The Revised Campus Access Policy (Memorandum, Series of 2026), reproduced
+  in full. Applicants must accept this before using the system, and can
+  re-read it from the sidebar at any time afterwards.
+
+  IF YOU EDIT THE TEXT BELOW, bump CAMPUS_POLICY_VERSION in
+  accounts/policy.py. Changing the wording without bumping the version
+  leaves everyone bound to text they never saw. See that module's docstring.
+{% endcomment %}
+
+{% block content %}
+<div class="shell-narrow policy-shell">
+    <div class="page-header">
+        <h1>Campus Access Policy</h1>
+        <p class="page-sub">
+            Revised Campus Access Policy — Memorandum, Series of 2026.
+            Effective 23 March 2026.
+        </p>
+    </div>
+
+    {% if already_accepted %}
+    <div class="status-panel is-open">
+        <span class="icon-plate success" aria-hidden="true">
+            <svg class="ic" aria-hidden="true"><use href="#i-check-circle"/></svg>
+        </span>
+        <div class="status-panel-body">
+            <h2>You have accepted this policy</h2>
+            <p>
+                Accepted on
+                {{ accepted_record.accepted_at|date:"F d, Y" }}
+                at {{ accepted_record.accepted_at|time:"g:i A" }}.
+                This page stays available so you can review the rules whenever
+                you need to.
+            </p>
+        </div>
+    </div>
+    {% else %}
+    <div class="status-panel is-closed">
+        <span class="icon-plate warning" aria-hidden="true">
+            <svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg>
+        </span>
+        <div class="status-panel-body">
+            <h2>Please read before continuing</h2>
+            <p>
+                Everyone applying for a vehicle sticker must read and accept
+                the University's Campus Access Policy. You'll find the Agree
+                button at the end of the document.
+            </p>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-body policy-document">
+
+            <p class="policy-meta">
+                {% comment %}
+                  alt="" because the seal is decorative *here*: the issuing
+                  institution is named in text on the very next line, so a
+                  described seal would make a screen reader announce Palawan
+                  State University twice before the memorandum starts.
+                  width/height are the file's intrinsic 94×94 — they give the
+                  browser the aspect ratio up front so the letterhead doesn't
+                  reflow when the image lands.
+                {% endcomment %}
+                <img src="{% static 'img/PSU_seal.png' %}" alt=""
+                     class="policy-seal" width="94" height="94" decoding="async">
+                Republic of the Philippines<br>
+                <strong>PALAWAN STATE UNIVERSITY</strong><br>
+                Office of the University President<br>
+                Puerto Princesa City
+            </p>
+
+            <p class="policy-meta">
+                <strong>MEMORANDUM</strong><br>
+                Series of 2026<br><br>
+                <strong>TO:</strong> The University Community (Students, Faculty,
+                Staff, and Visitors) in the Main and Manalo Campuses in Puerto
+                Princesa City<br>
+                <strong>Subject:</strong> Revised Campus Access Policy<br>
+                <strong>Date:</strong> 23 March 2026
+            </p>
+
+            <hr>
+
+            <h2>1. Rationale</h2>
+            <p>
+                In response to reports of theft and unauthorized entries, the
+                University is implementing these heightened measures to ensure
+                the protection of our constituents and the orderly management of
+                campus access.
+            </p>
+
+            <h2>2. Implementation Dates</h2>
+            <p>
+                The pilot implementation period has concluded. This revised
+                policy, incorporating evaluated community feedback, is effective
+                as of March 23, 2026.
+            </p>
+
+            <h2>3. Vehicle Entry Protocols</h2>
+
+            <h3>A. University Employees and Students</h3>
+            <p>All vehicles should display the latest PSU gate pass stickers.</p>
+
+            <h3>B. Gate Access &amp; Flow</h3>
+            <p>
+                To optimize fuel efficiency, vehicles are authorized to use both
+                the main and back gates for entry and exit, choosing the gate
+                nearest to their destination. However, in exceptional
+                circumstances—such as accidents, special events, or heavy
+                congestion—the Chief Security Officer, in consultation with the
+                Chief Administrative Officer, is authorized to temporarily
+                suspend two-way traffic. This suspension shall remain in effect
+                only until normal traffic flow is restored.
+            </p>
+
+            <h3>C. Entrance and Exit Procedures</h3>
+            <ol>
+                <li>
+                    Present to the guard on duty a valid driver's license or/and
+                    a government-issued ID of the driver.
+                </li>
+                <li>
+                    Surrender a valid government-issued ID (except the driver's
+                    license) to the guard for the duration of the visit.
+                </li>
+                <li>
+                    Passengers who are not affiliated with the University must
+                    submit a valid government-issued ID so that they can be
+                    issued a <strong>Visitor's Pass</strong> (Item 3.C.5 hereof).
+                </li>
+                <li>
+                    Visitors and/or vehicles with a previously
+                    <em>Approved Campus Access</em> signed by any of the
+                    following shall be allowed entry only during the day/s and
+                    time provided in their request:
+                    <ol type="i">
+                        <li>University President or Officer-in-Charge;</li>
+                        <li>Vice President;</li>
+                        <li>Or any other designated official of the University.</li>
+                    </ol>
+                </li>
+                <li>
+                    All visitors (both pedestrians or passengers) are required to
+                    obtain a signature from the visited office prior to
+                    departure. The Visitor's Pass shall contain a
+                    <strong>Control Number</strong> issued by the Security Guard
+                    on duty, along with the visitor's name, address, contact
+                    number, whom they are meeting, purpose, time in and time out,
+                    and signatures of both the visitor and the contact person.
+                </li>
+                <li>
+                    All IDs will be returned upon the surrender of a fully
+                    completed and signed Visitor's Pass.
+                </li>
+            </ol>
+
+            <h3>D. Sticker Availability</h3>
+            <p>
+                The GSO must ensure a sufficient supply of stickers for all
+                eligible personnel.
+            </p>
+
+            <h3>E. Tiered Enforcement for Missing Stickers</h3>
+            <ol type="a">
+                <li>
+                    <em>1st Offense:</em> Verify status via ID and issue a
+                    <strong>Temporary Vehicle Gate Pass</strong> (Collateral ID
+                    system) good for 5 days to allow him/her to secure a regular
+                    vehicle pass.
+                </li>
+                <li>
+                    <em>2nd Offense:</em> Denial of Entry until the sticker
+                    requirement is met.
+                </li>
+            </ol>
+
+            <h2>4. Pedestrian Entry Protocols</h2>
+            <p>Visitors entering through the pedestrian gates must:</p>
+            <ol type="A">
+                <li>
+                    Present a valid (Section 6.C hereof) photo ID to the
+                    Guard-on-Duty.
+                </li>
+                <li>
+                    Surrender said ID in exchange for a
+                    <strong>Visitor's Pass/ID. PSU retirees shall be allowed to
+                    use their former PSU ID.</strong>
+                </li>
+                <li>
+                    The Visitor's Pass must be signed by the personnel or officer
+                    of the office visited. IDs will be returned upon surrender of
+                    the signed pass.
+                </li>
+            </ol>
+
+            <h2>5. Transport &amp; Delivery Services</h2>
+
+            <h3>A. Motor Taxis (Maxim, Angkas, etc.)</h3>
+            <p>
+                Backride vehicles are permitted entry to drop off passengers at
+                the parking area in front of the Student Innovation Center.
+                Drivers must present an ID at the gate.
+            </p>
+
+            <h3>B. Tricycles</h3>
+            <p>
+                PUVs with stickers may enter freely; those without must surrender
+                an ID. Drivers must stay with vehicles (max 15 mins) and engines
+                off.
+            </p>
+
+            <h3>C. Courier &amp; Delivery Riders</h3>
+            <p>
+                Riders must proceed directly to the designated drop-off point
+                closest to the recipient. At the PSU main campus:
+            </p>
+            <ol type="a">
+                <li>Zone A: Vacant space fronting the Student Innovation Building.</li>
+                <li>Zone B: Vacant space Supply Storage Room (near the CBA).</li>
+                <li>
+                    Parcel Policy: Security guards are strictly prohibited from
+                    receiving or storing parcels on behalf of students or staff.
+                </li>
+            </ol>
+
+            <h3>D. Inclusivity Exemptions</h3>
+            <p>
+                PWDs, seniors, and medical emergencies, including VIP guests, are
+                exempt from restricted drop-off zones; vehicles may take them
+                directly to their destination building and offices through
+                door-to-door delivery.
+            </p>
+
+            <h2>6. General Security &amp; Conduct</h2>
+
+            <h3>A. Right to Inspect</h3>
+            <p>
+                PSU reserves the right to search bags, packages, vehicles (visual
+                search only), and other items brought into the campus.
+            </p>
+            <p>The following are strictly prohibited inside campus:</p>
+            <ol type="a">
+                <li>
+                    Firearms and deadly weapons, except those falling under Item
+                    6.B hereof <em>(Firearms and Deadly Weapons — Exceptions and
+                    Protocols)</em>.
+                </li>
+                <li>Illegal drugs and prohibited substances.</li>
+                <li>Explosives and hazardous materials.</li>
+                <li>Alcoholic beverages (unless authorized by administration).</li>
+                <li>Any item deemed dangerous by security personnel.</li>
+            </ol>
+            <p>
+                Confiscation and proper reporting shall be immediately
+                implemented.
+            </p>
+
+            <p><strong>Exit Procedures:</strong></p>
+            <ol>
+                <li>All bags and carried items may be subject to inspection.</li>
+                <li>
+                    Gate pass is required for bringing out university property.
+                    Only the property custodian and supply officer shall be
+                    allowed to release Gate Pass for this purpose.
+                </li>
+                <li>
+                    Security personnel may verify documents before allowing exit.
+                </li>
+            </ol>
+
+            <h3>B. Firearms and Deadly Weapons (Exceptions and Protocols)</h3>
+            <p>
+                While the University is a generally designated "Gun-Free Zone,"
+                the following exceptions apply strictly to authorized law
+                enforcement officers <em>on duty</em>, bank security escorts,
+                qualified licensed holders, and University security personnel
+                within the university community:
+            </p>
+
+            <p><em>a. Special Exception for Licensed Holders</em></p>
+            <p>
+                Authorized employees and students who possess firearms for
+                personal protection must adhere to the following mandatory
+                registration protocol:
+            </p>
+            <ol>
+                <li>
+                    All firearms must be legally registered with a valid License
+                    to Own and Possess Firearms (LTOPF).
+                </li>
+                <li>
+                    Possess a valid Permit to Carry Firearms Outside of Residence
+                    (PTCFOR).
+                </li>
+                <li>
+                    The firearm must be officially registered with the University
+                    Security Office. This ensures that the administration is
+                    aware of which employees or students are carrying firearms
+                    within the university premises for safety and monitoring
+                    purposes.
+                </li>
+            </ol>
+
+            <p><em>b. Law Enforcement Personnel</em></p>
+            <p>
+                Uniformed law enforcement officers (PNP, AFP, NBI, etc.) on
+                official duty are permitted to carry their service firearms
+                provided they present their mission orders upon request by the
+                Guard-on-Duty or prior approved access request. In the absence of
+                any of these, the enforcement officer shall be required to
+                surrender his/her firearm with the guard on duty.
+            </p>
+
+            <p><em>c. Bank Escort Security</em></p>
+            <p>
+                Security personnel who are escorting bank personnel who are
+                replenishing cash in ATMs within the campus shall be allowed to
+                carry their firearms within the campus during the transaction.
+            </p>
+
+            <p><em>d. University Security Personnel</em></p>
+            <p>
+                University security personnel who are on duty shall be allowed to
+                carry their service firearms within the campus.
+            </p>
+
+            <h3>C. Acceptable IDs</h3>
+            <p>
+                All visitors, delivery couriers, and individuals without a valid
+                PSU ID are strongly encouraged to present a valid
+                government-issued ID. These IDs are preferred due to their
+                security features and verifiable nature. The list of acceptable
+                IDs (primary and secondary) are as follows:
+            </p>
+            <p><strong>a. Primary IDs:</strong></p>
+            <ul>
+                <li>Driver's License</li>
+                <li>Passport</li>
+                <li>Professional Identification Card (PRC)</li>
+                <li>PhilSys (National ID)</li>
+                <li>UMID / SSS / GSIS ID</li>
+                <li>Senior Citizen / PWD ID</li>
+                <li>Voter's ID / Certification</li>
+                <li>Postal ID (Digital or Physical)</li>
+                <li>NBI Clearance (Original)</li>
+            </ul>
+            <p><strong>b. Secondary:</strong></p>
+            <ul>
+                <li>Company ID</li>
+                <li>Valid Student ID (from other Universities)</li>
+                <li>Integrated Bar of the Philippines (IBP) ID</li>
+            </ul>
+            <p><strong>c.</strong> For PSU retirees, their former PSU IDs.</p>
+
+            <h3>D. Mandatory Visibility and Facial Identification</h3>
+            <p>
+                To ensure that all individuals entering the campus can be
+                accurately identified by security personnel and captured by CCTV
+                systems, the following rules apply to all vehicles (motorcycles
+                and cars) at the point of entry and while within the campus:
+            </p>
+            <ol type="a">
+                <li>
+                    <em>Removal of Helmets (upon entry):</em> All motorcycle
+                    riders and their passengers are strictly required to remove
+                    their helmets before approaching the security checkpoint.
+                </li>
+                <li>
+                    <em>Removal of Face Coverings:</em> Drivers and passengers
+                    wearing balaclavas, full-face masks, heavy tinted visors, or
+                    hoodies that obscure the face must remove or lower them for
+                    visual verification by the Guard-on-Duty.
+                </li>
+                <li>
+                    <em>Vehicle Interiors:</em> Drivers of four-wheeled vehicles
+                    with heavy tint are required to roll down their windows
+                    (front and passenger sides) to allow security to verify the
+                    number of occupants and their identities.
+                </li>
+                <li>
+                    <em>Refusal of Entry:</em> Any individual who refuses to
+                    comply with facial identification protocols will be denied
+                    entry to the University premises.
+                </li>
+            </ol>
+
+            <h3>E. Visit Verification</h3>
+            <p>
+                To ensure campus security, Guards-on-Duty may verify a visitor's
+                legitimacy with the concerned PSU office before granting entry.
+                Verification may be conducted via:
+            </p>
+            <ol type="a">
+                <li>Radio communication with the relevant personnel or official.</li>
+                <li>
+                    Phone or text using the gate's official mobile phone or the
+                    visitor's device (if available).
+                </li>
+                <li>
+                    Official documentation, such as a printed invitation or
+                    correspondence.
+                </li>
+                <li>Personal escort by a university employee or student.</li>
+                <li>Other practical means deemed necessary to confirm the visit.</li>
+            </ol>
+
+            <h3>F. Serving Warrants to Personnel and Students</h3>
+            <p>
+                Serving warrants of arrest within a university campus shall be
+                governed by protocols designed to balance law enforcement duties
+                with academic freedom, privacy, and the safety of the campus
+                community. Serving warrants on campus shall be governed by the
+                following:
+            </p>
+            <ol type="a">
+                <li>
+                    <em>Initial Contact:</em> Law enforcement agents are directed
+                    to contact the university's Chief Security Officer (CSO)
+                    (warrants for personnel) or the Office of Student Affairs and
+                    Services (warrants for students) first.
+                </li>
+                <li>
+                    <em>Coordination:</em> CSO accompanies law enforcement to the
+                    location of the person named in the warrant.
+                </li>
+                <li>
+                    <em>Minimizing Disruption:</em> The arrest should cause the
+                    least disruption possible to university activities.
+                </li>
+                <li>
+                    <em>Secluded Service:</em> Warrants must be served in a
+                    private or secluded area rather than in a classroom or public
+                    space.
+                </li>
+                <li>
+                    <em>Verification:</em> CSO shall verify the existence of an
+                    active warrant before assisting outside agencies.
+                </li>
+            </ol>
+
+            <h3>G. Dress Code</h3>
+            <p>
+                All visitors must wear decent and appropriate attire. Entry may
+                be denied for attire deemed inappropriate for an academic
+                environment.
+            </p>
+
+            <h3>H. Security Monitoring</h3>
+            <p>
+                The University, through its security personnel, reserves the
+                right to approach, interview, and report any individuals
+                exhibiting suspicious behavior within campus grounds.
+            </p>
+
+            <h3>I. Adherence to the Safe Spaces Act in public transportation contexts</h3>
+            <p>
+                In compliance with Republic Act No. 11313 (The Safe Spaces Act),
+                the following protocols shall apply to ensure the safety and
+                dignity of all students and employees:
+            </p>
+            <ol type="a">
+                <li>
+                    <strong>Zero Tolerance for Harassment:</strong> Any form of
+                    gender-based sexual harassment, discrimination, or
+                    abuse—including but not limited to catcalling,
+                    wolf-whistling, persistent uninvited comments, or any
+                    physical or verbal act that creates a hostile
+                    environment—committed by PUV drivers or operators is strictly
+                    condemned.
+                </li>
+                <li>
+                    <strong>Due Process and Reporting:</strong> Any student or
+                    employee who encounters a violation from a PUV driver while
+                    inside the campus is encouraged to report the incident to the
+                    Office of Gender and Development, including the time of
+                    incident, description of the vehicle, and the driver's name,
+                    if available. This may be done using the S.A.F.E.R. Tool
+                    (Safe Access &amp; Fair Enforcement Reporting) — a QR-based
+                    messenger reporting app embedded in the PROTECT app (Item 13
+                    hereof) system implemented by the University. Once the
+                    complaint is formalized, it shall be officially endorsed to
+                    the Committee on Decorum and Investigation (CODI) for proper
+                    hearing and administrative review.
+                </li>
+                <li>
+                    <strong>Support Services:</strong> The University, through
+                    the Office of Gender and Development, shall provide immediate
+                    psychosocial support and guidance to the complainant to
+                    ensure their well-being throughout the reporting and legal
+                    process.
+                </li>
+            </ol>
+
+            <h2>7. Notification Protocol for University Events</h2>
+            <p>
+                To ensure the smooth entry of external guests for official
+                functions, the following coordination protocol must be followed:
+            </p>
+            <ol>
+                <li>
+                    <em>Advance Notice:</em> Event organizers or host offices
+                    must submit a formal notice or approved activity permit to
+                    the Security Office (Guard House) at least forty-eight (48)
+                    hours prior to the event.
+                </li>
+                <li>
+                    <em>Guest List Submission:</em> The notice must include a
+                    comprehensive list of names of external guests, the nature of
+                    the event, the specific venue, and the expected time of
+                    arrival.
+                </li>
+                <li>
+                    <em>Special Access:</em> For high-profile events or large
+                    delegations, organizers may request a "Guest Lane" to
+                    expedite entry, provided that guest names are pre-verified
+                    against the submitted list.
+                </li>
+                <li>
+                    <em>Walk-in Guests:</em> External guests not included in a
+                    pre-submitted list will be treated as infrequent visitors and
+                    must follow the standard ID surrender and logging procedure.
+                </li>
+            </ol>
+
+            <h2>8. Gate Pass Applications of Visitors with Vehicles</h2>
+            <p>
+                To avoid entry delays, students and personnel are encouraged to
+                obtain the latest gate passes from the designated guard on duty
+                at the <strong>Main Gate</strong> immediately.
+            </p>
+
+            <h2>9. 24/7 Heightened Security Mandate</h2>
+            <p>
+                To ensure a proactive defense against theft and unauthorized
+                entry, the University is shifting from stationary monitoring to a
+                dynamic, 24-hour surveillance model. Security operations are now
+                categorized into intensified <strong>Daytime Visibility</strong>
+                and <strong>Nighttime Interdiction</strong>.
+            </p>
+
+            <h2>10. Fixed Post Integrity</h2>
+            <p>
+                At all times, the <strong>Main Gate</strong> and
+                <strong>Back Gate</strong> must remain manned by stationed
+                security personnel. Under no circumstances shall these primary
+                access points be left unattended. These officers are responsible
+                for strict ID verification and vehicle inspections as provided in
+                this Memorandum.
+            </p>
+
+            <h2>11. Roving Inspection Protocols</h2>
+
+            <h3>A. Daytime Operations (6:00 AM – 6:00 PM)</h3>
+            <ol>
+                <li>
+                    <strong>Presence Patrols:</strong> Roving guards are directed
+                    to maintain high visibility in student hubs, corridors, and
+                    parking areas.
+                </li>
+                <li>
+                    <strong>Suspicious Character Monitoring:</strong> Personnel
+                    shall actively monitor and approach individuals who loiter in
+                    non-public areas or exhibit behavior inconsistent with
+                    academic activity.
+                </li>
+                <li>
+                    <strong>Building Checks:</strong> Conduct random
+                    walk-throughs of college buildings and admin offices to
+                    ensure only authorized personnel and students with visible
+                    IDs are present.
+                </li>
+            </ol>
+
+            <h3>B. Nighttime Operations (6:00 PM – 6:00 AM)</h3>
+            <ol>
+                <li>
+                    <strong>Mandatory Hourly Sweeps:</strong> Roving teams must
+                    conduct comprehensive perimeter and interior inspections
+                    every sixty (60) minutes.
+                </li>
+                <li>
+                    <strong>Target Zones:</strong> Focus shall be placed on the
+                    laboratory complexes, administrative offices, and dimly lit
+                    perimeter boundaries.
+                </li>
+                <li>
+                    <strong>Utility &amp; Breach Audit:</strong> During night
+                    sweeps, guards must check for unsecured windows, unbolted
+                    doors, and malfunctioning perimeter lights.
+                </li>
+            </ol>
+
+            <h2>12. Reporting, Security Personnel Conduct, and Accountability</h2>
+            <ol type="A">
+                <li>
+                    <strong>Security Logbook:</strong> Every roving cycle must be
+                    logged, indicating the specific areas checked and the status
+                    of the "all-clear." Any irregularities must be reported to
+                    the Chief Security Officer immediately.
+                </li>
+                <li>
+                    <strong>Direct Interdiction:</strong> Security personnel are
+                    empowered to interview and, if necessary, escort unauthorized
+                    or suspicious-looking individuals off the premises.
+                </li>
+                <li>
+                    <strong>Communication:</strong> Constant radio contact
+                    between roving units and gate-stationed personnel is
+                    mandatory to ensure rapid response coordination.
+                </li>
+                <li>
+                    <strong>Professionalism:</strong> Security must undergo
+                    <em>"Customer Service &amp; Inclusivity" training</em>, as
+                    necessary. The CSO shall submit daily security reports and
+                    consolidated monthly findings for policy development.
+                </li>
+            </ol>
+
+            <h2>
+                13. Incident Reporting through the P.R.O.T.E.C.T. System
+            </h2>
+            <p>
+                (PSU Real-time Online Threat and Emergency Communications Tool)
+            </p>
+            <p>The community is encouraged to assist our security force.</p>
+            <p>
+                Scan the QR code posted at the guard house to submit a real-time
+                report. Please include:
+            </p>
+            <ol>
+                <li><strong>Photos</strong> of the incident or individual.</li>
+                <li><strong>Exact Location</strong> within the campus.</li>
+                <li>
+                    <strong>Detailed Description</strong> of the observed
+                    activity and perpetrators.
+                </li>
+                <li>
+                    <strong>Email address</strong> of the reporting party (for
+                    issuance of updates).
+                </li>
+            </ol>
+
+            <h2>14. SOP for the P.R.O.T.E.C.T. Online Reporting System</h2>
+            <p>
+                To ensure a streamlined response to campus threats, the following
+                protocol shall be adopted:
+            </p>
+
+            <p><strong>Phase 1: Incident Trigger &amp; Deployment</strong></p>
+            <ol type="a">
+                <li>
+                    <strong>Initial Report:</strong> A client or personnel
+                    submits a report of a suspicious individual or incident via
+                    the P.R.O.T.E.C.T. system (Chat Group/Web Link).
+                </li>
+                <li>
+                    <strong>Rapid Dispatch:</strong> Upon receipt of the alert,
+                    the Security Office shall immediately deploy the nearest
+                    roving personnel to the specified area for investigation and
+                    intervention.
+                </li>
+            </ol>
+
+            <p><strong>Phase 2: Documentation &amp; Case Management</strong></p>
+            <ol type="a">
+                <li>
+                    <strong>Security Reporting &amp; Ticketing:</strong> The
+                    Security Office shall accomplish the Official Incident Report
+                    Form.
+                </li>
+                <li>
+                    <strong>New Requirement:</strong> The report must now include
+                    the reporting party's full name and email address for
+                    verification and follow-up.
+                </li>
+                <li>
+                    <strong>Ticketing:</strong> Every incident must be assigned a
+                    unique Case Ticket Number (e.g., PSU-2026-001) for tracking
+                    purposes.
+                </li>
+                <li>
+                    <strong>Database Integration:</strong> All report details,
+                    including timestamps and photographic evidence, must be
+                    uploaded/synced to the PSU Central Security Database for
+                    long-term data analysis and pattern recognition.
+                </li>
+            </ol>
+
+            <p><strong>Phase 3: Queue Management &amp; Data Privacy</strong></p>
+            <ol type="a">
+                <li>
+                    <strong>Group De-cluttering:</strong> To maintain the
+                    technical capacity of the reporting group (PROTECT) and
+                    ensure data privacy, the reporting client/personnel shall be
+                    removed from the active Chat Group once their initial
+                    statement and evidence have been successfully captured and
+                    logged.
+                </li>
+            </ol>
+
+            <p><strong>Phase 4: Resolution &amp; Feedback Loop</strong></p>
+            <ol type="a">
+                <li>
+                    <strong>Case Closure:</strong> Once the investigation is
+                    concluded or the threat is neutralized, the Case Ticket shall
+                    be marked as "CLOSED."
+                </li>
+                <li>
+                    <strong>Final Notification:</strong> A formal resolution
+                    update shall be sent to the reporting party via their
+                    registered email address to ensure transparency and encourage
+                    future civic cooperation.
+                </li>
+            </ol>
+
+            <h2>15. Security Personnel Duties and Responsibilities</h2>
+            <ol>
+                <li>Strictly enforce these policies, rules and regulations.</li>
+                <li>
+                    Inspect offices for compliance with austerity policy of the
+                    University and report observed violations.
+                </li>
+                <li>Maintain professional conduct at all times.</li>
+                <li>Immediately report suspicious activities.</li>
+                <li>
+                    Implement measures to protect the University personnel,
+                    students, properties and projects.
+                </li>
+                <li>Secure premises and personnel by patrolling campus perimeters.</li>
+                <li>Guard restricted areas against unlawful entry.</li>
+                <li>Control the entrance and movements of pedestrians and vehicles.</li>
+                <li>
+                    Prevent and investigate loss or damage of the University and
+                    personnel properties.
+                </li>
+                <li>Carry out special assignments during periods of emergency.</li>
+                <li>
+                    Coordinate with University Administration and local
+                    authorities when necessary.
+                </li>
+                <li>Ensure proper turnover of posts during shifting.</li>
+                <li>Wear the complete designated uniform while on duty.</li>
+                <li>
+                    Perform other related functions that may be assigned by the
+                    Head of the General Services Office, Chief Admin Officer, VP
+                    for Finance and Administration, and by the Office of
+                    University President.
+                </li>
+            </ol>
+
+            <p>
+                <strong>Additional roles/duties and functions of the Security
+                personnel:</strong>
+            </p>
+            <ol>
+                <li>
+                    Must show utmost courtesy and respect to all individuals at
+                    all times.
+                </li>
+                <li>
+                    Must remain unruffled even under pressure and stay calm at
+                    all times under all conditions.
+                </li>
+                <li>
+                    Shall not be involved in any illegal transactions or acts for
+                    the entire duration of the contract.
+                </li>
+                <li>
+                    Roving guards during ocular inspections must turn off all
+                    lights and office equipment when not in use. Street lights
+                    must be turned off at 5:30 AM and turned on at 6:00 PM.
+                </li>
+                <li>
+                    Guards shall extend assistance to the elderly and other
+                    persons or students in need, provided their post is not
+                    abandoned.
+                </li>
+                <li>
+                    Shall help maintain campus cleanliness by calling the
+                    attention of any persons littering inside the premises.
+                </li>
+                <li>
+                    Shall, through the Chief Security Officer, submit a daily
+                    security and accomplishment report to the GSO, copy furnished
+                    the CAO, VPFA, and the Office of the President via email.
+                </li>
+                <li>Shall act promptly and decisively during emergency situations.</li>
+                <li>
+                    Shall assist pupils and students in crossing the streets when
+                    necessary; and
+                </li>
+                <li>Perform other functions as may be deemed necessary.</li>
+            </ol>
+
+            <h2>16. Violations</h2>
+            <p>Non-compliance with this policy shall result in:</p>
+            <ol>
+                <li>Denial of entry</li>
+                <li>Confiscation of unauthorized items (Item 6.A hereof)</li>
+                <li>
+                    Administrative sanctions, subject to the required due process
+                </li>
+                <li>
+                    Filing of appropriate legal action if necessary, subject to
+                    the required due process
+                </li>
+            </ol>
+
+            <h2>17. Effectivity</h2>
+            <p>
+                This policy shall take effect immediately upon approval by the
+                Office of the University President, without prejudice to
+                subsequent amendment or revocation.
+            </p>
+            <p>
+                All previously issued memoranda, orders, guidelines, or parts
+                thereof that are inconsistent with the provisions of this
+                Memorandum are hereby repealed, amended, or modified accordingly.
+            </p>
+            <p>For information dissemination and guidance of all concerned.</p>
+
+            <p class="policy-signature">
+                <strong>MARISSA S. PONTILLAS</strong><br>
+                OIC, Office of the President
+            </p>
+
+        </div>
+    </div>
+
+    {% if not already_accepted %}
+    <div class="card policy-accept-card">
+        <div class="card-body">
+            <form method="post" id="policyAcceptForm">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ next }}">
+
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox"
+                           id="policyConfirm" name="policy_confirm" required>
+                    <label class="form-check-label" for="policyConfirm">
+                        I have read and understood the Campus Access Policy, and
+                        I agree to comply with it.
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-primary mt-3">
+                    <svg class="ic" aria-hidden="true"><use href="#i-check-circle"/></svg>
+                    Agree and continue
+                </button>
+            </form>
+
+            <p class="text-muted mt-3 mb-0">
+                You must accept this policy before you can apply for a vehicle
+                sticker. If you'd rather not, you can
+                <button type="submit" form="policyLogoutForm"
+                        class="field-link btn-as-link">sign out</button>
+                instead.
+            </p>
+        </div>
+    </div>
+
+    {% comment %} Kept outside the accept form — nesting forms is invalid HTML
+       and browsers silently drop the inner one. {% endcomment %}
+    <form method="post" action="{% url 'logout' %}" id="policyLogoutForm" class="d-none">
+        {% csrf_token %}
+    </form>
+    {% endif %}
+</div>
+
+<style>
+    /* ── Campus Access Policy ─────────────────────────────────────────
+       A 900-line legal memorandum rendered on the app's own tokens: no
+       new colours, no off-grid spacing, no hard-coded font sizes. Running
+       legal prose is the one thing this design system has no pattern for,
+       so the only genuinely local decisions here are the measure and the
+       vertical rhythm — everything else resolves to a base.html token.
+       Scoped to .policy-shell so nothing else on the site is affected. */
+
+    .policy-shell {
+        /* The accept card sticks over the document's tail. Without this
+           reserve the signature block sits underneath it, unreadable. */
+        padding-bottom: var(--s12);
+    }
+
+    /* ── The document ─────────────────────────────────────────────────
+       The measure comes from .shell-narrow: the card body *is* the
+       column (~680px ≈ 72ch), so the text is centred with the page
+       header and the status panel above it. The old max-width here
+       re-created a left-pinned column inside a full-width card. */
+    .policy-document {
+        line-height: 1.7;   /* --lh-body (1.55) is a UI rhythm; 200-word
+                               legal paragraphs need the extra leading */
+        text-wrap: pretty;  /* no one-word last lines in a long paragraph */
+    }
+    .policy-document > :first-child { margin-top: 0; }
+    .policy-document > :last-child  { margin-bottom: 0; }
+    .policy-document p { margin-bottom: var(--s4); }
+
+    /* ── Section rhythm ───────────────────────────────────────────────
+       19 numbered sections and 20 lettered subsections. The space above
+       a heading has to be unmistakably larger than the space between its
+       own paragraphs, or a reader cannot see where a section begins
+       without stopping to read it. */
+    .policy-document h2 {
+        font-size: var(--fs-lg);
+        margin: var(--s10) 0 var(--s4);
+        padding-bottom: var(--s2);
+        border-bottom: 1px solid var(--border-subtle);
+    }
+    .policy-document h3 {
+        font-size: var(--fs-md);
+        margin: var(--s7) 0 var(--s3);
+    }
+    /* A subsection heading directly under its section heading is one
+       unit, not two — it keeps the h2's 16px gap, not its own 28px. */
+    .policy-document h2 + *,
+    .policy-document h3 + * { margin-top: 0; }
+
+    /* ── Lists ────────────────────────────────────────────────────────
+       The browser default is 40px of padding, which stacks to 80px once
+       the roman sub-list in 3.C nests inside its parent — a fifth of a
+       375px screen spent on indentation. An em-based indent keeps the
+       step proportional to the type at every level and every width. */
+    .policy-document ol,
+    .policy-document ul {
+        padding-left: 1.7em;
+        margin: 0 0 var(--s4);
+    }
+    .policy-document li { margin-bottom: var(--s2); }
+    .policy-document li:last-child { margin-bottom: 0; }
+    /* The a. / i. markers are structure, not prose. Tinted and weighted
+       away from the body text, they read as the document's skeleton. */
+    .policy-document li::marker {
+        color: var(--text-muted);
+        font-weight: 600;
+    }
+    /* A nested list continues its parent item; it does not open a block. */
+    .policy-document li > ol,
+    .policy-document li > ul {
+        margin-top: var(--s2);
+        margin-bottom: 0;
+    }
+
+    /* ── Memorandum letterhead ────────────────────────────────────────
+       Two .policy-meta blocks: the issuing office, then the docket. */
+
+    /* The University seal heads the reproduced memorandum, and only that.
+       The app itself still wears a typographic wordmark — nothing outside
+       this quoted document should imply institutional endorsement of the
+       software. 64px keeps the rim lettering legible while leaving the
+       institution's name, not the mark, as the letterhead's anchor. */
+    .policy-document .policy-seal {
+        display: block;
+        width: 64px;
+        height: auto;   /* the 94×94 attrs carry the ratio; never distort a seal */
+        margin: 0 auto var(--s3);
+    }
+
+    .policy-document .policy-meta {
+        text-align: center;
+        line-height: var(--lh-snug);
+        font-size: var(--fs-xs);
+        color: var(--text-muted);
+        margin-bottom: var(--s4);
+    }
+    .policy-document .policy-meta strong {
+        display: inline-block;
+        color: var(--text-strong);
+        font-size: var(--fs-md);
+        font-weight: 650;
+        letter-spacing: 0.06em;
+    }
+    .policy-document hr {
+        border: 0;
+        border-top: 1px solid var(--border);
+        opacity: 1;   /* Bootstrap ships hr at .25, which reads as a smudge */
+        margin: var(--s8) 0;
+    }
+
+    /* The second block is TO: / Subject: / Date: — a label list. Centring
+       a label list reads as a layout fault, so it squares up into a
+       docket on the app's sunk surface. */
+    .policy-document .policy-meta + .policy-meta {
+        text-align: left;
+        color: var(--text-main);
+        background: var(--surface-sunk);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--r3);
+        padding: var(--s4) var(--s5);
+    }
+    .policy-document .policy-meta + .policy-meta strong {
+        display: inline;
+        font-size: inherit;
+        font-weight: 600;
+        letter-spacing: 0;
+        color: var(--text-muted);   /* labels recede; the values read */
+    }
+    .policy-document .policy-meta + .policy-meta > strong:first-child {
+        display: block;
+        font-size: var(--fs-sm);
+        font-weight: 650;
+        letter-spacing: 0.08em;
+        color: var(--text-strong);
+        margin-bottom: var(--s1);
+    }
+
+    .policy-document .policy-signature {
+        margin-top: var(--s12);
+        text-align: right;
+        line-height: var(--lh-snug);
+        font-size: var(--fs-xs);
+        color: var(--text-muted);
+    }
+    .policy-document .policy-signature strong {
+        display: block;
+        font-size: var(--fs-sm);
+        color: var(--text-strong);
+        letter-spacing: 0.02em;
+    }
+
+    /* ── Accept card ──────────────────────────────────────────────────
+       Floats over the document on tablet and desktop so the reader can
+       agree from wherever they finish. The z-index only has to beat the
+       document card; it stays well under the topbar (1000) and the toast
+       stack (1100). */
+    .policy-accept-card {
+        position: sticky;
+        bottom: var(--s4);
+        z-index: 5;
+        margin-top: var(--s6);
+        border-color: var(--border-strong);
+        box-shadow: var(--sh-3);
+    }
+
+    /* The sign-out control has to be a <button> to submit its form, but
+       reads as a link in a sentence. */
+    .btn-as-link {
+        background: none;
+        border: none;
+        padding: 0;
+        font: inherit;
+        cursor: pointer;
+        text-decoration: underline;
+    }
+
+    /* ── Narrow viewports ─────────────────────────────────────────────
+       Below 768px base.html turns the toast stack into a bottom sheet at
+       bottom:12px, which would land squarely on a sticky Agree button.
+       The card stops sticking and simply ends the document instead — a
+       reader has to reach the bottom to have read it anyway — which also
+       gives back the ~200px of viewport it was holding. */
+    /* A landscape phone is wider than 768px but only ~375px tall, where the
+       183px card is over half the screen. Height decides whether a floating
+       card is affordable, so it gets its own guard rather than riding on
+       width alone. */
+    @media (max-width: 768px), (max-height: 620px) {
+        .policy-shell { padding-bottom: 0; }
+        .policy-accept-card {
+            position: static;
+            border-color: var(--border);
+            box-shadow: var(--sh-1);
+        }
+    }
+
+    @media (max-width: 768px) {
+        /* "notwithstanding" has to be allowed to break at 320px. */
+        .policy-document { hyphens: auto; }
+        .policy-document h2 { font-size: var(--fs-md); margin-top: var(--s8); }
+        .policy-document h3 { font-size: var(--fs-sm); margin-top: var(--s6); }
+        .policy-document ol,
+        .policy-document ul { padding-left: 1.4em; }
+        .policy-document .policy-meta + .policy-meta { padding: var(--s3) var(--s4); }
+        .policy-document .policy-signature { text-align: left; margin-top: var(--s10); }
+    }
+
+    @media (max-width: 480px) {
+        /* .card-body's 20px each side leaves ~300px of line on a 375px
+           phone. Reclaiming 8px is a word and a half per line. */
+        .policy-document { padding: var(--s4); }
+        .policy-accept-card .card-body { padding: var(--s4); }
+        .policy-document .policy-seal { width: 52px; }
+        .policy-document hr { margin: var(--s6) 0; }
+        .policy-document ol,
+        .policy-document ul { padding-left: 1.25em; }
+    }
+
+    /* ── Print ────────────────────────────────────────────────────────
+       This is a memorandum; people will want it on paper. Drop the app
+       chrome and keep headings attached to what they title. */
+    @media print {
+        .policy-shell { padding-bottom: 0; max-width: none; }
+        .policy-shell .status-panel,
+        .policy-accept-card { display: none; }
+        .policy-shell .card {
+            border: 0;
+            box-shadow: none;
+            background: transparent;
+        }
+        .policy-document { padding: 0; line-height: 1.5; }
+        .policy-document h2,
+        .policy-document h3 { break-after: avoid; page-break-after: avoid; }
+        .policy-document p,
+        .policy-document li { break-inside: avoid; page-break-inside: avoid; }
+        .policy-document .policy-meta + .policy-meta {
+            background: none;
+            border-color: #999;
+        }
+    }
+</style>
+{% endblock %}

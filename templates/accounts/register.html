@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}Register — PalSU Gate System{% endblock %}
+{% block title %}Register — PalawanSU Gate System{% endblock %}
 
 {% block content %}
 <div class="auth-wrap">
@@ -38,7 +38,7 @@
                                    value="{{ form.username.value|default:'' }}" required>
                         </div>
                         <div class="col-12">
-                            <label for="id_email" class="form-label">PalSU email *</label>
+                            <label for="id_email" class="form-label">PalawanSU email *</label>
                             <input id="id_email" type="email" name="email" class="form-control"
                                    autocomplete="email"
                                    value="{{ form.email.value|default:'' }}"
@@ -67,12 +67,19 @@
                             <input id="id_id_number" type="text" name="id_number" class="form-control"
                                    value="{{ form.id_number.value|default:'' }}">
                         </div>
-                        <div class="col-sm-8">
-                            <label for="id_college_department" class="form-label">College / department</label>
-                            <input id="id_college_department" type="text" name="college_department" class="form-control"
-                                   value="{{ form.college_department.value|default:'' }}">
+                        <div class="col-12">
+                            <label for="id_college_department" class="form-label">College</label>
+                            {% comment %}
+                            Options come from accounts.models.COLLEGE_CHOICES via the form, so
+                            this list can never drift from the one on application Step 1.
+                            {% endcomment %}
+                            <select id="id_college_department" name="college_department" class="form-select">
+                                {% for value, label in form.fields.college_department.choices %}
+                                <option value="{{ value }}"{% if form.college_department.value == value %} selected{% endif %}>{% if value %}{{ label }}{% else %}— Select —{% endif %}</option>
+                                {% endfor %}
+                            </select>
                         </div>
-                        <div class="col-sm-4">
+                        <div class="col-sm-6">
                             <label for="id_contact_number" class="form-label">Contact no.</label>
                             <input id="id_contact_number" type="text" name="contact_number" class="form-control"
                                    autocomplete="tel"

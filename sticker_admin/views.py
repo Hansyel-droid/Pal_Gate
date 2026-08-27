@@ -246,6 +246,10 @@ def appointment_dates(request):
         if s.booked_count >= s.capacity * per_day_capacity
     )
     booked = sum(s.booked_count for s in slots)
+    # What "delete all empty" would actually remove, so the confirmation can
+    # say the number instead of asking about an unnamed quantity. Counted off
+    # the same annotated list as the stats above, so it costs no extra query.
+    empty = sum(1 for s in slots if not s.has_bookings())
 
     return render(request, 'sticker_admin/appointment_dates.html', {
         'slots': slots,
@@ -253,6 +257,7 @@ def appointment_dates(request):
         'active': active,
         'full': full,
         'booked': booked,
+        'empty': empty,
     })
 
 
@@ -495,7 +500,7 @@ def issue_sticker(request, pk):
                     return redirect('issue_sticker', pk=pk)
 
                 # Generate a unique sticker ID
-                sticker_id = f'PalSU-{uuid.uuid4().hex[:8].upper()}'
+                sticker_id = f'PalawanSU-{uuid.uuid4().hex[:8].upper()}'
 
                 # Issue the sticker
                 application.rfid_uid = rfid_uid

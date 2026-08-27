@@ -33,7 +33,7 @@ def make_app(applicant, plate):
         applicant=applicant, full_name=f'Driver {plate}',
         college_department='CCIS', id_number=plate, classification='student',
         plate_number=plate, vehicle_type='four_wheels', vehicle_color='blue',
-        is_owner=True, or_cr=doc(), drivers_license=doc(), status='issued',
+        is_owner=True, official_receipt=doc(), vehicle_registration=doc(), drivers_license=doc(), status='issued',
     )
 
 

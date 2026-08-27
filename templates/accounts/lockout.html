@@ -1,30 +1,54 @@
 {% extends 'base.html' %}
-{% block title %}Account Locked{% endblock %}
+{% block title %}Account Locked — PalawanSU Gate System{% endblock %}
 
 {% block content %}
 <div class="auth-wrap">
     <div class="auth-col">
+
+        <div class="auth-head">
+            <div class="auth-mark danger" aria-hidden="true">
+                <svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg>
+            </div>
+            <h1>Account locked</h1>
+            <p>
+                Too many failed sign-in attempts. This account is locked for
+                <strong class="text-strong">30 minutes</strong>, then unlocks
+                itself — you don't have to contact anyone.
+            </p>
+        </div>
+
         <div class="card auth-card">
-            <div class="card-body text-center">
-                <div class="auth-mark danger" aria-hidden="true">
-                    <svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg>
-                </div>
-                <h1>Account locked</h1>
-                <p class="mt-2 mb-4" style="font-size:var(--fs-xs); color:var(--text-muted);">
-                    Too many failed sign-in attempts. This account is temporarily
-                    locked for <strong>30 minutes</strong>. You can try again after
-                    that without contacting anyone.
+            <div class="card-body">
+                {% comment %}
+                    Someone who has just failed sign-in enough times to
+                    trip the lockout has most likely forgotten their
+                    password, not mistyped it six times. Offering the
+                    reset here means the wait is spent usefully.
+                {% endcomment %}
+                <p class="meta">
+                    Can't remember the password? Start the reset now — the
+                    link will be waiting when the lock lifts.
                 </p>
-                <p class="mb-4" style="font-size:var(--fs-2xs); color:var(--text-muted);">
+                <a href="{% url 'password_reset' %}" class="btn btn-primary w-100 mt-3">
+                    <svg class="ic" aria-hidden="true"><use href="#i-key"/></svg>
+                    Reset your password
+                </a>
+
+                <hr class="section-divider">
+
+                <p class="meta mb-0">
                     If you believe this is an error, contact the sticker
                     administrator's office at the Registrar.
                 </p>
-                <a href="{% url 'login' %}" class="btn btn-secondary">
-                    <svg class="ic" aria-hidden="true"><use href="#i-arrow-left"/></svg>
-                    Back to sign in
-                </a>
             </div>
         </div>
+
+        <p class="auth-alt">
+            <a href="{% url 'login' %}">
+                <svg class="ic" aria-hidden="true"><use href="#i-arrow-left"/></svg>
+                Back to sign in
+            </a>
+        </p>
     </div>
 </div>
 {% endblock %}

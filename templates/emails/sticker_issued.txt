@@ -1,6 +1,6 @@
 Hi {{ applicant.first_name|default:application.full_name }},
 
-Your PalSU Gate vehicle sticker has been issued.
+Your PalawanSU Gate vehicle sticker has been issued.
 
 Sticker ID: {{ application.sticker_id }}
 Plate Number: {{ application.plate_number }}
@@ -8,5 +8,5 @@ Valid until: {{ application.expiry_date|date:"F j, Y" }}
 
 Please affix the sticker to your vehicle as instructed at the Sticker Station. Keep this email for your records.
 
-— PalSU Gate System
+— PalawanSU Gate System
 This is an automated message. Please do not reply to this email.

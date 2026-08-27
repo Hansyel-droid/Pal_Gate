@@ -3,9 +3,15 @@
   "configurations": [
     {
       "name": "palsu-gate",
+      "url": "http://localhost:8000",
+      "port": 8000
+    },
+    {
+      "name": "palsu-gate-managed",
       "runtimeExecutable": "python",
       "runtimeArgs": ["manage.py", "runserver", "127.0.0.1:8000"],
-      "port": 8000
+      "port": 8000,
+      "autoPort": false
     }
   ]
 }

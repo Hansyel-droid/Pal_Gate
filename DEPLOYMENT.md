@@ -1,4 +1,4 @@
-# PalSU Gate System — Deployment Guide (Oracle Cloud)
+# PalawanSU Gate System — Deployment Guide (Oracle Cloud)
 
 **Who this is for:** whoever sets this up on the real server. Commands are
 shown exactly as typed. Where something needs *your* details (an IP,
@@ -167,7 +167,7 @@ sudo nano /etc/systemd/system/palsu-gate.service
 ```
 ```ini
 [Unit]
-Description=PalSU Gate System (gunicorn)
+Description=PalawanSU Gate System (gunicorn)
 After=network.target
 
 [Service]
@@ -242,7 +242,7 @@ doesn't, re-check Section 1 (both firewall layers) before anything else.
 
 A domain has to exist and its DNS **A record** has to point at
 `YOUR_VM_PUBLIC_IP` before this step works — Let's Encrypt verifies
-ownership by reaching the domain over the internet. If PSU IT hasn't set
+ownership by reaching the domain over the internet. If PalawanSU IT hasn't set
 up a subdomain yet, skip this section for now and stay on plain HTTP —
 it's not ideal, but the site still works for testing/defense purposes.
 Revisit this the moment a domain exists.
@@ -373,7 +373,7 @@ EMAIL_PORT=587
 EMAIL_HOST_USER=202380158@psu.palawan.edu.ph
 EMAIL_HOST_PASSWORD=<Google App Password — NOT the account's real login password>
 EMAIL_USE_TLS=True
-DEFAULT_FROM_EMAIL=PalSU Gate System <202380158@psu.palawan.edu.ph>
+DEFAULT_FROM_EMAIL=PalawanSU Gate System <202380158@psu.palawan.edu.ph>
 ```
 
 **If this ever needs to be redone:**
@@ -383,7 +383,7 @@ DEFAULT_FROM_EMAIL=PalSU Gate System <202380158@psu.palawan.edu.ph>
 3. Put it in `EMAIL_HOST_PASSWORD` (16 characters, no spaces) — never the
    account's normal login password.
 4. If Google doesn't offer an app password option, the Workspace admin
-   has it disabled org-wide — ask PSU IT to enable it for this account.
+   has it disabled org-wide — ask PalawanSU IT to enable it for this account.
 5. Verify with a real send:
    ```bash
    python manage.py shell -c "from django.core.mail import send_mail; send_mail('Test', 'It works.', 'FROM@ADDRESS', ['TO@ADDRESS'])"
@@ -419,9 +419,9 @@ For each job (`backup.py`, `manage.py cleanup_temp_files`,
 
 Command-line equivalent:
 ```bat
-schtasks /create /tn "PalSU Gate - Daily Backup" ^
+schtasks /create /tn "PalawanSU Gate - Daily Backup" ^
   /tr "C:\path\to\palsu_gate\venv\Scripts\python.exe C:\path\to\palsu_gate\backup.py" ^
   /sc daily /st 02:00 /ru SYSTEM
 ```
-Verify: `schtasks /query /tn "PalSU Gate - Daily Backup" /v /fo LIST` —
+Verify: `schtasks /query /tn "PalawanSU Gate - Daily Backup" /v /fo LIST` —
 `Last Result` of `0` means success.

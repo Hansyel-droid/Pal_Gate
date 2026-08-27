@@ -18,7 +18,7 @@ Three confirmed roles, each with a materially different situation. They are sepa
 
 ## Product Purpose
 
-PalSU Gate replaces a paper vehicle-sticker process and an unrecorded campus gate with one system: applicants apply and upload documents online, administrators review and issue an RFID sticker tied to a specific plate, and every pass through the gate is scanned and permanently logged.
+PalawanSU Gate replaces a paper vehicle-sticker process and an unrecorded campus gate with one system: applicants apply and upload documents online, administrators review and issue an RFID sticker tied to a specific plate, and every pass through the gate is scanned and permanently logged.
 
 Success means three things simultaneously: an applicant can complete an application on a phone without needing help; an administrator can decide on an application from the documents on screen without leaving the page; and a security officer can tell at a glance which vehicles are currently inside campus, and can later produce a defensible record of any incident.
 
@@ -56,9 +56,11 @@ The mechanism a generic form builder or a generic access-control product could n
 
 ## Brand Commitments
 
-The name **PalSU Gate System** is used throughout the interface and in the Django admin branding.
+The name **PalawanSU Gate System** is used throughout the interface and in the Django admin branding.
 
-**No binding visual commitments exist.** The current navy (`#0A1628`) + gold (`#C9A84C`) palette is the author's own choice and is explicitly *not* institutional — future design may change it. There is **no official PalSU seal or logo available**; `static/` is empty and the topbar currently uses a generic Bootstrap icon as a placeholder mark. Future work must not fabricate an institutional seal, crest, or official university branding; a typographic wordmark is the honest solution until a real asset is supplied.
+**No binding visual commitments exist.** The current navy (`#0A1628`) + gold (`#C9A84C`) palette is the author's own choice and is explicitly *not* institutional — future design may change it.
+
+The University seal is now on hand at `static/img/PSU_seal.png`, supplied by the author. Its use is **deliberately confined to the Campus Access Policy letterhead**, where it belongs to the memorandum being reproduced rather than to this software. The app's own mark stays a typographic wordmark: putting the seal in the topbar or on the login screen would read as the University endorsing the system, which is a claim nobody has made. Future work must still not fabricate an institutional seal, crest, or official branding beyond the supplied asset, and must not extend that asset into the application chrome without an explicit decision to do so.
 
 ## Evidence on Hand
 

@@ -92,11 +92,11 @@
                             Deactivate all dates
                         </button>
                     </form>
-                    <form method="post">
+                    <form method="post" data-confirm="deleteEmptyConfirm"
+                          data-confirm-fallback="Delete {{ empty }} date{{ empty|pluralize }} with no bookings? Dates that already have appointments are kept.">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="delete_all_empty">
-                        <button type="submit" class="btn btn-outline-danger w-100 justify-content-start"
-                                onclick="return confirm('Delete every date with no bookings? Dates that already have appointments are kept.')">
+                        <button type="submit" class="btn btn-outline-danger w-100 justify-content-start">
                             <svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg>
                             Delete all empty dates
                         </button>
@@ -116,12 +116,15 @@
                 </h2>
                 <span class="meta ms-2">{{ total }} total</span>
                 <!-- Revealed once rows are selected -->
-                <form method="post" id="bulk-delete-form" class="ms-auto">
+                {% comment %} The count is whatever is ticked right now, so the
+                   script below keeps data-confirm-field-count current as the
+                   selection changes — the dialog reads it when it opens. {% endcomment %}
+                <form method="post" id="bulk-delete-form" class="ms-auto"
+                      data-confirm="deleteSelectedConfirm">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="delete_selected">
                 <button type="submit" id="delete-selected-btn"
-                class="btn btn-outline-danger btn-sm d-none"
-                onclick="return confirm('Delete the selected dates?')">
+                class="btn btn-outline-danger btn-sm d-none">
                 <svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg>
                 Delete selected (<span id="selected-count">0</span>)
                 </button>
@@ -201,14 +204,19 @@
                                         </button>
                                     </form>
                                     {% if not slot.has_bookings %}
-                                    <form method="post" class="d-inline">
+                                    {% comment %} Every row shares one dialog and hands it
+                                       its own date — 300 activated dates would otherwise
+                                       mean 300 <dialog> elements on the page. {% endcomment %}
+                                    <form method="post" class="d-inline"
+                                          data-confirm="deleteDateConfirm"
+                                          data-confirm-field-date="{{ slot.date|date:'l, F d, Y' }}"
+                                          data-confirm-fallback="Delete {{ slot.date|date:'l, F d, Y' }}? Applicants will no longer be able to book this date.">
                                         {% csrf_token %}
                                         <input type="hidden" name="action" value="delete">
                                         <input type="hidden" name="slot_id" value="{{ slot.pk }}">
                                         <button type="submit" class="btn btn-secondary btn-sm btn-icon is-danger"
                                                 aria-label="Delete {{ slot.date|date:'M d, Y' }}"
-                                                title="Delete"
-                                                onclick="return confirm('Delete {{ slot.date }}?')">
+                                                title="Delete">
                                             <svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg>
                                         </button>
                                     </form>
@@ -239,6 +247,107 @@
         </div>
     </div>
 </div>
+
+{% comment %} ══ Confirmations ═══════════════════════════════════════════
+   All three sit outside every <form> on this page: a form cannot contain
+   another, and each of these holds its own method="dialog" form. Deleting
+   a date is not recoverable from this screen — the date is gone and any
+   applicant who was about to book it simply finds it missing — so each
+   dialog names what is actually about to be removed.
+   See the component note at the bottom of base.html.
+   ═══════════════════════════════════════════════════════════════════ {% endcomment %}
+
+<dialog class="confirm-dialog" id="deleteEmptyConfirm"
+        aria-labelledby="deleteEmptyTitle" aria-describedby="deleteEmptyBody">
+    <div class="confirm-head">
+        <span class="confirm-mark danger" aria-hidden="true">
+            <svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg>
+        </span>
+        <h2 class="confirm-title" id="deleteEmptyTitle">
+            Delete {{ empty }} date{{ empty|pluralize }} with no bookings?
+        </h2>
+    </div>
+    <div class="confirm-body" id="deleteEmptyBody">
+        <p>
+            {% if empty %}
+                Of the {{ total }} activated date{{ total|pluralize }},
+                {{ empty }} ha{{ empty|pluralize:"s,ve" }} nothing booked and
+                will be deleted. Dates that already have appointments are kept.
+                Applicants cannot book a date once it is gone.
+            {% else %}
+                Every activated date currently has at least one appointment
+                booked, so nothing will be deleted.
+            {% endif %}
+        </p>
+    </div>
+    <form method="dialog" class="confirm-actions">
+        <button type="submit" value="cancel" class="btn btn-secondary" autofocus>
+            Cancel
+        </button>
+        <button type="submit" value="confirm" class="btn btn-danger">
+            <svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg>
+            Delete empty dates
+        </button>
+    </form>
+</dialog>
+
+<dialog class="confirm-dialog" id="deleteSelectedConfirm"
+        aria-labelledby="deleteSelectedTitle" aria-describedby="deleteSelectedBody">
+    <div class="confirm-head">
+        <span class="confirm-mark danger" aria-hidden="true">
+            <svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg>
+        </span>
+        <h2 class="confirm-title" id="deleteSelectedTitle">
+            Delete <span data-confirm-field="count">the selected dates</span>?
+        </h2>
+    </div>
+    <div class="confirm-body" id="deleteSelectedBody">
+        <div class="confirm-record">
+            <span class="confirm-record-meta" data-confirm-field="dates"></span>
+        </div>
+        <p>
+            Applicants will no longer be able to book these dates. Only dates
+            with nothing booked can be selected, so no existing appointment
+            is affected.
+        </p>
+    </div>
+    <form method="dialog" class="confirm-actions">
+        <button type="submit" value="cancel" class="btn btn-secondary" autofocus>
+            Cancel
+        </button>
+        <button type="submit" value="confirm" class="btn btn-danger">
+            <svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg>
+            Delete selected
+        </button>
+    </form>
+</dialog>
+
+<dialog class="confirm-dialog" id="deleteDateConfirm"
+        aria-labelledby="deleteDateTitle" aria-describedby="deleteDateBody">
+    <div class="confirm-head">
+        <span class="confirm-mark danger" aria-hidden="true">
+            <svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg>
+        </span>
+        <h2 class="confirm-title" id="deleteDateTitle">
+            Delete <span data-confirm-field="date">this date</span>?
+        </h2>
+    </div>
+    <div class="confirm-body" id="deleteDateBody">
+        <p>
+            Applicants will no longer be able to book this date. It has
+            nothing booked, so no existing appointment is affected.
+        </p>
+    </div>
+    <form method="dialog" class="confirm-actions">
+        <button type="submit" value="cancel" class="btn btn-secondary" autofocus>
+            Cancel
+        </button>
+        <button type="submit" value="confirm" class="btn btn-danger">
+            <svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg>
+            Delete date
+        </button>
+    </form>
+</dialog>
 {% endblock %}
 
 {% block extra_js %}
@@ -251,13 +360,28 @@
         const deleteBtn = document.getElementById('delete-selected-btn');
         const selectedCount = document.getElementById('selected-count');
         const checkboxes = document.querySelectorAll('.slot-checkbox:not([disabled])');
+        const bulkForm = document.getElementById('bulk-delete-form');
 
         if (!selectAll || !deleteBtn || !selectedCount || !checkboxes.length) return;
 
         function updateDeleteButton() {
-            const checked = document.querySelectorAll('.slot-checkbox:checked').length;
+            const ticked = document.querySelectorAll('.slot-checkbox:checked');
+            const checked = ticked.length;
             selectedCount.textContent = checked;
             deleteBtn.classList.toggle('d-none', checked === 0);
+
+            // Hand the confirmation dialog the current selection. It reads
+            // these when it opens, so they have to be right at every change
+            // rather than only when the button is pressed. The checkbox's
+            // aria-label already carries the date the row is for.
+            const dates = [].map.call(ticked, function (cb) {
+                return (cb.getAttribute('aria-label') || '').replace(/^Select\s+/, '');
+            });
+            bulkForm.dataset.confirmFieldCount =
+                checked + ' selected date' + (checked === 1 ? '' : 's');
+            bulkForm.dataset.confirmFieldDates = dates.join(' · ');
+            bulkForm.dataset.confirmFallback =
+                'Delete ' + checked + ' selected date' + (checked === 1 ? '' : 's') + '?';
         }
 
         selectAll.addEventListener('change', function () {

@@ -49,7 +49,7 @@ class AppointmentCapacityTests(TestCase):
             vehicle_type='four_wheels',
             vehicle_color='blue',
             is_owner=True,
-            or_cr=make_doc(),
+            official_receipt=make_doc(), vehicle_registration=make_doc(),
             drivers_license=make_doc(),
             status='draft',
         )

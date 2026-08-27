@@ -1,19 +1,34 @@
+from datetime import datetime, timedelta
+
 from django.conf import settings
+from django.http import HttpResponseRedirect
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
-from .forms import RegisterForm, LoginForm, OTPVerifyForm
-from .models import EmailOTP, User
+from .forms import (
+    CampusPasswordResetForm, RegisterForm, LoginForm, OTPVerifyForm,
+)
+from .models import EmailOTP, PolicyAcceptance, User
 from .otp import issue_otp, seconds_until_resend, verify_otp
-from gate.audit import log_action
+from .policy import CAMPUS_POLICY_VERSION, has_accepted_current_policy
+from gate.audit import get_client_ip, log_action
 
 # Where we remember, between the sign-up POST and the code they type back,
 # which half-finished account the browser is verifying.
 PENDING_SESSION_KEY = 'pending_verification_user_id'
+
+# The same two facts for the password reset flow: who asked, and when we
+# last mailed them. Kept in the session rather than on the account so
+# "send it again" does not need the person to type their username a
+# second time, and so nothing is written to the database for an
+# identifier that may not match an account at all.
+RESET_IDENTIFIER_KEY = 'password_reset_identifier'
+RESET_SENT_AT_KEY = 'password_reset_sent_at'
 
 
 def _pending_user(request):
@@ -302,6 +317,63 @@ def logout_view(request):
 
 
 @login_required
+def campus_policy_view(request):
+    """
+    The Campus Access Policy — shown as a gate before an applicant can use
+    the system, and reachable from the sidebar forever afterwards.
+
+    One view serves both jobs. If the person hasn't accepted the version
+    currently in force they get the Agree control; if they have, they get
+    the same text plus a note of when they accepted it. Splitting these
+    into two views would mean two copies of a 17-section legal document
+    that could drift apart.
+    """
+    already_accepted = has_accepted_current_policy(request.user)
+
+    if request.method == 'POST' and not already_accepted:
+        # get_or_create, not create: the unique constraint would otherwise
+        # turn an impatient double-click into an IntegrityError 500 on
+        # what is, from the applicant's point of view, a successful action
+        # they already completed.
+        PolicyAcceptance.objects.get_or_create(
+            user=request.user,
+            version=CAMPUS_POLICY_VERSION,
+            defaults={'ip_address': get_client_ip(request)},
+        )
+        log_action(
+            request,
+            'policy_accepted',
+            f'{request.user.username} accepted Campus Access Policy '
+            f'version {CAMPUS_POLICY_VERSION}'
+        )
+        messages.success(
+            request,
+            'Thank you. You can re-read the Campus Access Policy at any '
+            'time from the sidebar.'
+        )
+        # Honour where the middleware wanted them to go, but only if it's a
+        # path on this site — an open redirect here would be handed to
+        # every applicant at login, which is the worst possible place for one.
+        next_url = request.POST.get('next', '')
+        if next_url.startswith('/') and not next_url.startswith('//'):
+            return redirect(next_url)
+        return redirect('dashboard')
+
+    accepted_record = None
+    if already_accepted:
+        accepted_record = request.user.policy_acceptances.filter(
+            version=CAMPUS_POLICY_VERSION
+        ).first()
+
+    return render(request, 'accounts/campus_policy.html', {
+        'already_accepted': already_accepted,
+        'accepted_record': accepted_record,
+        'policy_version': CAMPUS_POLICY_VERSION,
+        'next': request.GET.get('next', ''),
+    })
+
+
+@login_required
 def dashboard_redirect(request):
     """
     Sends each role to their own dashboard.
@@ -313,3 +385,156 @@ def dashboard_redirect(request):
         return redirect('gate_live')
     else:
         return redirect('applicant_home')
+
+
+# ── Password reset ───────────────────────────────────────────────────────────
+
+def password_reset_context():
+    """
+    The two facts every screen and email in the reset flow states.
+
+    `expiry_hours` is derived from PASSWORD_RESET_TIMEOUT rather than
+    written out again, so the pages cannot go on promising an hour after
+    ops has changed the setting.
+    """
+    return {
+        'support_email': settings.SUPPORT_EMAIL,
+        'expiry_hours': max(1, round(settings.PASSWORD_RESET_TIMEOUT / 3600)),
+    }
+
+
+def _reset_mail_options(request):
+    """
+    Everything CampusPasswordResetForm.save() needs to send our reset
+    email.
+
+    One function, used by both the first send and the resend, because
+    they are meant to be the same email — a resend that quietly fell back
+    to Django's stock template would be a strange thing to discover.
+    """
+    return {
+        'use_https': request.is_secure(),
+        'from_email': settings.DEFAULT_FROM_EMAIL,
+        'email_template_name': 'emails/password_reset.txt',
+        'subject_template_name': 'emails/password_reset_subject.txt',
+        'request': request,
+        'extra_email_context': password_reset_context(),
+    }
+
+
+def _remember_reset_request(request, identifier):
+    request.session[RESET_IDENTIFIER_KEY] = identifier
+    request.session[RESET_SENT_AT_KEY] = timezone.now().isoformat()
+
+
+def seconds_until_reset_resend(request):
+    """
+    How long this browser still has to wait before we'll send another
+    reset link. 0 means now.
+
+    Same cooldown as the sign-up code (OTP_RESEND_COOLDOWN_SECONDS): both
+    answer the same question — how often are we willing to mail the same
+    person — and a second knob for it would only be a second thing to get
+    out of step. Without the wait, "send it again" is a button that
+    floods somebody else's inbox for as long as you keep clicking.
+    """
+    sent_at = request.session.get(RESET_SENT_AT_KEY)
+    if not sent_at:
+        return 0
+
+    try:
+        last = datetime.fromisoformat(sent_at)
+    except (TypeError, ValueError):
+        # A malformed timestamp must not lock the button forever.
+        return 0
+
+    if timezone.is_naive(last):
+        last = timezone.make_aware(last, timezone.utc)
+
+    ready_at = last + timedelta(seconds=settings.OTP_RESEND_COOLDOWN_SECONDS)
+    remaining = (ready_at - timezone.now()).total_seconds()
+    return max(0, int(remaining + 0.999))
+
+
+class CampusPasswordResetView(auth_views.PasswordResetView):
+    """
+    The "which account?" step.
+
+    Overrides form_valid rather than leaving it to Django so the send and
+    the remembering happen together: the identifier has to survive into
+    the next screen for the resend button there to have anything to send
+    to.
+    """
+
+    template_name = 'accounts/password_reset.html'
+    form_class = CampusPasswordResetForm
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(password_reset_context())
+        return context
+
+    def form_valid(self, form):
+        identifier = form.cleaned_data['email']
+        form.save(**_reset_mail_options(self.request))
+        _remember_reset_request(self.request, identifier)
+        return HttpResponseRedirect(self.get_success_url())
+
+
+class CampusPasswordResetDoneView(auth_views.PasswordResetDoneView):
+    """The "check your email" step, which is where resending happens."""
+
+    template_name = 'accounts/password_reset_done.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(password_reset_context())
+        context['resend_in'] = seconds_until_reset_resend(self.request)
+        # Someone who reached this page directly, or whose session has
+        # since expired, has nothing for us to resend — better to show no
+        # button than one that can only apologise.
+        context['can_resend'] = bool(
+            self.request.session.get(RESET_IDENTIFIER_KEY)
+        )
+        return context
+
+
+@require_POST
+@ratelimit(key='ip', rate='5/m', method='POST', block=True)
+def password_reset_resend_view(request):
+    """
+    Send the reset link again, to whoever this browser asked about a
+    moment ago.
+
+    Deliberately says the same thing whether or not anything was sent.
+    The page this returns to never reveals whether an account exists, and
+    a resend button that said "sent!" for real accounts and something
+    else for the rest would hand that back.
+    """
+    identifier = request.session.get(RESET_IDENTIFIER_KEY)
+    if not identifier:
+        messages.error(
+            request,
+            'Tell us which account to reset and we will email a link.'
+        )
+        return redirect('password_reset')
+
+    wait = seconds_until_reset_resend(request)
+    if wait > 0:
+        messages.error(
+            request,
+            f'Please wait {wait} more second{"" if wait == 1 else "s"} '
+            'before asking for another link.'
+        )
+        return redirect('password_reset_done')
+
+    form = CampusPasswordResetForm({'email': identifier})
+    if form.is_valid():
+        form.save(**_reset_mail_options(request))
+
+    _remember_reset_request(request, identifier)
+    messages.success(
+        request,
+        'If that matches an account, another reset link is on its way.'
+    )
+    return redirect('password_reset_done')

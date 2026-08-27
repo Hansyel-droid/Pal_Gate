@@ -1,4 +1,4 @@
-# PalSU Gate System — Operations Runbook
+# PalawanSU Gate System — Operations Runbook
 
 **Who this is for:** whoever keeps the system running day to day. You do
 not need to be a programmer to follow this. Where a command is shown, type
@@ -25,7 +25,7 @@ Work through these in order. Stop as soon as it's working again.
 
 Open the site on a phone using mobile data (not campus WiFi). If it loads
 on mobile data but not on a campus computer, the problem is the campus
-network, not this system — contact PSU IT.
+network, not this system — contact PalawanSU IT.
 
 ### 1.2 Restart the application
 
@@ -39,7 +39,7 @@ sudo systemctl status palsu-gate
 You want to see `active (running)` in green.
 
 **Windows server:**
-Open Task Manager → Services tab → find the PalSU Gate service →
+Open Task Manager → Services tab → find the PalawanSU Gate service →
 right-click → Restart.
 
 Wait 30 seconds, then reload the website.
@@ -83,7 +83,7 @@ made.
 Never restore while the system is running.
 
 **Linux:** `sudo systemctl stop palsu-gate`
-**Windows:** Task Manager → Services → stop the PalSU Gate service
+**Windows:** Task Manager → Services → stop the PalawanSU Gate service
 
 ### 2.2 Set the damaged database aside — do not delete it
 
@@ -213,6 +213,14 @@ person needs to renew.
 **We need to add a new staff account.**
 Admin panel → Accounts → Users → Add. Set the role to `admin` for sticker
 office staff or `security` for guards.
+
+**A superuser account (made with `createsuperuser`) can log into the admin
+panel but not the app's own staff pages (Sticker Station, Applications,
+etc.).** These are two separate things: Django's built-in "superuser" flag
+only grants access to the admin panel itself. The app's own pages check a
+different field — `role` — which a fresh superuser doesn't have set. Fix:
+admin panel → Accounts → Users → find the account → set `role` to `admin`
+or `security` → Save.
 
 **Someone left the university and should lose access.**
 Don't delete the account — that would erase their history. Admin panel →

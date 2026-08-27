@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}Verify Your Email — PalSU Gate System{% endblock %}
+{% block title %}Verify Your Email — PalawanSU Gate System{% endblock %}
 
 {% block content %}
 <div class="auth-wrap">
@@ -22,9 +22,16 @@
                     {% csrf_token %}
 
                     <label for="id_code" class="form-label">Verification code</label>
+                    {% comment %}
+                        data-otp-length turns this into one box per digit
+                        (see base.html). Without JS it stays the single
+                        field it has always been, and posts the same
+                        `code` either way.
+                    {% endcomment %}
                     <input id="id_code" type="text" name="code" class="form-control otp-input"
                            inputmode="numeric" autocomplete="one-time-code"
                            pattern="[0-9 -]*" maxlength="{{ code_length|add:6 }}"
+                           data-otp-length="{{ code_length }}"
                            required autofocus
                            aria-describedby="code_help">
                     <p id="code_help" class="form-text">
@@ -56,6 +63,8 @@
                         Didn't get it? Check your spam folder, or
                     </span>
                     <button type="submit" class="btn btn-link p-0 align-baseline"
+                            data-resend-in="{{ resend_in }}"
+                            data-resend-label="resend the code"
                             {% if resend_in %}disabled{% endif %}>
                         resend the code{% if resend_in %} ({{ resend_in }}s){% endif %}
                     </button>

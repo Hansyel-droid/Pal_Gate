@@ -8,7 +8,8 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from accounts.models import User
+from accounts.forms import RegisterForm
+from accounts.models import COLLEGE_CHOICES, User
 from appointments.models import AppointmentSlot, Appointment
 from gate.models import AuditLog
 from .models import RegistrationWindow, StickerApplication
@@ -50,13 +51,17 @@ class ServeDocumentOwnershipTests(TestCase):
             vehicle_type='four_wheels',
             vehicle_color='blue',
             is_owner=True,
-            or_cr=make_doc('or_cr.pdf'),
+            official_receipt=make_doc('or.pdf'),
+            vehicle_registration=make_doc('cr.pdf'),
             drivers_license=make_doc('license.pdf'),
             cor=make_doc('cor.pdf'),
             status='draft',
         )
         self.url = reverse(
-            'serve_document', args=[self.application.pk, 'or_cr']
+            'serve_document', args=[self.application.pk, 'official_receipt']
+        )
+        self.cr_url = reverse(
+            'serve_document', args=[self.application.pk, 'vehicle_registration']
         )
 
     def test_anonymous_redirected_to_login(self):
@@ -92,6 +97,29 @@ class ServeDocumentOwnershipTests(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 404)
 
+    def test_the_cr_is_served_under_its_own_name(self):
+        """
+        The two documents are separately addressable, and each URL serves
+        its own file — not one shared blob behind two names.
+        """
+        self.client.force_login(self.owner)
+        or_response = self.client.get(self.url)
+        cr_response = self.client.get(self.cr_url)
+        self.assertEqual(cr_response.status_code, 200)
+        self.assertEqual(
+            or_response.filename, self.application.official_receipt.name.rsplit('/', 1)[-1]
+        )
+        self.assertEqual(
+            cr_response.filename, self.application.vehicle_registration.name.rsplit('/', 1)[-1]
+        )
+        self.assertNotEqual(or_response.filename, cr_response.filename)
+
+    def test_the_retired_or_cr_name_is_no_longer_a_document_field(self):
+        """The field is gone; its URL must 404 rather than serve something."""
+        self.client.force_login(self.owner)
+        url = reverse('serve_document', args=[self.application.pk, 'or_cr'])
+        self.assertEqual(self.client.get(url).status_code, 404)
+
 
 @override_settings(MEDIA_ROOT=tempfile.mkdtemp())
 class PlateUniquenessConstraintTests(TestCase):
@@ -117,7 +145,7 @@ class PlateUniquenessConstraintTests(TestCase):
             vehicle_type='four_wheels',
             vehicle_color='red',
             is_owner=True,
-            or_cr=make_doc(),
+            official_receipt=make_doc(), vehicle_registration=make_doc(),
             drivers_license=make_doc(),
             status=status,
         )
@@ -177,7 +205,8 @@ class RenewalFlowTests(TestCase):
             vehicle_type='four_wheels',
             vehicle_color='white',
             is_owner=True,
-            or_cr=make_doc('old_or_cr.pdf'),
+            official_receipt=make_doc('old_or.pdf'),
+            vehicle_registration=make_doc('old_cr.pdf'),
             drivers_license=make_doc('old_license.pdf'),
             status='expired',
             issued_at=timezone.now() - timedelta(days=400),
@@ -213,7 +242,13 @@ class RenewalFlowTests(TestCase):
         session = self.client.session
         self.assertEqual(session['app_step1']['full_name'], 'Renewer Person')
         self.assertEqual(session['app_step2']['plate_number'], 'REN-001')
-        self.assertIsNotNone(session['app_temp_files']['or_cr'])
+        # Both vehicle documents are carried over, separately.
+        self.assertIsNotNone(session['app_temp_files']['official_receipt'])
+        self.assertIsNotNone(session['app_temp_files']['vehicle_registration'])
+        self.assertNotEqual(
+            session['app_temp_files']['official_receipt']['path'],
+            session['app_temp_files']['vehicle_registration']['path'],
+        )
         self.assertIsNone(session['app_temp_files']['cor'])
         self.assertEqual(session['app_renewal_of'], self.expired_application.pk)
 
@@ -241,7 +276,8 @@ class RenewalFlowTests(TestCase):
             plate_number='REN-001'
         ).exclude(pk=self.expired_application.pk).get()
         self.assertEqual(new_application.status, 'scheduled')
-        self.assertTrue(new_application.or_cr.name)
+        self.assertTrue(new_application.official_receipt.name)
+        self.assertTrue(new_application.vehicle_registration.name)
 
         self.expired_application.refresh_from_db()
         self.assertEqual(self.expired_application.status, 'expired')
@@ -271,7 +307,7 @@ class RenewalFlowTests(TestCase):
                 vehicle_type='four_wheels',
                 vehicle_color='black',
                 is_owner=True,
-                or_cr=make_doc(),
+                official_receipt=make_doc(), vehicle_registration=make_doc(),
                 drivers_license=make_doc(),
                 status='scheduled',
             )
@@ -351,6 +387,77 @@ class AppointmentPickerRenderingTests(TestCase):
     def test_step4_redirects_to_picker_if_no_appointment_chosen_yet(self):
         response = self.client.get(reverse('apply_step4'))
         self.assertRedirects(response, reverse('apply_step3'))
+
+
+class CollegeChoiceTests(TestCase):
+    """
+    College is a fixed list, not free text. Reviewers filter and report on
+    this column, and while it was a text input the same college arrived as
+    "CCIS", "CS" and "College of Sciences" — three values, one place.
+    """
+
+    def setUp(self):
+        self.applicant = User.objects.create_user(
+            username='chooser', password='pw-1234567', role='applicant',
+            college_department='College of Engineering',
+            id_number='2020-0060', classification='student',
+            first_name='Cho', last_name='Oser',
+        )
+        today = timezone.localdate()
+        RegistrationWindow.objects.create(
+            start_date=today, end_date=today, is_active=True
+        )
+        self.client.force_login(self.applicant)
+
+    def base_post(self, college):
+        return {
+            'full_name': 'Cho Oser', 'college_department': college,
+            'id_number': '2020-0060', 'classification': 'student',
+        }
+
+    def test_step1_renders_every_college_as_an_option(self):
+        response = self.client.get(reverse('apply_step1'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '<select', html=False)
+        for college, _ in COLLEGE_CHOICES:
+            self.assertContains(response, college)
+
+    def test_step1_accepts_a_college_from_the_list(self):
+        response = self.client.post(
+            reverse('apply_step1'),
+            self.base_post('College of Nursing and Health Sciences'),
+        )
+        self.assertRedirects(response, reverse('apply_step2'))
+        self.assertEqual(
+            self.client.session['app_step1']['college_department'],
+            'College of Nursing and Health Sciences',
+        )
+
+    def test_step1_rejects_a_college_that_is_not_on_the_list(self):
+        response = self.client.post(reverse('apply_step1'), self.base_post('CCIS'))
+        # Re-rendered with the error rather than redirected onwards, and
+        # nothing was written to the session.
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn('app_step1', self.client.session)
+
+    def test_register_form_rejects_a_college_that_is_not_on_the_list(self):
+        form = RegisterForm({
+            'username': 'newbie', 'first_name': 'New', 'last_name': 'Bie',
+            'email': '202399999@psu.palawan.edu.ph',
+            'college_department': 'Some Made-Up College',
+            'password1': 'pw-1234567', 'password2': 'pw-1234567',
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('college_department', form.errors)
+
+    def test_register_form_leaves_college_optional(self):
+        form = RegisterForm({
+            'username': 'newbie', 'first_name': 'New', 'last_name': 'Bie',
+            'email': '202399999@psu.palawan.edu.ph',
+            'college_department': '',
+            'password1': 'pw-1234567', 'password2': 'pw-1234567',
+        })
+        self.assertTrue(form.is_valid(), form.errors)
 
 
 class NotificationHelperTests(TestCase):

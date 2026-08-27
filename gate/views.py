@@ -370,7 +370,7 @@ def incident_pdf(request, pk):
     story = []
 
     # Title
-    story.append(Paragraph('PalSU Gate System', styles['Title']))
+    story.append(Paragraph('PalawanSU Gate System', styles['Title']))
     story.append(Paragraph('Incident Report', styles['Heading1']))
     story.append(Spacer(1, 12))
 
@@ -422,7 +422,7 @@ def incident_pdf(request, pk):
             ['Full Name', application.full_name],
             ['Classification', application.get_classification_display()],
             ['ID Number', application.id_number],
-            ['College/Dept', application.college_department],
+            ['College', application.college_department],
         ]
         t2 = Table(data2, colWidths=[150, 300])
         t2.setStyle(TableStyle([

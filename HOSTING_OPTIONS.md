@@ -1,4 +1,4 @@
-# Hosting Options for PalSU Gate System
+# Hosting Options for PalawanSU Gate System
 
 Researched August 2026. Free tiers change often — re-check before committing.
 
@@ -128,7 +128,7 @@ which makes it an easy mistake to miss.
 
 ## Recommendation
 
-1. **Ask PSU's IT office first.** Costs nothing to ask. If they host it,
+1. **Ask PalawanSU's IT office first.** Costs nothing to ask. If they host it,
    it outlives our graduation, sits on their network and their backups,
    and no student's card is involved.
 2. If not — **Oracle Always Free (Singapore)** for free, or **Railway**

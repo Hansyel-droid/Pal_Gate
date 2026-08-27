@@ -1,4 +1,5 @@
 from django import forms
+from accounts.models import COLLEGE_CHOICES
 from .models import StickerApplication
 
 
@@ -14,9 +15,12 @@ class ApplicationStep1Form(forms.Form):
         widget=forms.TextInput(attrs={'class': 'form-control',
                                       'autocomplete': 'name'})
     )
-    college_department = forms.CharField(
-        max_length=100,
-        widget=forms.TextInput(attrs={'class': 'form-control'})
+    # A fixed list rather than free text: reviewers filter and report on this
+    # column, and typing it left "CCIS", "CS", and "College of Sciences" as
+    # three different colleges.
+    college_department = forms.ChoiceField(
+        choices=[('', '---------')] + COLLEGE_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-select'})
     )
     id_number = forms.CharField(
         max_length=50,
@@ -31,7 +35,10 @@ class ApplicationStep1Form(forms.Form):
 class ApplicationStep2Form(forms.Form):
     """Step 2: Vehicle Details and Document Uploads"""
 
-    DOCUMENT_FIELDS = ['or_cr', 'drivers_license', 'cor', 'authorization_letter']
+    DOCUMENT_FIELDS = [
+        'official_receipt', 'vehicle_registration',
+        'drivers_license', 'cor', 'authorization_letter',
+    ]
 
     ALLOWED_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png']
     MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
@@ -62,9 +69,15 @@ class ApplicationStep2Form(forms.Form):
         widget=forms.Select(attrs={'class': 'form-select'})
     )
 
-    # Documents
-    or_cr = forms.FileField(
-        label='OR/CR (Official Receipt / Certificate of Registration)',
+    # Documents. The OR and the CR are two separate LTO papers, so they are
+    # two separate uploads — see the note on StickerApplication for why the
+    # vehicle CR is not called `cr` next to the students' `cor`.
+    official_receipt = forms.FileField(
+        label='Official Receipt (OR)',
+        widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf,.jpg,.jpeg,.png'})
+    )
+    vehicle_registration = forms.FileField(
+        label='Certificate of Registration (CR)',
         widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf,.jpg,.jpeg,.png'})
     )
     drivers_license = forms.FileField(

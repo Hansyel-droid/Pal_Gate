@@ -55,7 +55,7 @@ def _send(application, subject, template_name, context=None):
 def notify_appointment_assigned(application, appointment):
     _send(
         application,
-        subject='PalSU Gate — Your inspection appointment is scheduled',
+        subject='PalawanSU Gate — Your inspection appointment is scheduled',
         template_name='appointment_assigned',
         context={'appointment': appointment},
     )
@@ -64,7 +64,7 @@ def notify_appointment_assigned(application, appointment):
 def notify_approved(application):
     _send(
         application,
-        subject='PalSU Gate — Your sticker application was approved',
+        subject='PalawanSU Gate — Your sticker application was approved',
         template_name='application_approved',
     )
 
@@ -72,7 +72,7 @@ def notify_approved(application):
 def notify_rejected(application):
     _send(
         application,
-        subject='PalSU Gate — Your sticker application needs attention',
+        subject='PalawanSU Gate — Your sticker application needs attention',
         template_name='application_rejected',
     )
 
@@ -80,6 +80,6 @@ def notify_rejected(application):
 def notify_sticker_issued(application):
     _send(
         application,
-        subject='PalSU Gate — Your sticker has been issued',
+        subject='PalawanSU Gate — Your sticker has been issued',
         template_name='sticker_issued',
     )

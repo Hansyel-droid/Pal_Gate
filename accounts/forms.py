@@ -1,7 +1,22 @@
+import unicodedata
+
 from django import forms
 from django.conf import settings
-from django.contrib.auth.forms import UserCreationForm
-from .models import User
+from django.contrib.auth.forms import PasswordResetForm, UserCreationForm
+from django.db.models import Q
+from .models import COLLEGE_CHOICES, User
+
+
+def _ci_equal(a, b):
+    """
+    Case-insensitive comparison that also folds the Unicode lookalikes a
+    database `__iexact` misses (the same NFKC + casefold Django applies
+    before it will email a password reset link to an address).
+    """
+    return (
+        unicodedata.normalize('NFKC', a).casefold()
+        == unicodedata.normalize('NFKC', b).casefold()
+    )
 
 
 class RegisterForm(UserCreationForm):
@@ -11,7 +26,10 @@ class RegisterForm(UserCreationForm):
     first_name = forms.CharField(max_length=50, required=True)
     last_name = forms.CharField(max_length=50, required=True)
     email = forms.EmailField(required=True)
-    college_department = forms.CharField(max_length=100, required=False)
+    college_department = forms.ChoiceField(
+        choices=[('', '---------')] + COLLEGE_CHOICES,
+        required=False
+    )
     id_number = forms.CharField(max_length=50, required=False)
     classification = forms.ChoiceField(
         choices=[('', '---------')] + User.CLASSIFICATION_CHOICES,
@@ -36,10 +54,10 @@ class RegisterForm(UserCreationForm):
         # Self-registration is for the campus community only. The domain
         # check is what makes the emailed code meaningful — anyone can
         # receive mail at a personal address, but only students, faculty,
-        # and staff have a PalSU mailbox.
+        # and staff have a PalawanSU mailbox.
         if not email.endswith('@' + domain):
             raise forms.ValidationError(
-                f'Use your official PalSU email address '
+                f'Use your official PalawanSU email address '
                 f'(it must end in @{domain}).'
             )
 
@@ -83,3 +101,69 @@ class LoginForm(forms.Form):
     """
     username = forms.CharField()
     password = forms.CharField(widget=forms.PasswordInput)
+
+
+class CampusPasswordResetForm(PasswordResetForm):
+    """
+    "Forgot password" for every kind of account in the system.
+
+    Django's stock form asks for an email address, which only ever fit
+    applicants — they sign up with one and it is verified. Sticker
+    administrators and security officers are made in the Django admin and
+    sign in with a username; asked for "your email address" on the reset
+    page, the honest answer for some of them is that they don't know which
+    one, if any, is on the account. They would type something, be told a
+    link was on its way, and wait for mail that was never sent.
+
+    So the field takes whichever of the two the person actually remembers.
+    The lookup widens; delivery does not. PasswordResetForm.save() mails
+    `user.email` for each user get_users() yields, never the string that
+    was typed, so entering somebody else's username sends the link to that
+    person's own inbox and tells the sender nothing.
+    """
+
+    email = forms.CharField(
+        label='Username or campus email',
+        max_length=254,
+        strip=True,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'autocomplete': 'username',
+            'autofocus': True,
+            'aria-describedby': 'reset_help',
+            'placeholder': f'you@{settings.REGISTRATION_EMAIL_DOMAIN}',
+        }),
+    )
+
+    def get_users(self, identifier):
+        """
+        The accounts a reset link may be sent to for this identifier.
+
+        Three filters, each of which would otherwise produce a link that
+        cannot work:
+
+        - `is_active=True` — an applicant who never typed back their
+          sign-up code is inactive and cannot log in, so a new password
+          buys them nothing. They need to finish verifying instead, which
+          is what the reset page tells them.
+        - a non-empty email — the link has nowhere to go. Legacy walk-in
+          records and command-line accounts fall in here.
+        - a usable password — set_unusable_password() accounts are not
+          password logins at all.
+        """
+        candidates = User.objects.filter(
+            Q(email__iexact=identifier) | Q(username__iexact=identifier),
+            is_active=True,
+        ).exclude(email='')
+
+        # __iexact only case-folds ASCII on SQLite, so re-check the match
+        # the way Django's own form does before mailing anyone — this is
+        # what stops a lookalike Unicode address from matching.
+        return [
+            user for user in candidates
+            if user.has_usable_password()
+            and (
+                _ci_equal(identifier, user.email)
+                or _ci_equal(identifier, user.username)
+            )
+        ]

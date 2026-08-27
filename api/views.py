@@ -6,6 +6,7 @@ from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 from django_ratelimit.decorators import ratelimit
 from .authentication import require_api_key
+from .rfid_auth import derive_tag_credentials_hex
 
 from accounts.mixins import role_required
 from applications.models import StickerApplication
@@ -60,7 +61,7 @@ def scan_tag(request):
         "action": "entry"/"exit"/"denied",
         "name": "Juan dela Cruz",
         "plate": "ABC 123",
-        "sticker_id": "PalSU-XXXX",
+        "sticker_id": "PalawanSU-XXXX",
         "reason": "..."   (only if denied)
     }
     """
@@ -172,7 +173,8 @@ def scan_tag(request):
 def register_uid(request):
     """
     Called by the ESP32 registration scanner when a new tag is presented.
-    Stores the UID temporarily so the sticker station can pick it up.
+    Stores the UID temporarily so the sticker station can pick it up, and
+    hands back the PWD_AUTH credentials the device writes to the tag.
 
     Expected JSON body:
     {
@@ -182,8 +184,29 @@ def register_uid(request):
     Returns:
     {
         "success": true,
-        "uid": "AB12CD34"
+        "uid": "AB12CD34",
+        "pwd": "1A2B3C4D",     (4 bytes, hex)
+        "pack": "5E6F"         (2 bytes, hex)
     }
+
+    The pwd/pack are derived from the UID under settings.RFID_MASTER_KEY —
+    they are not stored anywhere, because they never need to be: anything
+    holding the master key can recompute them from the UID at any time.
+    That is the point of deriving rather than generating them. See
+    api/rfid_auth.py for the derivation and for what this does and does not
+    protect against.
+
+    They are returned in the same response as the registration so the device
+    can write them to the tag while it is still in the RF field — a second
+    round trip would mean a second tap, and a tag that walked away between
+    the two would be registered but left unprotected.
+
+    This endpoint is the only place these credentials are exposed, and it
+    sits behind require_api_key. Note what that means: anyone holding a gate
+    device's API key can derive the password for any UID they can name. That
+    is inherent — a reader has to be able to authenticate tags — but it is
+    the reason API keys are per-device and revocable while the master key
+    never leaves the server.
     """
     try:
         data = json.loads(request.body)
@@ -204,6 +227,15 @@ def register_uid(request):
             status=400
         )
 
+    # Derived before the UID is stored: if the derivation is going to fail
+    # (a blanked master key), fail without leaving a pending registration
+    # behind that the sticker station would happily offer up for a tag the
+    # device was never told how to lock.
+    try:
+        credentials = derive_tag_credentials_hex(uid)
+    except ValueError as exc:
+        return JsonResponse({'error': str(exc)}, status=500)
+
     # Mark all previous pending UIDs as claimed
     # so only the latest one shows up
     PendingRFID.objects.filter(claimed=False).update(claimed=True)
@@ -214,6 +246,8 @@ def register_uid(request):
     return JsonResponse({
         'success': True,
         'uid': uid,
+        'pwd': credentials['pwd'],
+        'pack': credentials['pack'],
     })
 
 
