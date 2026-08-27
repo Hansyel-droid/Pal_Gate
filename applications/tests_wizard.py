@@ -17,11 +17,23 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from accounts.models import User
+from accounts.models import PolicyAcceptance, User
+from accounts.policy import CAMPUS_POLICY_VERSION
 from .models import RegistrationWindow, StickerApplication
 from .forms import ApplicationStep2Form
 
 MEDIA = tempfile.mkdtemp()
+
+
+def accept_policy(user):
+    """
+    CampusPolicyMiddleware redirects any applicant who hasn't accepted the
+    current policy version to the policy page, ahead of every other view —
+    including the whole apply/ wizard these tests exercise. Without this,
+    every test below would hit that redirect instead of the page it means
+    to test.
+    """
+    PolicyAcceptance.objects.create(user=user, version=CAMPUS_POLICY_VERSION)
 
 
 def doc(name='doc.pdf'):
@@ -71,6 +83,7 @@ class Step2RevisitTests(TestCase):
             username='stu', password='pw-1234567', role='applicant',
             classification='student',
         )
+        accept_policy(self.user)
         self.client.force_login(self.user)
         s = self.client.session
         s['app_step1'] = {
@@ -170,6 +183,7 @@ class Step2RevisitTests(TestCase):
             username='..', password='pw-1234567', role='applicant',
             classification='faculty',
         )
+        accept_policy(dots)
         self.client.force_login(dots)
         s = self.client.session
         s['app_step1'] = {
@@ -260,6 +274,7 @@ class ServeMissingDocumentTests(TestCase):
         owner = User.objects.create_user(
             username='own', password='pw-1234567', role='applicant'
         )
+        accept_policy(owner)
         app = StickerApplication.objects.create(
             applicant=owner, full_name='O', college_department='C',
             id_number='1', classification='student', plate_number='GONE-1',

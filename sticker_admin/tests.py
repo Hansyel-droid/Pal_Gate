@@ -9,10 +9,24 @@ from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 
-from accounts.models import User
+from accounts.models import PolicyAcceptance, User
+from accounts.policy import CAMPUS_POLICY_VERSION
 from applications.models import RegistrationWindow, StickerApplication
 from appointments.models import Appointment, AppointmentSlot
 from gate.models import AuditLog, PendingRFID
+
+
+def accept_policy(user):
+    """
+    These tests use an 'applicant' user purely as a not-admin fixture, to
+    pin that admin-only actions reject the wrong role. CampusPolicyMiddleware
+    would otherwise intercept that user first and redirect to the policy
+    page instead of letting the request reach the view's own role check —
+    a real behaviour (an applicant who's never accepted really would see
+    that page first), but not what these tests are checking. Pre-accepting
+    keeps the assertion about role rejection, not policy gating.
+    """
+    PolicyAcceptance.objects.create(user=user, version=CAMPUS_POLICY_VERSION)
 
 
 def make_doc(name='doc.pdf'):
@@ -195,6 +209,7 @@ class RfidDoubleIssuanceTests(TestCase):
         applicant = User.objects.create_user(
             username='notadmin', password='pw-1234567', role='applicant'
         )
+        accept_policy(applicant)
         self.client.force_login(applicant)
         response = self.client.get(
             reverse('issue_sticker', args=[self.pending.pk])
@@ -219,6 +234,7 @@ class ApprovalRejectionEmailTests(TestCase):
             username='applicant1', password='pw-1234567', role='applicant',
             email='applicant1@example.com',
         )
+        accept_policy(self.applicant)
         self.application = StickerApplication.objects.create(
             applicant=self.applicant,
             full_name='Approval Tester',
@@ -298,6 +314,7 @@ class ApproveEndpointContractTests(TestCase):
             username='contract_applicant', password='pw-1234567',
             role='applicant', email='contract@example.com',
         )
+        accept_policy(self.applicant)
         self.application = StickerApplication.objects.create(
             applicant=self.applicant, full_name='Contract Tester',
             college_department='CCIS', id_number='2020-0030',
@@ -393,6 +410,7 @@ class DestructiveActionContractTests(TestCase):
             username='destructive_applicant', password='pw-1234567',
             role='applicant',
         )
+        accept_policy(self.applicant)
         today = timezone.localdate()
         # Two free dates and one with a booking on it.
         self.free_a = AppointmentSlot.objects.create(date=today + timedelta(days=1))
@@ -569,6 +587,7 @@ class RegistrationWindowContractTests(TestCase):
         applicant = User.objects.create_user(
             username='window_applicant', password='pw-1234567', role='applicant'
         )
+        accept_policy(applicant)
         self.client.force_login(applicant)
         response = self.client.post(self.url, data={'action': 'close'})
         self.window.refresh_from_db()

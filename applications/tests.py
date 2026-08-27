@@ -9,7 +9,8 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.forms import RegisterForm
-from accounts.models import COLLEGE_CHOICES, User
+from accounts.models import COLLEGE_CHOICES, PolicyAcceptance, User
+from accounts.policy import CAMPUS_POLICY_VERSION
 from appointments.models import AppointmentSlot, Appointment
 from gate.models import AuditLog
 from .models import RegistrationWindow, StickerApplication
@@ -18,6 +19,17 @@ from .notifications import notify_approved
 
 def make_doc(name='doc.pdf'):
     return SimpleUploadedFile(name, b'%PDF-1.4 test document content', content_type='application/pdf')
+
+
+def accept_policy(user):
+    """
+    CampusPolicyMiddleware redirects any applicant who hasn't accepted the
+    current policy version to the policy page, ahead of every other view —
+    including apply/ and serve_document. Only needed for applicant users
+    that actually get force_login'd and make a request; users only used as
+    foreign-key owners of test data don't need this.
+    """
+    PolicyAcceptance.objects.create(user=user, version=CAMPUS_POLICY_VERSION)
 
 
 @override_settings(MEDIA_ROOT=tempfile.mkdtemp())
@@ -32,9 +44,11 @@ class ServeDocumentOwnershipTests(TestCase):
         self.owner = User.objects.create_user(
             username='owner', password='pw-1234567', role='applicant'
         )
+        accept_policy(self.owner)
         self.other_applicant = User.objects.create_user(
             username='intruder', password='pw-1234567', role='applicant'
         )
+        accept_policy(self.other_applicant)
         self.admin = User.objects.create_user(
             username='admin1', password='pw-1234567', role='admin'
         )
@@ -186,6 +200,7 @@ class RenewalFlowTests(TestCase):
             username='renewer', password='pw-1234567', role='applicant',
             email='renewer@example.com',
         )
+        accept_policy(self.applicant)
         today = timezone.localdate()
         self.window = RegistrationWindow.objects.create(
             start_date=today, end_date=today + timedelta(days=5), is_active=True
@@ -226,6 +241,7 @@ class RenewalFlowTests(TestCase):
         stranger = User.objects.create_user(
             username='stranger', password='pw-1234567', role='applicant'
         )
+        accept_policy(stranger)
         self.client.force_login(stranger)
         response = self.client.get(
             reverse('apply_renew', args=[self.expired_application.pk])
@@ -343,6 +359,7 @@ class AppointmentPickerRenderingTests(TestCase):
         self.applicant = User.objects.create_user(
             username='picker', password='pw-1234567', role='applicant'
         )
+        accept_policy(self.applicant)
         today = timezone.localdate()
         self.window = RegistrationWindow.objects.create(
             start_date=today, end_date=today, is_active=True
@@ -403,6 +420,7 @@ class CollegeChoiceTests(TestCase):
             id_number='2020-0060', classification='student',
             first_name='Cho', last_name='Oser',
         )
+        accept_policy(self.applicant)
         today = timezone.localdate()
         RegistrationWindow.objects.create(
             start_date=today, end_date=today, is_active=True

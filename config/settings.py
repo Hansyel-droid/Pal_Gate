@@ -75,32 +75,63 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-        'OPTIONS': {
-            # Take the write lock at BEGIN instead of at the first write.
-            #
-            # This is not a micro-optimisation — without it, concurrent
-            # writes fail outright. SQLite's default DEFERRED transaction
-            # only grabs a read lock at BEGIN and tries to upgrade to a
-            # write lock later. When two connections both hold a read lock
-            # and both try to upgrade, one MUST fail immediately —
-            # busy_timeout is deliberately skipped for that case, because
-            # waiting could only deadlock. So a burst of simultaneous
-            # submissions produced instant "database is locked" errors no
-            # matter how high busy_timeout was set. Measured: 60 concurrent
-            # bookings -> 5 succeeded, 55 crashed.
-            #
-            # IMMEDIATE makes each writing transaction queue at BEGIN,
-            # where busy_timeout DOES apply, so they serialise and wait
-            # their turn instead of failing.
-            'transaction_mode': 'IMMEDIATE',
-            'init_command': 'PRAGMA busy_timeout=20000;',
-        },
+# ── Database ─────────────────────────────────────────────────────────────────
+# SQLite by default (zero setup, the right call for an unattended long-term
+# deployment — see the note below). Set SUPABASE_DB_HOST in .env to switch to
+# Supabase's hosted Postgres instead — this exists for the Render+Supabase
+# demo path specifically, NOT as a recommendation to abandon SQLite for the
+# real deployment. Supabase's free tier has no backups and Render's own free
+# Postgres deletes itself after 30 days, so treat this path as temporary
+# (demo/defense) unless every service involved is on a paid tier.
+_supabase_db_host = config('SUPABASE_DB_HOST', default='')
+
+if _supabase_db_host:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'HOST': _supabase_db_host,
+            'NAME': config('SUPABASE_DB_NAME', default='postgres'),
+            'USER': config('SUPABASE_DB_USER', default='postgres'),
+            'PASSWORD': config('SUPABASE_DB_PASSWORD'),
+            'PORT': config('SUPABASE_DB_PORT', default='5432'),
+            'OPTIONS': {
+                # Supabase's pooler (port 6543, "Transaction" mode) sits in
+                # front of Postgres for exactly this kind of small app — the
+                # direct connection (port 5432) works too but caps out on
+                # concurrent connections much sooner. Either works; the
+                # pooler is the one Supabase's own dashboard recommends for
+                # a web app instead of a persistent script.
+                'sslmode': 'require',
+            },
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+            'OPTIONS': {
+                # Take the write lock at BEGIN instead of at the first write.
+                #
+                # This is not a micro-optimisation — without it, concurrent
+                # writes fail outright. SQLite's default DEFERRED transaction
+                # only grabs a read lock at BEGIN and tries to upgrade to a
+                # write lock later. When two connections both hold a read
+                # lock and both try to upgrade, one MUST fail immediately —
+                # busy_timeout is deliberately skipped for that case, because
+                # waiting could only deadlock. So a burst of simultaneous
+                # submissions produced instant "database is locked" errors no
+                # matter how high busy_timeout was set. Measured: 60
+                # concurrent bookings -> 5 succeeded, 55 crashed.
+                #
+                # IMMEDIATE makes each writing transaction queue at BEGIN,
+                # where busy_timeout DOES apply, so they serialise and wait
+                # their turn instead of failing.
+                'transaction_mode': 'IMMEDIATE',
+                'init_command': 'PRAGMA busy_timeout=20000;',
+            },
+        }
+    }
 
 # ── SQLite concurrency notes ─────────────────────────────────────────────────
 # The two settings that make concurrent writes survivable (transaction_mode
@@ -189,17 +220,60 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 # The manifest backend requires `collectstatic` to have run before anything
 # resolving a static file will render — DEPLOYMENT.md already does this in
 # both the first-install and the update path.
-STORAGES = {
-    'default': {
-        'BACKEND': 'django.core.files.storage.FileSystemStorage',
-    },
-    'staticfiles': {
-        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
-    },
-}
+#
+# 'default' (uploaded documents) is local disk unless SUPABASE_STORAGE_BUCKET
+# is set, in which case uploads go to Supabase Storage instead — needed on
+# Render, which has no persistent disk: every uploaded file would be wiped on
+# the next redeploy or restart otherwise. Same temporary/demo caveat as the
+# database switch above applies here.
+_supabase_bucket = config('SUPABASE_STORAGE_BUCKET', default='')
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+if _supabase_bucket:
+    STORAGES = {
+        'default': {
+            'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
+        },
+        'staticfiles': {
+            'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+        },
+    }
+    AWS_STORAGE_BUCKET_NAME = _supabase_bucket
+    AWS_ACCESS_KEY_ID = config('SUPABASE_S3_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = config('SUPABASE_S3_SECRET_ACCESS_KEY')
+    # Project's S3-compatible endpoint, from Supabase dashboard ->
+    # Storage -> S3 Connection. Looks like:
+    #   https://<project-ref>.supabase.co/storage/v1/s3
+    AWS_S3_ENDPOINT_URL = config('SUPABASE_S3_ENDPOINT_URL')
+    AWS_S3_REGION_NAME = config('SUPABASE_S3_REGION', default='us-east-1')
+    # Supabase's S3 gateway expects path-style addressing
+    # (endpoint/bucket/key), not the virtual-hosted-style
+    # (bucket.endpoint/key) boto3 defaults to.
+    AWS_S3_ADDRESSING_STYLE = 'path'
+    AWS_DEFAULT_ACL = 'private'
+    # Deliberately left at its default (True): these are government IDs and
+    # OR/CR documents. applications.views.serve_document is the ONLY place
+    # that reads them — it opens the file server-side via Django's storage
+    # API and streams the bytes through an authenticated, ownership-checked
+    # view (FileResponse), so the browser never sees a storage URL at all.
+    # If AWS_QUERYSTRING_AUTH were False and the bucket public, that
+    # authentication and ownership check would be bypassable by anyone who
+    # obtained a direct object URL. Leaving this True means that even if
+    # `.url` is ever called somewhere by mistake, it produces a short-lived
+    # signed link rather than a permanently public one — the bucket itself
+    # must stay Private in the Supabase dashboard, not Public.
+    # AWS_QUERYSTRING_AUTH = True  (this is the boto3 default — not set here)
+    MEDIA_URL = '/media/'  # unused for these fields; nothing calls .url on them
+else:
+    STORAGES = {
+        'default': {
+            'BACKEND': 'django.core.files.storage.FileSystemStorage',
+        },
+        'staticfiles': {
+            'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+        },
+    }
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

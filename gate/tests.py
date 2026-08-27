@@ -2,7 +2,8 @@ from django.contrib.admin.sites import site as admin_site
 from django.test import TestCase
 from django.urls import reverse
 
-from accounts.models import User
+from accounts.models import PolicyAcceptance, User
+from accounts.policy import CAMPUS_POLICY_VERSION
 from .admin import AuditLogAdmin
 from .masking import mask_name, mask_plate, mask_rfid, mask_sticker_id
 from .models import AuditLog
@@ -45,6 +46,15 @@ class GateViewsAccessTests(TestCase):
     def setUp(self):
         self.applicant = User.objects.create_user(
             username='applicant1', password='pw-1234567', role='applicant'
+        )
+        # These tests use the applicant purely as a not-security fixture,
+        # to pin that @role_required('security') rejects the wrong role.
+        # CampusPolicyMiddleware would otherwise intercept this user first
+        # and redirect to the policy page instead of letting the request
+        # reach the view's own role check — accepting up front keeps the
+        # assertion about role rejection, not policy gating.
+        PolicyAcceptance.objects.create(
+            user=self.applicant, version=CAMPUS_POLICY_VERSION
         )
         self.security = User.objects.create_user(
             username='security1', password='pw-1234567', role='security'
