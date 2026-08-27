@@ -7,6 +7,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.db.models import Q
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django_ratelimit.decorators import ratelimit
@@ -49,6 +50,25 @@ def _pending_user(request):
     if user is None:
         request.session.pop(PENDING_SESSION_KEY, None)
     return user
+
+
+def _lookup_pending_user_by_identifier(identifier):
+    """
+    Fallback for _pending_user() when the session that started
+    registration isn't the one finishing it — checking email on a phone
+    while signing up on a desktop, a different browser, a cleared cookie,
+    or a cold-started server rotating session data are all ordinary ways
+    for that to happen with real users. Scoped to inactive+unverified
+    accounts only, same as _pending_user(), so this can't be used to
+    look up anyone with a real, active account.
+    """
+    identifier = (identifier or '').strip()
+    if not identifier:
+        return None
+    return User.objects.filter(
+        Q(username__iexact=identifier) | Q(email__iexact=identifier),
+        is_active=False, email_verified=False,
+    ).first()
 
 
 def _release_abandoned_signups(request, username, email):
@@ -192,47 +212,61 @@ def verify_email_view(request):
     if request.user.is_authenticated:
         return redirect('dashboard')
 
+    # The fast path: the session set when registration started is still
+    # here, so the person doesn't have to type anything but the code.
     user = _pending_user(request)
-    if user is None:
-        messages.error(
-            request,
-            'Your sign-up session expired. Please create your account again.'
-        )
-        return redirect('register')
+    need_identifier = user is None
 
     if request.method == 'POST':
         form = OTPVerifyForm(request.POST)
         if form.is_valid():
-            ok, error = verify_otp(user, form.cleaned_data['code'])
-            if ok:
-                user.is_active = True
-                user.email_verified = True
-                user.save(update_fields=['is_active', 'email_verified'])
-                request.session.pop(PENDING_SESSION_KEY, None)
+            lookup_user = user or _lookup_pending_user_by_identifier(
+                form.cleaned_data['identifier']
+            )
+            if lookup_user is None:
+                messages.error(
+                    request,
+                    "We couldn't find a pending sign-up for that username "
+                    "or email. Double-check what you typed, or start over."
+                )
+            else:
+                # Found by identifier rather than session — adopt them into
+                # this session so a mistyped code doesn't force retyping
+                # the identifier too on the next attempt.
+                request.session[PENDING_SESSION_KEY] = lookup_user.pk
+                ok, error = verify_otp(lookup_user, form.cleaned_data['code'])
+                if ok:
+                    lookup_user.is_active = True
+                    lookup_user.email_verified = True
+                    lookup_user.save(update_fields=['is_active', 'email_verified'])
+                    request.session.pop(PENDING_SESSION_KEY, None)
 
-                log_action(
-                    request,
-                    'email_verified',
-                    f'{user.username} verified {user.email}',
-                    target_user=user.username,
-                )
-                messages.success(
-                    request,
-                    'Email verified! Your account is ready — you can now log in.'
-                )
-                return redirect('login')
-            messages.error(request, error)
+                    log_action(
+                        request,
+                        'email_verified',
+                        f'{lookup_user.username} verified {lookup_user.email}',
+                        target_user=lookup_user.username,
+                    )
+                    messages.success(
+                        request,
+                        'Email verified! Your account is ready — you can now log in.'
+                    )
+                    return redirect('login')
+                messages.error(request, error)
+                user = lookup_user  # so the re-rendered page still shows their email
         else:
             messages.error(request, 'Please fix the errors below.')
+        need_identifier = _pending_user(request) is None
     else:
         form = OTPVerifyForm()
 
     return render(request, 'accounts/verify_email.html', {
         'form': form,
-        'email': user.email,
+        'email': user.email if user else None,
         'code_length': settings.OTP_LENGTH,
         'expiry_minutes': settings.OTP_EXPIRY_MINUTES,
-        'resend_in': seconds_until_resend(user),
+        'resend_in': seconds_until_resend(user) if user else None,
+        'need_identifier': need_identifier,
     })
 
 
@@ -240,13 +274,16 @@ def verify_email_view(request):
 @ratelimit(key='ip', rate='5/m', method='POST', block=True)
 def resend_otp_view(request):
     """Send a fresh code, subject to the per-account cooldown."""
-    user = _pending_user(request)
+    user = _pending_user(request) or _lookup_pending_user_by_identifier(
+        request.POST.get('identifier', '')
+    )
     if user is None:
         messages.error(
             request,
-            'Your sign-up session expired. Please create your account again.'
+            "We couldn't find a pending sign-up for that username or "
+            "email. Double-check what you typed, or start over."
         )
-        return redirect('register')
+        return redirect('verify_email')
 
     wait = seconds_until_resend(user)
     if wait > 0:

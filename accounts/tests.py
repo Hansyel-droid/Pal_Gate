@@ -295,19 +295,57 @@ class RegistrationOTPFlowTests(TestCase):
 
         self.assertEqual(len(mail.outbox), 1)  # no second email went out
 
-    def test_verification_page_needs_a_pending_signup(self):
+    def test_verification_page_without_a_session_asks_for_identifier(self):
+        # No pending session (nobody registered in this browser this run) —
+        # rather than dead-ending with "your session expired, start over",
+        # the page offers a way to finish verifying anyway: type back the
+        # username/email plus the code. See OTPVerifyForm's docstring for
+        # why session continuity can't be assumed with real users.
         response = self.client.get('/accounts/register/verify/')
 
-        self.assertRedirects(response, '/accounts/register/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="identifier"')
 
-    def test_another_session_cannot_verify_someone_elses_signup(self):
+    def test_another_session_cannot_verify_someone_elses_signup_by_code_alone(self):
+        # A stranger's browser has no session pointing at the victim's
+        # pending account, and they don't submit an identifier either — the
+        # code by itself, with no way to resolve *whose* code it is, must
+        # not be enough.
         self._register()
         code = self._sent_code()
 
         response = Client().post('/accounts/register/verify/', {'code': code})
 
-        self.assertRedirects(response, '/accounts/register/')
+        self.assertEqual(response.status_code, 200)
         self.assertFalse(self._applicant().is_active)
+
+    def test_knowing_the_identifier_is_not_enough_without_the_code(self):
+        # The identifier fallback exists so a lost session doesn't strand a
+        # real user — it must not become a second way in that skips the
+        # code. A stranger who knows the victim's username/email still
+        # can't activate the account without the code actually emailed.
+        self._register()
+
+        response = Client().post('/accounts/register/verify/', {
+            'identifier': 'jdelacruz', 'code': '000000',
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(self._applicant().is_active)
+
+    def test_identifier_fallback_still_requires_the_real_code(self):
+        # The positive case: a genuinely lost session (different device,
+        # different browser) is recoverable with identifier + the actual
+        # code — this is the whole point of the fallback.
+        self._register()
+        code = self._sent_code()
+
+        response = Client().post('/accounts/register/verify/', {
+            'identifier': self.EMAIL, 'code': code,
+        })
+
+        self.assertRedirects(response, '/accounts/login/')
+        self.assertTrue(self._applicant().is_active)
 
     def _expire_pending_code(self):
         """Age out the outstanding code, i.e. the sign-up is now abandoned

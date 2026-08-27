@@ -76,8 +76,24 @@ class RegisterForm(UserCreationForm):
 
 class OTPVerifyForm(forms.Form):
     """
-    The single-field form on the "check your email" step.
+    The form on the "check your email" step.
+
+    `identifier` is normally invisible and unused: the pending account is
+    found through the session set when registration started. It only
+    matters when that session didn't make it back — a different browser,
+    a different device, a cleared cookie jar, or anything else that breaks
+    the assumption that "the person typing the code" and "the person who
+    submitted the sign-up form" share one session. Without it, the entire
+    verification step depends on session continuity holding across however
+    long it takes someone to go read an email, which real users doing this
+    on a phone regularly break. Optional here; the view enforces it only
+    when the session lookup comes back empty.
     """
+    identifier = forms.CharField(
+        label='Username or email',
+        required=False,
+        max_length=254,
+    )
     # Deliberately looser than OTP_LENGTH so a pasted "123 456" reaches
     # clean_code() and gets tidied up instead of being rejected outright.
     code = forms.CharField(
