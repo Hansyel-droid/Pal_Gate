@@ -404,25 +404,28 @@
             position: relative;
             display: grid;
             place-items: center;
-            width: 34px; height: 34px;
+            width: 38px; height: 38px;
             flex: none;
             border-radius: var(--rfull);
-            color: var(--text-muted);
+            background: var(--accent-50);
+            border: 1px solid var(--accent-100);
+            color: var(--accent-700);
             text-decoration: none;
             transition: background var(--t-fast) var(--ease-soft), color var(--t-fast) var(--ease-soft);
         }
-        .notif-bell:hover { background: var(--surface-hover); color: var(--text-strong); }
+        .notif-bell .ic { width: 20px; height: 20px; stroke-width: 2.1; }
+        .notif-bell:hover { background: var(--accent-100); color: var(--accent-700); }
         .notif-bell-badge {
             position: absolute;
-            top: 2px; right: 2px;
-            min-width: 15px; height: 15px;
-            padding: 0 3px;
+            top: -3px; right: -3px;
+            min-width: 18px; height: 18px;
+            padding: 0 4px;
             border-radius: var(--rfull);
             background: var(--danger);
             color: #fff;
-            font-size: 9px;
+            font-size: 10.5px;
             font-weight: 700;
-            line-height: 15px;
+            line-height: 18px;
             text-align: center;
             box-shadow: 0 0 0 2px var(--surface, #fff);
         }
