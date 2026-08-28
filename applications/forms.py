@@ -64,6 +64,18 @@ class ApplicationStep2Form(forms.Form):
         choices=[('', '---------')] + StickerApplication.COLOR_CHOICES,
         widget=forms.Select(attrs={'class': 'form-select'})
     )
+    # Shown/required only when vehicle_color == 'other' — see clean() below,
+    # which folds this into vehicle_color itself so the model keeps a single
+    # column and every existing get_vehicle_color_display() call site (the
+    # incident report PDF, the admin detail page) needs no changes at all.
+    vehicle_color_other = forms.CharField(
+        required=False,
+        max_length=30,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter the vehicle\'s color',
+        })
+    )
     is_owner = forms.ChoiceField(
         choices=[('yes', 'Yes – I own this vehicle'), ('no', 'No – I am not the owner')],
         widget=forms.Select(attrs={'class': 'form-select'})
@@ -117,6 +129,18 @@ class ApplicationStep2Form(forms.Form):
         for field_name in self.existing_files:
             self.fields[field_name].required = False
 
+        # Returning to this step (renewal, or a "Change" link from Step 3/4)
+        # seeds `initial['vehicle_color']` with whatever was saved before.
+        # If that's custom text from a previous "Other" entry rather than
+        # one of the fixed choice keys, the <select> can't show it directly
+        # — so re-point the dropdown at 'other' and hand the actual text to
+        # the textbox, instead of it silently rendering as unselected.
+        color_keys = {key for key, _ in StickerApplication.COLOR_CHOICES}
+        current_color = self.initial.get('vehicle_color')
+        if current_color and current_color not in color_keys:
+            self.initial['vehicle_color'] = 'other'
+            self.initial['vehicle_color_other'] = current_color
+
     def validate_file_extension(self, file):
         """Check that the uploaded file is PDF, JPG, JPEG, or PNG — by both
         extension and actual file content, and enforce a size cap."""
@@ -153,6 +177,21 @@ class ApplicationStep2Form(forms.Form):
         cleaned_data = super().clean()
         classification = self.data.get('step1_classification', '')
         is_owner = cleaned_data.get('is_owner')
+
+        # "Other" needs the typed-in color, and folds it straight into
+        # vehicle_color so the rest of the app — session storage, the
+        # model's single vehicle_color column, get_vehicle_color_display()
+        # on the admin detail page and the incident report — never has to
+        # know a second field exists.
+        if cleaned_data.get('vehicle_color') == 'other':
+            custom_color = (cleaned_data.get('vehicle_color_other') or '').strip()
+            if not custom_color:
+                self.add_error(
+                    'vehicle_color_other',
+                    'Please type the vehicle\'s color.'
+                )
+            else:
+                cleaned_data['vehicle_color'] = custom_color
 
         # Validate file types for all uploaded files
         for field_name in self.DOCUMENT_FIELDS:

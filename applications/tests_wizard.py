@@ -268,6 +268,130 @@ class Step2RevisitTests(TestCase):
         self.assertNotIn('vehicle_registration', form.errors)
 
 
+class VehicleColorOtherTests(TestCase):
+    """
+    'Other' in the color dropdown needs the typed-in text, and that text
+    becomes vehicle_color itself — see the comment on the field in forms.py
+    for why there's no separate column.
+    """
+
+    def make_form(self, **overrides):
+        data = {
+            'plate_number': 'A 1', 'vehicle_type': 'four_wheels',
+            'vehicle_color': 'other', 'is_owner': 'yes',
+        }
+        data.update(overrides)
+        form = ApplicationStep2Form(
+            data=data,
+            files={
+                'official_receipt': doc('or.pdf'),
+                'vehicle_registration': doc('cr.pdf'),
+                'drivers_license': doc('dl.pdf'),
+            },
+        )
+        form.data = form.data.copy()
+        form.data['step1_classification'] = 'faculty'
+        return form
+
+    def test_other_without_typed_color_is_rejected(self):
+        form = self.make_form()
+        self.assertFalse(form.is_valid())
+        self.assertIn('vehicle_color_other', form.errors)
+
+    def test_other_with_typed_color_is_stored_as_vehicle_color(self):
+        form = self.make_form(vehicle_color_other='Maroon')
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data['vehicle_color'], 'Maroon')
+
+    def test_a_normal_color_still_works_unchanged(self):
+        form = self.make_form(vehicle_color='red', vehicle_color_other='')
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data['vehicle_color'], 'red')
+
+    def test_whitespace_only_typed_color_is_rejected(self):
+        form = self.make_form(vehicle_color_other='   ')
+        self.assertFalse(form.is_valid())
+        self.assertIn('vehicle_color_other', form.errors)
+
+    def test_typed_color_is_stripped(self):
+        form = self.make_form(vehicle_color_other='  Maroon  ')
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data['vehicle_color'], 'Maroon')
+
+    def test_resuming_the_form_with_a_custom_color_reselects_other(self):
+        """
+        A renewal or a "Change" link from Step 3/4 seeds initial data from
+        a previously-saved application. If that vehicle_color is custom
+        text rather than one of the fixed keys, the dropdown must come back
+        pointed at 'other' with the text handed to the textbox — not render
+        as silently unselected.
+        """
+        form = ApplicationStep2Form(initial={'vehicle_color': 'Maroon'})
+        self.assertEqual(form.initial['vehicle_color'], 'other')
+        self.assertEqual(form.initial['vehicle_color_other'], 'Maroon')
+
+    def test_resuming_with_a_normal_color_leaves_the_dropdown_alone(self):
+        form = ApplicationStep2Form(initial={'vehicle_color': 'blue'})
+        self.assertEqual(form.initial['vehicle_color'], 'blue')
+        self.assertNotIn('vehicle_color_other', form.initial)
+
+
+@override_settings(MEDIA_ROOT=MEDIA)
+class VehicleColorOtherEndToEndTests(TestCase):
+    """
+    The same behavior, but through the real apply_step2 view and all the
+    way to the saved StickerApplication row — pinning that a custom color
+    survives the session round-trip and displays correctly afterward via
+    get_vehicle_color_display(), with no further template changes needed.
+    """
+
+    def setUp(self):
+        today = timezone.localdate()
+        RegistrationWindow.objects.create(
+            is_active=True,
+            start_date=today - timedelta(days=1),
+            end_date=today + timedelta(days=30),
+        )
+        self.user = User.objects.create_user(
+            username='stu2', password='pw-1234567', role='applicant',
+            classification='faculty',
+        )
+        accept_policy(self.user)
+        self.client.force_login(self.user)
+        s = self.client.session
+        s['app_step1'] = {
+            'full_name': 'Stu Dent', 'college_department': 'CCIS',
+            'id_number': '2020-3', 'classification': 'faculty',
+        }
+        s.save()
+
+    def test_custom_color_reaches_the_saved_application(self):
+        from appointments.models import AppointmentSlot
+
+        r = self.client.post(reverse('apply_step2'), {
+            'plate_number': 'MRN 001', 'vehicle_type': 'four_wheels',
+            'vehicle_color': 'other', 'vehicle_color_other': 'Maroon',
+            'is_owner': 'yes',
+            'official_receipt': doc('or.pdf'),
+            'vehicle_registration': doc('cr.pdf'),
+            'drivers_license': doc('dl.pdf'),
+        })
+        self.assertRedirects(r, reverse('apply_step3'))
+        self.assertEqual(self.client.session['app_step2']['vehicle_color'], 'Maroon')
+
+        slot = AppointmentSlot.objects.create(
+            date=timezone.localdate() + timedelta(days=40)
+        )
+        self.client.post(reverse('apply_step3'), {
+            'slot_id': slot.pk, 'time': '08:00',
+        })
+        self.client.post(reverse('apply_step4'), {})
+
+        app = StickerApplication.objects.get(plate_number='MRN 001')
+        self.assertEqual(app.vehicle_color, 'Maroon')
+        self.assertEqual(app.get_vehicle_color_display(), 'Maroon')
+
+
 @override_settings(MEDIA_ROOT=MEDIA)
 class ServeMissingDocumentTests(TestCase):
     def test_missing_file_is_404_not_500(self):
