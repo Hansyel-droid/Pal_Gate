@@ -400,6 +400,33 @@
             font-size: var(--fs-sm);
         }
 
+        .notif-bell {
+            position: relative;
+            display: grid;
+            place-items: center;
+            width: 34px; height: 34px;
+            flex: none;
+            border-radius: var(--rfull);
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: background var(--t-fast) var(--ease-soft), color var(--t-fast) var(--ease-soft);
+        }
+        .notif-bell:hover { background: var(--surface-hover); color: var(--text-strong); }
+        .notif-bell-badge {
+            position: absolute;
+            top: 2px; right: 2px;
+            min-width: 15px; height: 15px;
+            padding: 0 3px;
+            border-radius: var(--rfull);
+            background: var(--danger);
+            color: #fff;
+            font-size: 9px;
+            font-weight: 700;
+            line-height: 15px;
+            text-align: center;
+            box-shadow: 0 0 0 2px var(--surface, #fff);
+        }
+
         .btn-logout {
             display: inline-flex;
             align-items: center;
@@ -2197,6 +2224,7 @@
 <symbol id="i-file-up" viewBox="0 0 24 24"><path d="M13.5 2.75H7A1.75 1.75 0 0 0 5.25 4.5v15A1.75 1.75 0 0 0 7 21.25h10a1.75 1.75 0 0 0 1.75-1.75V8l-5.25-5.25Z"/><path d="M13.5 2.75V8h5.25"/><path d="M12 18v-5.5"/><path d="M9.75 14.5 12 12.25l2.25 2.25"/></symbol>
 <symbol id="i-file-pdf" viewBox="0 0 24 24"><path d="M13.5 2.75H7A1.75 1.75 0 0 0 5.25 4.5v15A1.75 1.75 0 0 0 7 21.25h10a1.75 1.75 0 0 0 1.75-1.75V8l-5.25-5.25Z"/><path d="M13.5 2.75V8h5.25"/><path d="M8.75 17.5v-4.25h1.4a1.15 1.15 0 0 1 0 2.3h-1.4"/><path d="M13 17.5v-4.25h1.1a1.6 1.6 0 0 1 1.6 1.6v1.05a1.6 1.6 0 0 1-1.6 1.6H13Z"/></symbol>
 <symbol id="i-mail" viewBox="0 0 24 24"><rect x="2.75" y="5" width="18.5" height="14" rx="1.75"/><path d="m3.5 7 8.5 6 8.5-6"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 3.5 1.25 5.25 2 6.25a1 1 0 0 1-.8 1.75H4.8a1 1 0 0 1-.8-1.75C4.75 14.25 6 12.5 6 9Z"/><path d="M10 19.5a2 2 0 0 0 4 0"/></symbol>
 <symbol id="i-mail-check" viewBox="0 0 24 24"><path d="M21.25 11V6.75A1.75 1.75 0 0 0 19.5 5h-15a1.75 1.75 0 0 0-1.75 1.75v10.5A1.75 1.75 0 0 0 4.5 19h8"/><path d="m3.5 7 8.5 6 8.5-6"/><path d="M15.5 18.5 17.5 20.5 21.5 16"/></symbol>
 <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/></symbol>
 <symbol id="i-user-check" viewBox="0 0 24 24"><circle cx="10" cy="8" r="4"/><path d="M3 20.5a7 7 0 0 1 11.2-5.6"/><path d="M15 18.5 17 20.5 21.5 15.5"/></symbol>
@@ -2238,6 +2266,12 @@ rendering the topbar there put the product name on the page twice.
     </div>
 
     <div class="topbar-user">
+        <a href="{% url 'notifications_list' %}" class="notif-bell" aria-label="Notifications{% if unread_notification_count %} ({{ unread_notification_count }} unread){% endif %}">
+            <svg class="ic" aria-hidden="true"><use href="#i-bell"/></svg>
+            {% if unread_notification_count %}
+            <span class="notif-bell-badge" aria-hidden="true">{% if unread_notification_count > 9 %}9+{% else %}{{ unread_notification_count }}{% endif %}</span>
+            {% endif %}
+        </a>
         <div class="user-info">
             <div class="user-name">{{ user.get_full_name|default:user.username }}</div>
             <div class="user-role">{{ user.get_role_display }}</div>

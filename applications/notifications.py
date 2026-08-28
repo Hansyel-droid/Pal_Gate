@@ -3,6 +3,9 @@ import logging
 from django.conf import settings
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
+from django.urls import reverse
+
+from accounts.notifications import notify_user
 
 logger = logging.getLogger('django')
 
@@ -59,6 +62,12 @@ def notify_appointment_assigned(application, appointment):
         template_name='appointment_assigned',
         context={'appointment': appointment},
     )
+    notify_user(
+        application.applicant,
+        f'Your inspection for plate {application.plate_number} is scheduled '
+        f'for {appointment.slot.date:%B %d, %Y}.',
+        link=reverse('my_applications'),
+    )
 
 
 def notify_approved(application):
@@ -66,6 +75,11 @@ def notify_approved(application):
         application,
         subject='PalawanSU Gate — Your sticker application was approved',
         template_name='application_approved',
+    )
+    notify_user(
+        application.applicant,
+        f'Your application for plate {application.plate_number} was approved.',
+        link=reverse('my_applications'),
     )
 
 
@@ -75,6 +89,12 @@ def notify_rejected(application):
         subject='PalawanSU Gate — Your sticker application needs attention',
         template_name='application_rejected',
     )
+    notify_user(
+        application.applicant,
+        f'Your application for plate {application.plate_number} needs '
+        f'attention — see the reason on your applications page.',
+        link=reverse('my_applications'),
+    )
 
 
 def notify_sticker_issued(application):
@@ -82,4 +102,9 @@ def notify_sticker_issued(application):
         application,
         subject='PalawanSU Gate — Your sticker has been issued',
         template_name='sticker_issued',
+    )
+    notify_user(
+        application.applicant,
+        f'Your sticker for plate {application.plate_number} has been issued.',
+        link=reverse('my_applications'),
     )

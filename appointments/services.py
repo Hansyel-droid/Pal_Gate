@@ -1,9 +1,11 @@
 from datetime import datetime, timedelta
 from django.db import transaction
 from django.db.models import Count
+from django.urls import reverse
 from .models import AppointmentSlot, Appointment
 from applications.models import RegistrationWindow
 from applications.notifications import notify_appointment_assigned
+from accounts.notifications import notify_admins
 
 
 def _bookable_start_date():
@@ -113,6 +115,20 @@ def book_appointment(application, slot_id, time):
         # never told about an appointment that doesn't exist.
         transaction.on_commit(
             lambda: notify_appointment_assigned(application, appointment)
+        )
+
+        # This is the one place a brand new application reliably passes
+        # through — book_appointment runs once per submission (initial or
+        # renewal), right after the application row is created. That makes
+        # it the single hook for "an admin needs to look at this", rather
+        # than duplicating the notification at every call site that can
+        # create an application.
+        transaction.on_commit(
+            lambda: notify_admins(
+                f'New application from {application.applicant.get_full_name()} '
+                f'— plate {application.plate_number}.',
+                link=reverse('application_detail', args=[application.pk]),
+            )
         )
 
         return appointment

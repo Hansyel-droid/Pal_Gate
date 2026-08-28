@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 from django.conf import settings
 from django.http import HttpResponseRedirect
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
@@ -14,7 +14,7 @@ from django_ratelimit.decorators import ratelimit
 from .forms import (
     CampusPasswordResetForm, RegisterForm, LoginForm, OTPVerifyForm,
 )
-from .models import EmailOTP, PolicyAcceptance, User
+from .models import EmailOTP, Notification, PolicyAcceptance, User
 from .otp import issue_otp, seconds_until_resend, verify_otp
 from .policy import CAMPUS_POLICY_VERSION, has_accepted_current_policy
 from gate.audit import get_client_ip, log_action
@@ -408,6 +408,52 @@ def campus_policy_view(request):
         'policy_version': CAMPUS_POLICY_VERSION,
         'next': request.GET.get('next', ''),
     })
+
+
+@login_required
+def notifications_list_view(request):
+    """
+    Everyone's inbox — the page the topbar bell links to. Same view for
+    every role; each person only ever sees their own rows regardless
+    (Notification.recipient is filtered to request.user), so there's
+    nothing role-specific to branch on here.
+    """
+    notifications = request.user.notifications.all()[:50]
+    return render(request, 'accounts/notifications.html', {
+        'notifications': notifications,
+    })
+
+
+@login_required
+def notification_open_view(request, pk):
+    """
+    Marks one notification read, then sends the person to whatever it was
+    about. A plain GET works fine here — it's an ordinary "follow this
+    link" action, and marking an already-read notification read again is
+    harmless, so there's no state-mutation hazard a GET would normally
+    need to avoid.
+
+    Scoped to request.user's own notifications via get_object_or_404, so
+    guessing another id doesn't leak whose it was or mark it read on
+    someone else's behalf — a 404 either way.
+    """
+    notification = get_object_or_404(
+        Notification, pk=pk, recipient=request.user
+    )
+    if not notification.is_read:
+        notification.is_read = True
+        notification.save(update_fields=['is_read'])
+
+    if notification.link:
+        return redirect(notification.link)
+    return redirect('notifications_list')
+
+
+@require_POST
+@login_required
+def notifications_mark_all_read_view(request):
+    request.user.notifications.filter(is_read=False).update(is_read=True)
+    return redirect('notifications_list')
 
 
 @login_required

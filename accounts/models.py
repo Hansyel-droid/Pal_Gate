@@ -142,6 +142,45 @@ class PolicyAcceptance(models.Model):
         return f'{self.user.username} accepted policy {self.version}'
 
 
+class Notification(models.Model):
+    """
+    An in-app notification for one user — the red-dot inbox in the topbar.
+
+    Deliberately separate from applications.notifications (the email
+    sender): that module's whole job is "does an email leave the server",
+    and it already has its own reasons to fail silently (no address on
+    file, mail server down) without breaking the action that triggered it.
+    A Notification row here is a plain, transactional database write with
+    none of that — it either commits with the rest of the request or it
+    doesn't, same as any other model. The two are wired up at the same
+    call sites (see accounts.notifications) so the in-app and email trails
+    agree, but neither depends on the other succeeding.
+    """
+    recipient = models.ForeignKey(
+        'accounts.User',
+        on_delete=models.CASCADE,
+        related_name='notifications',
+    )
+    message = models.CharField(max_length=255)
+    # Where clicking the notification should go — a relative path such as
+    # `/sticker-admin/applications/7/`. Blank is valid (falls back to the
+    # notifications list itself) rather than required, so a future
+    # notification type that has nowhere specific to send someone isn't
+    # forced to invent a link.
+    link = models.CharField(max_length=255, blank=True)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['recipient', 'is_read']),
+        ]
+
+    def __str__(self):
+        return f'{self.recipient.username}: {self.message[:50]}'
+
+
 class EmailOTP(models.Model):
     """
     A one-time code emailed to an applicant to prove they own the campus
