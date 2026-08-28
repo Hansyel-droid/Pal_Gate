@@ -13,7 +13,12 @@ psycopg2-binary==2.9.12
 
 # Object storage (Supabase Storage, S3-compatible) — only used when
 # SUPABASE_STORAGE_BUCKET is set in .env. See config/settings.py.
-django-storages==1.14.4
+# MUST stay >=1.14.5 — 1.14.4 shipped a regression where .exists() returns
+# False for a file that was just saved and genuinely exists (upstream
+# issue jschneier/django-storages#1430, reverted in 1.14.5's #1484/#1486).
+# That exact bug is what made every sticker application submission fail
+# with "required documents could not be found" once documents moved to S3.
+django-storages==1.14.6
 boto3==1.35.99
 
 # Real email delivery over HTTPS (works on Render's free tier, unlike SMTP).
