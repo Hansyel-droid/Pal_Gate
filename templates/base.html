@@ -2442,6 +2442,43 @@ rendering the topbar there put the product name on the page twice.
         });
     })();
 
+    // Auto-dismiss toasts (application approved, sticker issued, etc.) after
+    // a few seconds instead of leaving them stacking up until the next page
+    // load pushes a new one in. Errors are the exception: per the note above
+    // the messages block, those are the one message a user must not miss, so
+    // they stay until dismissed by hand. Hovering or focusing a toast (e.g.
+    // to read it or reach the close button) pauses the countdown; it resumes
+    // on mouseleave/blur rather than restarting from zero.
+    (function () {
+        var DELAY = 5000;
+        document.querySelectorAll('.messages-wrap .alert').forEach(function (el) {
+            if (el.classList.contains('alert-danger') || el.classList.contains('alert-error')) return;
+
+            var timer, remaining = DELAY, startedAt;
+
+            function startTimer() {
+                startedAt = Date.now();
+                timer = setTimeout(function () {
+                    bootstrap.Alert.getOrCreateInstance(el).close();
+                }, remaining);
+            }
+            function pauseTimer() {
+                clearTimeout(timer);
+                remaining -= Date.now() - startedAt;
+            }
+            function resumeTimer() {
+                if (remaining > 0) startTimer();
+            }
+
+            el.addEventListener('mouseenter', pauseTimer);
+            el.addEventListener('mouseleave', resumeTimer);
+            el.addEventListener('focusin', pauseTimer);
+            el.addEventListener('focusout', resumeTimer);
+
+            startTimer();
+        });
+    })();
+
     // Show/hide toggle on every password field, site-wide. Done here once
     // instead of per-template so login, registration, and password
     // reset/change all get it automatically, including any password
