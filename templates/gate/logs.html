@@ -105,67 +105,8 @@
                     <th scope="col"><span class="visually-hidden">Incident report</span></th>
                 </tr>
             </thead>
-            <tbody>
-                {% for log in page_obj %}
-                <tr>
-                    <td class="text-muted">
-                        <time>{{ log.timestamp|date:"M d, Y H:i:s" }}</time>
-                    </td>
-                    <td>
-                        {% if log.application %}
-                            <span class="plate">{{ log.application.plate_number|mask_plate }}</span>
-                        {% else %}
-                            <code>{{ log.rfid_uid|mask_rfid }}</code>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if log.application.sticker_id %}
-                            <code>{{ log.application.sticker_id|mask_sticker_id }}</code>
-                        {% else %}
-                            <span class="text-faint">—</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if log.application %}
-                            {{ log.application.full_name|mask_name }}
-                        {% else %}
-                            <span class="text-faint">—</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if log.action == 'entry' %}
-                            <span class="status-badge badge-entry">Entry</span>
-                        {% elif log.action == 'exit' %}
-                            <span class="status-badge badge-exit">Exit</span>
-                        {% else %}
-                            <span class="status-badge badge-denied">Denied</span>
-                        {% endif %}
-                    </td>
-                    <td class="text-muted">{{ log.gate_location }}</td>
-                    <td class="text-end">
-                        <a href="{% url 'incident_report' log.pk %}"
-                           class="btn btn-sm btn-secondary">
-                            Report
-                        </a>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="7">
-                        <div class="empty-state">
-                            <svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>
-                            <h3>No logs match these filters</h3>
-                            <p>
-                                Widen the date range or clear the filters to see the
-                                full record.
-                            </p>
-                            <a href="{% url 'gate_logs' %}" class="btn btn-secondary btn-sm mt-3">
-                                Clear filters
-                            </a>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
+            <tbody id="logs-table-body">
+                {% include 'gate/_logs_rows.html' %}
             </tbody>
         </table>
     </div>
@@ -199,4 +140,29 @@
     </ul>
 </nav>
 {% endif %}
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        // Only run the live feed if we are on page 1 (or no page is set)
+        const isPageOne = !urlParams.has('page') || urlParams.get('page') === '1';
+        
+        if (isPageOne) {
+            setInterval(() => {
+                // Grab the current URL (including any active filters like gate or action)
+                let fetchUrl = new URL(window.location.href);
+                // Append the partial flag so Django knows to only send the table rows
+                fetchUrl.searchParams.set('partial', '1');
+
+                fetch(fetchUrl)
+                    .then(response => response.text())
+                    .then(html => {
+                        document.getElementById('logs-table-body').innerHTML = html;
+                    })
+                    .catch(error => console.error('Error fetching live logs:', error));
+            }, 5000); // Polls every 5 seconds (5000 milliseconds)
+        }
+    });
+</script>
 {% endblock %}

@@ -328,7 +328,7 @@ def gate_logs(request):
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
 
-    return render(request, 'gate/logs.html', {
+    context = {
         'page_obj': page_obj,
         'query': query,
         'action_filter': action_filter,
@@ -337,7 +337,13 @@ def gate_logs(request):
         'date_to': date_to,
         'gate_locations': gate_locations,
         'total_count': paginator.count,
-    })
+    }
+
+    # Intercept partial requests for live polling
+    if request.GET.get('partial'):
+        return render(request, 'gate/_logs_rows.html', context)
+
+    return render(request, 'gate/logs.html', context)
 
 
 @role_required('security')
