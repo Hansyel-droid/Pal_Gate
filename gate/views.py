@@ -457,11 +457,15 @@ def export_csv(request):
     if query:
         logs = logs.filter(
             Q(application__plate_number__icontains=query) |
-            Q(application__full_name__icontains=query)
+            Q(application__full_name__icontains=query) |
+            Q(rfid_uid__icontains=query)
         )
     action_filter = request.GET.get('action', '')
     if action_filter:
         logs = logs.filter(action=action_filter)
+    gate_filter = request.GET.get('gate', '')
+    if gate_filter:
+        logs = logs.filter(gate_location=gate_filter)
     date_from = request.GET.get('date_from', '')
     date_to = request.GET.get('date_to', '')
     if date_from:
@@ -469,29 +473,30 @@ def export_csv(request):
     if date_to:
         logs = logs.filter(timestamp__date__lte=date_to)
 
-    # Streamed rather than assembled in memory. With no filters applied this
-    # is the whole table, and the previous version built every row of it into
-    # a single HttpResponse body before sending a byte — one export of a
-    # large history was enough to take the process down. iterator() keeps the
-    # DB cursor from materialising the queryset alongside it.
+    # Streamed rather than assembled in memory.
     def rows():
         writer = csv.writer(Echo())
         yield writer.writerow([
-            'Timestamp', 'Plate Number', 'Sticker ID',
+            'Timestamp', 'Plate Number', 'Vehicle Color', 'Sticker ID',
             'Driver Name', 'Action', 'Gate', 'Denial Reason'
         ])
         for log in logs.iterator(chunk_size=2000):
-            # Masked the same way the logs page is — this file gets
-            # downloaded, emailed, and opened outside the system, so it
-            # carries the same over-exposure risk as the browsing page.
+            color = '—'
+            if log.application and getattr(log.application, 'vehicle_color', None):
+                if hasattr(log.application, 'get_vehicle_color_display'):
+                    color = log.application.get_vehicle_color_display()
+                else:
+                    color = str(log.application.vehicle_color).capitalize()
+
             yield writer.writerow([csv_safe(v) for v in [
                 log.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
                 mask_plate(log.application.plate_number) if log.application else '—',
+                color,
                 log.application.sticker_id if log.application else '—',
                 mask_name(log.application.full_name) if log.application else '—',
                 log.get_action_display(),
                 log.gate_location,
-                log.denial_reason,
+                log.denial_reason or '—',
             ]])
 
     response = StreamingHttpResponse(rows(), content_type='text/csv')
@@ -515,9 +520,7 @@ def time_tracker(request):
 
     # Every plate whose most recent scan in the lookback window was an
     # entry — i.e. it went in and hasn't come back out. One query, bounded
-    # to recent history. This used to pull the entire GateLog table into
-    # Python to find the latest row per plate, so a year of scans was read
-    # in full even to render an empty list.
+    # to recent history.
     still_inside = _latest_scan_per_plate(now - INSIDE_LOOKBACK).filter(
         action='entry'
     ).order_by('timestamp')
