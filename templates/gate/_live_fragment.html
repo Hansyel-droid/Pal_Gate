@@ -38,6 +38,9 @@
             </div>
         {% endif %}
         <div class="live-hero-meta">
+            {% if latest_scan.application %}
+                {{ latest_scan.application.vehicle_color|capfirst }} &middot;
+            {% endif %}
             {{ latest_scan.gate_location }} · {{ latest_scan_ago }}
         </div>
     {% else %}
@@ -112,6 +115,7 @@
             <tr>
                 <th scope="col">Time</th>
                 <th scope="col">Plate</th>
+                <th scope="col">Colour</th>
                 <th scope="col">Driver</th>
                 <th scope="col">Action</th>
                 <th scope="col">Gate</th>
@@ -130,6 +134,13 @@
                         <span class="plate">{{ log.application.plate_number }}</span>
                     {% else %}
                         <code>{{ log.rfid_uid }}</code>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if log.application %}
+                        {{ log.application.vehicle_color|capfirst }}
+                    {% else %}
+                        <span class="text-faint">—</span>
                     {% endif %}
                 </td>
                 <td>
@@ -171,7 +182,7 @@
             </tr>
             {% empty %}
             <tr>
-                <td colspan="7">
+                <td colspan="8">
                     <div class="empty-state">
                         <svg class="ic" aria-hidden="true"><use href="#i-inbox"/></svg>
                         <h3>No gate events recorded yet{% if gate_filter %} at {{ gate_filter }}{% endif %}</h3>

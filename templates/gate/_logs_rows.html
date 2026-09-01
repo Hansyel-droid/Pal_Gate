@@ -12,6 +12,13 @@
         {% endif %}
     </td>
     <td>
+        {% if log.application %}
+            {{ log.application.vehicle_color|capfirst }}
+        {% else %}
+            <span class="text-faint">—</span>
+        {% endif %}
+    </td>
+    <td>
         {% if log.application.sticker_id %}
             <code>{{ log.application.sticker_id|mask_sticker_id }}</code>
         {% else %}
@@ -44,7 +51,7 @@
 </tr>
 {% empty %}
 <tr>
-    <td colspan="7">
+    <td colspan="8">
         <div class="empty-state">
             <svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>
             <h3>No logs match these filters</h3>
