@@ -41,6 +41,15 @@ def bounded_text(data, key, max_length, default=''):
     return value
 
 
+def _get_vehicle_color(application):
+    """Safely resolve the human-readable vehicle color from the application."""
+    if not application:
+        return ''
+    if hasattr(application, 'get_vehicle_color_display'):
+        return application.get_vehicle_color_display()
+    return str(getattr(application, 'vehicle_color', ''))
+
+
 @csrf_exempt
 @require_api_key
 @ratelimit(key='ip', rate='60/m', method='POST', block=True)
@@ -61,6 +70,7 @@ def scan_tag(request):
         "action": "entry"/"exit"/"denied",
         "name": "Juan dela Cruz",
         "plate": "ABC 123",
+        "color": "Red",
         "sticker_id": "PalawanSU-XXXX",
         "reason": "..."   (only if denied)
     }
@@ -128,6 +138,7 @@ def scan_tag(request):
             'action': 'denied',
             'name': application.full_name,
             'plate': application.plate_number,
+            'color': _get_vehicle_color(application),
             'reason': f'Sticker not active. Status: {application.get_status_display()}',
         })
 
@@ -162,6 +173,7 @@ def scan_tag(request):
         'action': action,
         'name': application.full_name,
         'plate': application.plate_number,
+        'color': _get_vehicle_color(application),
         'sticker_id': application.sticker_id,
     })
 
