@@ -1,3 +1,4 @@
+import re
 import unicodedata
 
 from django import forms
@@ -45,7 +46,7 @@ class RegisterForm(UserCreationForm):
             'contact_number', 'password1', 'password2'
         ]
 
-def clean_email(self):
+    def clean_email(self):
         email = self.cleaned_data['email'].strip().lower()
         domain = settings.REGISTRATION_EMAIL_DOMAIN
 
@@ -67,6 +68,16 @@ def clean_email(self):
                 'An account with this email address already exists.'
             )
         return email
+
+    def clean_id_number(self):
+        id_number = self.cleaned_data.get('id_number', '').strip()
+        if id_number:
+            pattern = r'^\d{4}-\d{1,2}-\d{4}$'
+            if not re.match(pattern, id_number):
+                raise forms.ValidationError(
+                    'Enter a valid ID number format (e.g., 2023-8-0158).'
+                )
+        return id_number
 
 
 class OTPVerifyForm(forms.Form):

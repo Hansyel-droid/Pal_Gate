@@ -62,7 +62,14 @@
                         <div class="col-sm-6">
                             <label for="id_id_number" class="form-label">ID number</label>
                             <input id="id_id_number" type="text" name="id_number" class="form-control"
-                                   value="{{ form.id_number.value|default:'' }}">
+                                   value="{{ form.id_number.value|default:'' }}"
+                                   placeholder="2023-8-0158"
+                                   pattern="\d{4}-\d{1,2}-\d{4}"
+                                   title="Format: 2023-8-0158"
+                                   aria-describedby="id_number_help">
+                            <p id="id_number_help" class="form-text">
+                                Format: e.g., <strong>2023-8-0158</strong>
+                            </p>
                         </div>
                         <div class="col-12">
                             <label for="id_college_department" class="form-label">College</label>
