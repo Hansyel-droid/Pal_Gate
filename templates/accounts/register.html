@@ -64,12 +64,7 @@
                             <input id="id_id_number" type="text" name="id_number" class="form-control"
                                    value="{{ form.id_number.value|default:'' }}"
                                    placeholder="2023-8-0158"
-                                   pattern="\d{4}-\d{1,2}-\d{4}"
-                                   title="Format: 2023-8-0158"
-                                   aria-describedby="id_number_help">
-                            <p id="id_number_help" class="form-text">
-                                Format: e.g., <strong>2023-8-0158</strong>
-                            </p>
+                                   maxlength="13">
                         </div>
                         <div class="col-12">
                             <label for="id_college_department" class="form-label">College</label>
@@ -138,4 +133,36 @@
         </p>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const idInput = document.getElementById('id_id_number');
+    if (!idInput) return;
+
+    idInput.addEventListener('input', function() {
+        let val = this.value.replace(/\D/g, '');
+        if (!val) {
+            this.value = '';
+            return;
+        }
+
+        if (val.length <= 4) {
+            this.value = val;
+        } else if (val.length === 9) {
+            // Converts 202380158 -> 2023-8-0158
+            this.value = val.replace(/^(\d{4})(\d{1})(\d{4})$/, '$1-$2-$3');
+        } else if (val.length >= 10) {
+            // Converts 2023100158 -> 2023-10-0158
+            this.value = val.slice(0, 10).replace(/^(\d{4})(\d{2})(\d{4})$/, '$1-$2-$3');
+        } else {
+            // Intermediate state while actively typing
+            if (val.length <= 5) {
+                this.value = val.replace(/^(\d{4})(\d+)/, '$1-$2');
+            } else {
+                this.value = val.replace(/^(\d{4})(\d{1})(\d+)/, '$1-$2-$3');
+            }
+        }
+    });
+});
+</script>
 {% endblock %}

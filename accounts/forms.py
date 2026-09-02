@@ -72,6 +72,15 @@ class RegisterForm(UserCreationForm):
     def clean_id_number(self):
         id_number = self.cleaned_data.get('id_number', '').strip()
         if id_number:
+            # Strip non-digit characters to check raw input
+            raw_digits = re.sub(r'\D', '', id_number)
+            
+            # Auto-convert unformatted raw digits (e.g. 202380158 -> 2023-8-0158)
+            if len(raw_digits) == 9:
+                id_number = f"{raw_digits[:4]}-{raw_digits[4]}-{raw_digits[5:]}"
+            elif len(raw_digits) == 10:
+                id_number = f"{raw_digits[:4]}-{raw_digits[4:6]}-{raw_digits[6:]}"
+
             pattern = r'^\d{4}-\d{1,2}-\d{4}$'
             if not re.match(pattern, id_number):
                 raise forms.ValidationError(
