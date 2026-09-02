@@ -28,25 +28,24 @@
                     {% csrf_token %}
 
                     {% if need_identifier %}
-                    <label for="id_identifier" class="form-label">Username or email</label>
-                    <input id="id_identifier" type="text" name="identifier" class="form-control"
-                           autocomplete="username" required
-                           aria-describedby="identifier_help">
-                    <p id="identifier_help" class="form-text">
-                        We couldn't tell which sign-up this is — this usually happens
-                        when the code is checked on a different device or browser
-                        than the one you signed up with. Enter the username or email
-                        you registered with, along with the code below.
-                    </p>
+                    <div class="mb-3">
+                        <label for="id_identifier" class="form-label">Username or email</label>
+                        <input id="id_identifier" type="text" name="identifier" class="form-control"
+                               value="{{ form.identifier.value|default:'' }}"
+                               autocomplete="username" required
+                               aria-describedby="identifier_help">
+                        <p id="identifier_help" class="form-text">
+                            We couldn't tell which sign-up this is — this usually happens
+                            when the code is checked on a different device or browser
+                            than the one you signed up with. Enter the username or email
+                            you registered with, along with the code below.
+                        </p>
+                    </div>
+                    {% else %}
+                    <input type="hidden" name="identifier" value="{{ email|default:'' }}">
                     {% endif %}
 
                     <label for="id_code" class="form-label">Verification code</label>
-                    {% comment %}
-                        data-otp-length turns this into one box per digit
-                        (see base.html). Without JS it stays the single
-                        field it has always been, and posts the same
-                        `code` either way.
-                    {% endcomment %}
                     <input id="id_code" type="text" name="code" class="form-control otp-input"
                            inputmode="numeric" autocomplete="one-time-code"
                            pattern="[0-9 -]*" maxlength="{{ code_length|add:6 }}"
@@ -78,9 +77,7 @@
 
                 <form method="post" action="{% url 'resend_otp' %}" class="text-center">
                     {% csrf_token %}
-                    {% if need_identifier %}
-                    <input type="hidden" name="identifier" value="{{ form.identifier.value|default:'' }}">
-                    {% endif %}
+                    <input type="hidden" name="identifier" value="{{ email|default:form.identifier.value|default:'' }}">
                     <span class="meta">
                         Didn't get it? Check your spam folder, or
                     </span>

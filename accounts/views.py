@@ -77,23 +77,13 @@ def _release_abandoned_signups(request, username, email):
     submitted, so an abandoned attempt doesn't lock the address out.
 
     The filter is deliberately narrow: the account must be inactive,
-    unverified, never logged in, and have an actual registration code on
-    file. Any real account — including one an admin has suspended, or a
-    legacy walk-in record with no password — fails at least one of those,
-    so this can't be used to delete somebody else's account by guessing
-    their username.
-
-    That still wasn't narrow enough. This runs on raw POST data before the
-    form has been validated, so it acted on any username a caller cared to
-    type — including one belonging to somebody sitting on the verification
-    page right then. Knowing a username was enough to delete their
-    in-progress sign-up and strand them.
-
-    So a match is only released when it is genuinely abandoned — its
-    verification code has expired, which is the point the sign-up stops
-    being completable on its own — or when it belongs to this very session,
-    which covers the ordinary "start over" case in the same browser.
+    unverified, and have never logged in. Any real account — including
+    one an admin has suspended, or a legacy walk-in record with no password —
+    fails at least one of those, so this can't be used to delete somebody
+    else's account by guessing their username.
     """
+    username = (username or '').strip()
+    email = (email or '').strip()
     if not (username or email):
         return
 
@@ -101,44 +91,22 @@ def _release_abandoned_signups(request, username, email):
         is_active=False,
         email_verified=False,
         last_login__isnull=True,
-        email_otps__purpose=EmailOTP.PURPOSE_REGISTER,
     )
 
-    # Resolve to ids first — the filter above spans a join, and deleting
-    # through one is a good way to take more rows than intended.
     matched_ids = set()
     if username:
         matched_ids.update(
-            candidates.filter(username__iexact=username.strip())
+            candidates.filter(username__iexact=username)
             .values_list('pk', flat=True)
         )
     if email:
         matched_ids.update(
-            candidates.filter(email__iexact=email.strip())
+            candidates.filter(email__iexact=email)
             .values_list('pk', flat=True)
         )
 
-    if not matched_ids:
-        return
-
-    # Anyone holding a code that is still live is mid-verification, and
-    # this request has no business deleting them unless it IS them.
-    still_verifying = set(
-        EmailOTP.objects.filter(
-            user_id__in=matched_ids,
-            purpose=EmailOTP.PURPOSE_REGISTER,
-            used_at__isnull=True,
-            expires_at__gt=timezone.now(),
-        ).values_list('user_id', flat=True)
-    )
-    own_pending_id = request.session.get(PENDING_SESSION_KEY)
-
-    releasable = {
-        pk for pk in matched_ids
-        if pk not in still_verifying or pk == own_pending_id
-    }
-    if releasable:
-        User.objects.filter(pk__in=releasable).delete()
+    if matched_ids:
+        User.objects.filter(pk__in=matched_ids).delete()
 
 
 @ratelimit(key='ip', rate='10/m', method='POST', block=True)
@@ -221,7 +189,7 @@ def verify_email_view(request):
         form = OTPVerifyForm(request.POST)
         if form.is_valid():
             lookup_user = user or _lookup_pending_user_by_identifier(
-                form.cleaned_data['identifier']
+                form.cleaned_data.get('identifier')
             )
             if lookup_user is None:
                 messages.error(
@@ -229,6 +197,7 @@ def verify_email_view(request):
                     "We couldn't find a pending sign-up for that username "
                     "or email. Double-check what you typed, or start over."
                 )
+                need_identifier = True
             else:
                 # Found by identifier rather than session — adopt them into
                 # this session so a mistyped code doesn't force retyping
@@ -254,9 +223,10 @@ def verify_email_view(request):
                     return redirect('login')
                 messages.error(request, error)
                 user = lookup_user  # so the re-rendered page still shows their email
+                need_identifier = False
         else:
             messages.error(request, 'Please fix the errors below.')
-        need_identifier = _pending_user(request) is None
+            need_identifier = _pending_user(request) is None
     else:
         form = OTPVerifyForm()
 

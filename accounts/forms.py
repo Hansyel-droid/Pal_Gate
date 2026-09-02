@@ -45,16 +45,10 @@ class RegisterForm(UserCreationForm):
             'contact_number', 'password1', 'password2'
         ]
 
-    def clean_email(self):
-        # Normalize first: addresses are matched case-insensitively
-        # everywhere else, so store them in one consistent shape.
+def clean_email(self):
         email = self.cleaned_data['email'].strip().lower()
         domain = settings.REGISTRATION_EMAIL_DOMAIN
 
-        # Self-registration is for the campus community only. The domain
-        # check is what makes the emailed code meaningful — anyone can
-        # receive mail at a personal address, but only students, faculty,
-        # and staff have a PalawanSU mailbox.
         if not email.endswith('@' + domain):
             raise forms.ValidationError(
                 f'Use your official PalawanSU email address '
@@ -67,7 +61,8 @@ class RegisterForm(UserCreationForm):
                 'Enter the full email address, including the part before "@".'
             )
 
-        if User.objects.filter(email__iexact=email).exists():
+        # Ignore unverified accounts here since _release_abandoned_signups handles them
+        if User.objects.filter(email__iexact=email, is_active=True).exists():
             raise forms.ValidationError(
                 'An account with this email address already exists.'
             )
