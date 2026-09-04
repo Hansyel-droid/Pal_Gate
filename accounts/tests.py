@@ -1,5 +1,6 @@
 import re
 from datetime import timedelta
+from unittest import mock
 
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
@@ -8,7 +9,7 @@ from django.contrib.sessions.middleware import SessionMiddleware
 from django.core import mail
 from django.core.cache import cache
 from django.http import HttpResponse
-from django.test import Client, RequestFactory, TestCase
+from django.test import Client, RequestFactory, TestCase, override_settings
 from django.utils import timezone
 
 from .forms import RegisterForm
@@ -902,3 +903,51 @@ class TemplateCommentSyntaxTests(TestCase):
             '{% comment %}...{% endcomment %} instead: '
             + ', '.join(offenders)
         ))
+
+
+class AbandonedSignupCleanupMiddlewareTests(TestCase):
+    """
+    There is no cron job or task scheduler on this deployment, so
+    AbandonedSignupCleanupMiddleware (accounts/middleware.py) is what keeps
+    the registration email's promise that an unfinished account "will be
+    removed automatically" — it piggybacks the cleanup onto ordinary site
+    traffic instead. These tests are about that piggybacking mechanism
+    itself (does it run, does it throttle, does a failure stay contained) —
+    accounts.management.commands.cleanup_abandoned_signups has its own
+    tests for what actually gets deleted and what doesn't.
+    """
+
+    def setUp(self):
+        cache.clear()
+
+    def tearDown(self):
+        cache.clear()
+
+    def test_runs_the_cleanup_once_then_throttles_further_requests(self):
+        with mock.patch('accounts.middleware.call_command') as mocked:
+            self.client.get('/accounts/login/')
+            self.client.get('/accounts/login/')
+            self.client.get('/accounts/login/')
+
+        mocked.assert_called_once_with(
+            'cleanup_abandoned_signups', verbosity=0
+        )
+
+    @override_settings(ABANDONED_SIGNUP_CLEANUP_INTERVAL=1800)
+    def test_a_second_request_within_the_interval_does_not_rerun_it(self):
+        with mock.patch('accounts.middleware.call_command') as mocked:
+            self.client.get('/accounts/login/')
+        self.assertEqual(mocked.call_count, 1)
+
+        with mock.patch('accounts.middleware.call_command') as mocked_again:
+            self.client.get('/accounts/login/')
+        self.assertEqual(mocked_again.call_count, 0)
+
+    def test_a_failing_cleanup_does_not_break_the_request_it_rode_in_on(self):
+        with mock.patch(
+            'accounts.middleware.call_command',
+            side_effect=RuntimeError('boom'),
+        ):
+            response = self.client.get('/accounts/login/')
+
+        self.assertEqual(response.status_code, 200)

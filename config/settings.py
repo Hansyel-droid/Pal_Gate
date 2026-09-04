@@ -43,6 +43,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'accounts.middleware.AbandonedSignupCleanupMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -414,6 +415,13 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 SESSION_COOKIE_HTTPONLY = True          # No JS access to session cookie
 SESSION_SAVE_EVERY_REQUEST = True       # Refresh expiry on activity
 IDLE_TIMEOUT = 1800                     # 30 min idle timeout (seconds)
+
+# How often AbandonedSignupCleanupMiddleware (accounts/middleware.py) runs
+# accounts.cleanup_abandoned_signups. There's no task scheduler or cron job
+# on this deployment, so this is what actually keeps the registration
+# email's promise that an unverified account "will be removed
+# automatically" — it rides along on ordinary site traffic instead.
+ABANDONED_SIGNUP_CLEANUP_INTERVAL = 1800  # 30 minutes
 
 # ── Message Tags ──────────────────────────────────────────────────────────────
 # Django's default tag for messages.error() is the literal string 'error',

@@ -1,11 +1,16 @@
+import logging
 from urllib.parse import urlencode
 
 from django.conf import settings
+from django.core.cache import cache
+from django.core.management import call_command
 from django.shortcuts import redirect
 from django.contrib.auth import logout
 from django.contrib import messages
 from django.urls import reverse
 from django.utils import timezone
+
+logger = logging.getLogger('django')
 
 
 class IdleTimeoutMiddleware:
@@ -112,4 +117,59 @@ class CampusPolicyMiddleware:
                 query = urlencode({'next': request.get_full_path()})
                 return redirect(f'{policy_url}?{query}')
 
+        return self.get_response(request)
+
+
+class AbandonedSignupCleanupMiddleware:
+    """
+    Runs accounts.cleanup_abandoned_signups on a timer, piggybacking on
+    ordinary site traffic.
+
+    There is no task scheduler on this deployment — no cron job, no
+    background worker, nothing that runs on its own — so without this,
+    "the unverified account will be removed automatically" (the
+    registration email's own words) is only true if someone happens to
+    retry registering with the same address later. This is what actually
+    keeps that promise, without needing any infrastructure beyond the web
+    service that's already running.
+
+    Cheap by design: every request pays one cache read. The cleanup itself
+    — a single query — only runs once per CLEANUP_INTERVAL, on whichever
+    request happens to land right after the window opens. cache.add() is
+    atomic even against the file-based cache this project uses (see CACHES
+    in settings, chosen specifically so multiple gunicorn workers on one
+    machine share it), so if several requests land in that same instant,
+    exactly one of them wins the add() and runs the cleanup; the rest see
+    it return False and carry on. No lock file, no separate process, no
+    second thing that can be left unconfigured.
+
+    Runs first in MIDDLEWARE, ahead of session/auth/policy, so a request
+    that gets redirected or rejected downstream still ran this on the way
+    in — the throttle window was already spent by the time anything else
+    had a chance to short-circuit the response.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+        self.cache_key = 'abandoned_signup_cleanup_last_run'
+        self.interval = getattr(
+            settings, 'ABANDONED_SIGNUP_CLEANUP_INTERVAL', 1800
+        )
+
+    def __call__(self, request):
+        if cache.add(self.cache_key, True, timeout=self.interval):
+            try:
+                # verbosity=0: this fires on ordinary request traffic, so
+                # "Removed 0 abandoned sign-up(s)" printing to the gunicorn
+                # log every half hour forever would just be noise. A real
+                # failure still surfaces below, through the logger.
+                call_command('cleanup_abandoned_signups', verbosity=0)
+            except Exception:
+                # A cleanup that fails should never take the site down with
+                # it — worst case, abandoned rows just wait for the next
+                # window instead of this one.
+                logger.exception(
+                    'cleanup_abandoned_signups failed during its '
+                    'opportunistic run'
+                )
         return self.get_response(request)
