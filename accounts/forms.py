@@ -62,10 +62,20 @@ class RegisterForm(UserCreationForm):
                 'Enter the full email address, including the part before "@".'
             )
 
-        # Ignore unverified accounts here since _release_abandoned_signups handles them
-        if User.objects.filter(email__iexact=email, is_active=True).exists():
+        # Deliberately not narrowed to is_active=True: an inactive,
+        # unverified row can still be a live sign-up someone is mid-way
+        # through (unexpired code, not this session) — _release_abandoned_
+        # signups() already ran before this form validated and would have
+        # cleared it out if it were genuinely abandoned. If it's still here,
+        # it's still claimed, and creating a second account on the same
+        # email (the email column has no uniqueness constraint of its own)
+        # would just produce two accounts fighting over one inbox.
+        if User.objects.filter(email__iexact=email).exists():
             raise forms.ValidationError(
-                'An account with this email address already exists.'
+                'An account with this email address already exists. '
+                'Already signed up? Go to the verification page and enter '
+                'your username or email to resend your code instead of '
+                'registering again.'
             )
         return email
 

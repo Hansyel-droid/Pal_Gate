@@ -296,6 +296,14 @@ REGISTRATION_EMAIL_DOMAIN = config(
     default='psu.palawan.edu.ph'
 )
 
+# Base URL for links inside outgoing email (the registration code message's
+# "open this on any device" link, for one). No trailing slash. Not derived
+# from the request, because the registration OTP email is composed in
+# otp.py, which mailing a code from a background job or a shell wouldn't
+# have a request to pull it from — a fixed setting works the same way
+# everywhere this runs, dev or prod.
+SITE_URL = config('SITE_URL', default='https://palsu-gate.onrender.com')
+
 # ── Email ────────────────────────────────────────────────────────────────────
 # Default is the console backend — emails print to the server log/terminal
 # instead of actually sending, which is fine for local dev and for campus

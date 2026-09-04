@@ -7,8 +7,14 @@ Your verification code is:
 
     {{ code }}
 
-Enter it on the verification page to finish setting up your account.
-The code expires in {{ expiry_minutes }} minutes.
+Open this link to go straight to the verification page — this works even
+if you're opening this email on a different device or browser than the
+one you signed up on:
+
+    {{ verify_url }}
+
+Enter the code above once you're there. The code expires in
+{{ expiry_minutes }} minutes.
 
 If you did not try to create an account, you can ignore this message.
 Nothing was activated, and the unverified account will be removed

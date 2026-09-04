@@ -145,12 +145,18 @@
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         const urlParams = new URLSearchParams(window.location.search);
-        
+
         // Only run the live feed if we are on page 1 (or no page is set)
         const isPageOne = !urlParams.has('page') || urlParams.get('page') === '1';
-        
+
         if (isPageOne) {
-            setInterval(() => {
+            function pollLogs() {
+                // Skip the request entirely while the tab is backgrounded —
+                // a staff member commonly leaves this page open for hours,
+                // and there's no point hitting the DB every 2s for a tab
+                // nobody's looking at.
+                if (document.hidden) return;
+
                 // Grab the current URL (including any active filters like gate or action)
                 let fetchUrl = new URL(window.location.href);
                 // Append the partial flag so Django knows to only send the table rows
@@ -162,7 +168,8 @@
                         document.getElementById('logs-table-body').innerHTML = html;
                     })
                     .catch(error => console.error('Error fetching live logs:', error));
-            }, 2000); // Polls every 2 seconds (5000 milliseconds)
+            }
+            setInterval(pollLogs, 2000); // Polls every 2 seconds (2000 milliseconds)
         }
     });
 </script>

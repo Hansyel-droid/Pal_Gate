@@ -111,6 +111,7 @@ class AuditLog(models.Model):
         ('lockout', 'Account Locked Out'),
         ('register_started', 'Registration Started'),
         ('email_verified', 'Email Verified'),
+        ('signup_abandoned', 'Abandoned Sign-up Removed'),
         ('policy_accepted', 'Campus Access Policy Accepted'),
         # Application events
         ('app_submitted', 'Application Submitted'),

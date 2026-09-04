@@ -10,12 +10,14 @@ without going through the HTTP layer.
 import logging
 import secrets
 from datetime import timedelta
+from urllib.parse import urlencode
 
 from django.conf import settings
 from django.contrib.auth.hashers import check_password, make_password
 from django.core.mail import send_mail
 from django.db.models import F
 from django.template.loader import render_to_string
+from django.urls import reverse
 from django.utils import timezone
 
 from .models import EmailOTP
@@ -86,10 +88,23 @@ def issue_otp(user, purpose=EmailOTP.PURPOSE_REGISTER):
 
 def _email_code(user, code):
     try:
+        # Points straight back to the verify page with the account already
+        # identified, so opening this link on whatever device the mail app
+        # happens to be on — very often not the one registration was
+        # started on — skips the "which sign-up is this" screen entirely.
+        # Same lookup the identifier box itself does; the link just fills
+        # it in instead of asking the person to type their own email back
+        # to us out of the email we just sent them.
+        verify_url = '{site}{path}?{query}'.format(
+            site=settings.SITE_URL,
+            path=reverse('verify_email'),
+            query=urlencode({'identifier': user.email}),
+        )
         body = render_to_string('emails/registration_otp.txt', {
             'user': user,
             'code': code,
             'expiry_minutes': settings.OTP_EXPIRY_MINUTES,
+            'verify_url': verify_url,
         })
         send_mail(
             subject=f'PalawanSU Gate — Your verification code is {code}',

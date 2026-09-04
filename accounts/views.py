@@ -77,10 +77,29 @@ def _release_abandoned_signups(request, username, email):
     submitted, so an abandoned attempt doesn't lock the address out.
 
     The filter is deliberately narrow: the account must be inactive,
-    unverified, and have never logged in. Any real account — including
-    one an admin has suspended, or a legacy walk-in record with no password —
-    fails at least one of those, so this can't be used to delete somebody
-    else's account by guessing their username.
+    unverified, never logged in, and have an actual registration code on
+    file. Any real account — including one an admin has suspended, or a
+    legacy walk-in record with no password — fails at least one of those,
+    so this can't be used to delete somebody else's account by guessing
+    their username.
+
+    That still wasn't narrow enough. This runs on raw POST data before the
+    form has been validated, so it acted on any username a caller cared to
+    type — including one belonging to somebody sitting on the verification
+    page right then. Knowing a username was enough to delete their
+    in-progress sign-up and strand them.
+
+    So a match is only released when it is genuinely abandoned — its
+    verification code has expired, which is the point the sign-up stops
+    being completable on its own — or when it belongs to this very session,
+    which covers the ordinary "start over" case in the same browser.
+
+    A cross-device user who is still within their code's window is not
+    supposed to end up here at all: the verify page's identifier box (and
+    the link in the code email) finds their pending account without going
+    through this function, so nothing needs deleting. See
+    cleanup_abandoned_signups (accounts management command) for the
+    no-retry-required version of this same cleanup, run on a schedule.
     """
     username = (username or '').strip()
     email = (email or '').strip()
@@ -91,8 +110,11 @@ def _release_abandoned_signups(request, username, email):
         is_active=False,
         email_verified=False,
         last_login__isnull=True,
+        email_otps__purpose=EmailOTP.PURPOSE_REGISTER,
     )
 
+    # Resolve to ids first — the filter above spans a join, and deleting
+    # through one is a good way to take more rows than intended.
     matched_ids = set()
     if username:
         matched_ids.update(
@@ -105,8 +127,27 @@ def _release_abandoned_signups(request, username, email):
             .values_list('pk', flat=True)
         )
 
-    if matched_ids:
-        User.objects.filter(pk__in=matched_ids).delete()
+    if not matched_ids:
+        return
+
+    # Anyone holding a code that is still live is mid-verification, and
+    # this request has no business deleting them unless it IS them.
+    still_verifying = set(
+        EmailOTP.objects.filter(
+            user_id__in=matched_ids,
+            purpose=EmailOTP.PURPOSE_REGISTER,
+            used_at__isnull=True,
+            expires_at__gt=timezone.now(),
+        ).values_list('user_id', flat=True)
+    )
+    own_pending_id = request.session.get(PENDING_SESSION_KEY)
+
+    releasable = {
+        pk for pk in matched_ids
+        if pk not in still_verifying or pk == own_pending_id
+    }
+    if releasable:
+        User.objects.filter(pk__in=releasable).delete()
 
 
 @ratelimit(key='ip', rate='10/m', method='POST', block=True)
@@ -228,7 +269,22 @@ def verify_email_view(request):
             messages.error(request, 'Please fix the errors below.')
             need_identifier = _pending_user(request) is None
     else:
-        form = OTPVerifyForm()
+        # The code email links straight back here with ?identifier=<email>
+        # so that opening it on a different device — the exact case that
+        # otherwise lands someone on the "which sign-up is this" screen —
+        # resolves on its own. Same lookup the identifier box itself uses,
+        # so it can't reach anything the box couldn't: still scoped to
+        # inactive, unverified accounts only.
+        identifier_hint = request.GET.get('identifier', '')
+        if user is None and identifier_hint:
+            hinted_user = _lookup_pending_user_by_identifier(identifier_hint)
+            if hinted_user is not None:
+                request.session[PENDING_SESSION_KEY] = hinted_user.pk
+                user = hinted_user
+                need_identifier = False
+        form = OTPVerifyForm(
+            initial={'identifier': identifier_hint} if need_identifier else None
+        )
 
     return render(request, 'accounts/verify_email.html', {
         'form': form,
