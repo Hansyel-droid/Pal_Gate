@@ -64,4 +64,11 @@ class Command(BaseCommand):
         if count:
             User.objects.filter(pk__in=[u.pk for u in to_delete]).delete()
 
-        self.stdout.write(f'Removed {count} abandoned sign-up(s).')
+        # verbosity=0 (how AbandonedSignupCleanupMiddleware invokes this on
+        # every throttle window) has to actually mean quiet. BaseCommand
+        # doesn't gate self.stdout.write() calls on its own — it just hands
+        # the option through in kwargs — so this command has to check it
+        # itself or "Removed 0 abandoned sign-up(s)." would print to the
+        # production log on a timer, forever.
+        if kwargs.get('verbosity', 1) > 0:
+            self.stdout.write(f'Removed {count} abandoned sign-up(s).')

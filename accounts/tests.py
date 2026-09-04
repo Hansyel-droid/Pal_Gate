@@ -306,6 +306,47 @@ class RegistrationOTPFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'name="identifier"')
+        # The visible box specifically, not just the hidden fallback input
+        # the "already resolved" branch also renders under the same name.
+        self.assertContains(response, 'id="id_identifier"')
+
+    def test_email_link_identifier_resolves_the_signup_without_a_session(self):
+        # otp.py builds the code email's verify link as
+        # /accounts/register/verify/?identifier=<email> specifically so
+        # that opening it on a different device/browser than the one
+        # registration was started on doesn't land on the "which sign-up
+        # is this" screen at all. A fresh Client() has no session, the
+        # same as a genuinely different device would.
+        self._register()
+        user = self._applicant()
+
+        other_client = Client()
+        response = other_client.get(
+            '/accounts/register/verify/', {'identifier': user.email}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, user.email)
+        self.assertNotContains(response, 'id="id_identifier"')
+        self.assertEqual(
+            other_client.session.get(PENDING_SESSION_KEY), user.pk
+        )
+
+    def test_email_link_identifier_is_ignored_for_an_unresolvable_address(self):
+        # Same link shape, but for an address with nothing pending (typo,
+        # stale/reused link, someone poking at the query string) — falls
+        # back to asking, exactly as if no identifier had been supplied at
+        # all. Nothing about a query parameter should be able to adopt a
+        # session into an account that isn't a genuine unverified match.
+        other_client = Client()
+        response = other_client.get(
+            '/accounts/register/verify/',
+            {'identifier': 'nobody-pending@psu.palawan.edu.ph'},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="id_identifier"')
+        self.assertNotIn(PENDING_SESSION_KEY, other_client.session)
 
     def test_another_session_cannot_verify_someone_elses_signup_by_code_alone(self):
         # A stranger's browser has no session pointing at the victim's
