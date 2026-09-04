@@ -142,6 +142,27 @@
         color: var(--hero-ink);
         word-break: break-all;
     }
+    /* Photo and plate sit side by side — one comparison, one glance. The
+       photo is sized off the plate's own clamp so it stays proportionate to
+       the largest type in the product as the viewport narrows. */
+    .live-hero-identity {
+        display: flex;
+        align-items: center;
+        gap: var(--s4);
+    }
+    .live-hero-identity-text { min-width: 0; }
+    .live-hero-photo {
+        width: clamp(72px, 13vw, 116px);
+        border-color: rgba(255,255,255,.42);
+    }
+    /* On the neutral empty/no-verdict ground the white border would vanish. */
+    .live-hero:not([class*="live-hero-"]) .live-hero-photo,
+    .live-hero-empty-state .live-hero-photo { border-color: var(--border); }
+    .live-hero-photo.photo-thumb-empty {
+        background: rgba(255,255,255,.14);
+        color: var(--hero-ink-dim);
+    }
+
     .live-hero-name {
         font-size: var(--fs-xl);
         font-weight: 500;

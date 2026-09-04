@@ -66,7 +66,21 @@
             <tbody>
                 {% for app in applications %}
                 <tr>
-                    <td class="text-strong fw-medium">{{ app.full_name }}</td>
+                    <td class="text-strong fw-medium">
+                        <span class="d-inline-flex align-items-center gap-2">
+                            {% if app.photo_2x2 %}
+                                <img class="photo-thumb row-photo"
+                                     src="{% url 'serve_document' app.pk 'photo_2x2' %}"
+                                     alt="">
+                            {% else %}
+                                <span class="photo-thumb photo-thumb-empty row-photo"
+                                      aria-hidden="true">
+                                    <svg class="ic"><use href="#i-user"/></svg>
+                                </span>
+                            {% endif %}
+                            {{ app.full_name }}
+                        </span>
+                    </td>
                     <td class="text-muted">{{ app.id_number }}</td>
                     <td><span class="plate">{{ app.plate_number }}</span></td>
                     <td class="text-muted">{{ app.get_classification_display }}</td>

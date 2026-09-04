@@ -46,6 +46,13 @@ def png(name='doc.png'):
     )
 
 
+def photo(name='me.jpg'):
+    """A valid 2x2 photo upload: JPEG magic bytes, image extension."""
+    return SimpleUploadedFile(
+        name, b'\xff\xd8\xff' + b'0' * 32, content_type='image/jpeg'
+    )
+
+
 @override_settings(MEDIA_ROOT=MEDIA)
 class CleanupCommandTests(TestCase):
     def test_deletes_old_temp_files(self):
@@ -100,6 +107,7 @@ class Step2RevisitTests(TestCase):
             'vehicle_registration': doc('cr.pdf'),
             'drivers_license': doc('dl.pdf'),
             'cor': doc('cor.pdf'),
+            'photo_2x2': photo('me.jpg'),
         }
         data.update(extra)
         return self.client.post(reverse('apply_step2'), data)
@@ -148,6 +156,7 @@ class Step2RevisitTests(TestCase):
         self.assertEqual(after['vehicle_registration'], before['vehicle_registration'])
         self.assertEqual(after['drivers_license'], before['drivers_license'])
         self.assertEqual(after['cor'], before['cor'])
+        self.assertEqual(after['photo_2x2'], before['photo_2x2'])
 
     def test_reupload_different_extension_replaces(self):
         self.post_step2()
@@ -161,7 +170,8 @@ class Step2RevisitTests(TestCase):
         _, files = default_storage.listdir(f'temp_uploads/{self.user.pk}')
         self.assertEqual(
             sorted(files),
-            ['cor', 'drivers_license', 'official_receipt', 'vehicle_registration'],
+            ['cor', 'drivers_license', 'official_receipt', 'photo_2x2',
+             'vehicle_registration'],
         )
 
     def test_replacing_the_or_leaves_the_cr_alone(self):
@@ -195,7 +205,7 @@ class Step2RevisitTests(TestCase):
             'plate_number': 'DOT 001', 'vehicle_type': 'four_wheels',
             'vehicle_color': 'blue', 'is_owner': 'yes',
             'official_receipt': doc(), 'vehicle_registration': doc(),
-            'drivers_license': doc('dl.pdf'),
+            'drivers_license': doc('dl.pdf'), 'photo_2x2': photo(),
         })
         self.assertRedirects(r, reverse('apply_step3'))
 
@@ -252,7 +262,7 @@ class Step2RevisitTests(TestCase):
         form.data['step1_classification'] = 'student'
         self.assertFalse(form.is_valid())
         for f in ('official_receipt', 'vehicle_registration',
-                  'drivers_license', 'cor'):
+                  'drivers_license', 'cor', 'photo_2x2'):
             self.assertIn(f, form.errors)
 
     def test_the_cr_alone_is_not_enough(self):
@@ -287,6 +297,7 @@ class VehicleColorOtherTests(TestCase):
                 'official_receipt': doc('or.pdf'),
                 'vehicle_registration': doc('cr.pdf'),
                 'drivers_license': doc('dl.pdf'),
+                'photo_2x2': photo('me.jpg'),
             },
         )
         form.data = form.data.copy()
@@ -375,6 +386,7 @@ class VehicleColorOtherEndToEndTests(TestCase):
             'official_receipt': doc('or.pdf'),
             'vehicle_registration': doc('cr.pdf'),
             'drivers_license': doc('dl.pdf'),
+            'photo_2x2': photo('me.jpg'),
         })
         self.assertRedirects(r, reverse('apply_step3'))
         self.assertEqual(self.client.session['app_step2']['vehicle_color'], 'Maroon')
@@ -414,3 +426,170 @@ class ServeMissingDocumentTests(TestCase):
             reverse('serve_document', args=[app.pk, 'official_receipt'])
         )
         self.assertEqual(r.status_code, 404)
+
+
+@override_settings(MEDIA_ROOT=MEDIA)
+class Photo2x2Tests(TestCase):
+    """
+    The 2x2 photo is required of everyone and, unlike every other upload,
+    has to be an actual image — it renders inline on the admin review page
+    and in the guard's live scan card, where a PDF would draw as a broken
+    image instead of a face.
+    """
+
+    def setUp(self):
+        today = timezone.localdate()
+        RegistrationWindow.objects.create(
+            is_active=True,
+            start_date=today - timedelta(days=1),
+            end_date=today + timedelta(days=30),
+        )
+        self.user = User.objects.create_user(
+            username='photo-stu', password='pw-1234567', role='applicant',
+            classification='faculty',
+        )
+        accept_policy(self.user)
+        self.client.force_login(self.user)
+        s = self.client.session
+        s['app_step1'] = {
+            'full_name': 'Photo Person', 'college_department': 'CCIS',
+            'id_number': '2020-9', 'classification': 'faculty',
+        }
+        s.save()
+
+    def make_form(self, **files):
+        payload = {
+            'official_receipt': doc('or.pdf'),
+            'vehicle_registration': doc('cr.pdf'),
+            'drivers_license': doc('dl.pdf'),
+            'photo_2x2': photo('me.jpg'),
+        }
+        payload.update(files)
+        payload = {k: v for k, v in payload.items() if v is not None}
+        form = ApplicationStep2Form(
+            data={
+                'plate_number': 'PIC 001', 'vehicle_type': 'four_wheels',
+                'vehicle_color': 'blue', 'is_owner': 'yes',
+            },
+            files=payload,
+        )
+        form.data = form.data.copy()
+        form.data['step1_classification'] = 'faculty'
+        return form
+
+    def post_step2(self, **files):
+        payload = {
+            'plate_number': 'PIC 001', 'vehicle_type': 'four_wheels',
+            'vehicle_color': 'blue', 'is_owner': 'yes',
+            'official_receipt': doc('or.pdf'),
+            'vehicle_registration': doc('cr.pdf'),
+            'drivers_license': doc('dl.pdf'),
+            'photo_2x2': photo('me.jpg'),
+        }
+        payload.update(files)
+        payload = {k: v for k, v in payload.items() if v is not None}
+        return self.client.post(reverse('apply_step2'), payload)
+
+    def submit(self):
+        """Walk step 3 and step 4, returning the step 4 response."""
+        from appointments.models import AppointmentSlot
+        slot = AppointmentSlot.objects.create(
+            date=timezone.localdate() + timedelta(days=40)
+        )
+        self.client.post(reverse('apply_step3'), {
+            'slot_id': slot.pk, 'time': '08:00',
+        })
+        return self.client.post(reverse('apply_step4'), {})
+
+    # ── Required ──────────────────────────────────────────────────────
+
+    def test_photo_is_required(self):
+        form = self.make_form(photo_2x2=None)
+        self.assertFalse(form.is_valid())
+        self.assertIn('photo_2x2', form.errors)
+
+    def test_step2_will_not_advance_without_a_photo(self):
+        response = self.post_step2(photo_2x2=None)
+        self.assertEqual(response.status_code, 200, 'should have re-rendered step 2')
+        self.assertNotIn('app_temp_files', self.client.session)
+
+    def test_submission_is_blocked_when_the_photo_went_missing(self):
+        """
+        The temp file can disappear mid-wizard (the cleanup command runs on
+        a timer). The photo is on the required-before-submit list, so that
+        has to send the applicant back rather than commit a photoless row.
+        """
+        self.post_step2()
+        default_storage.delete(f'temp_uploads/{self.user.pk}/photo_2x2')
+        response = self.submit()
+        self.assertRedirects(response, reverse('apply_step2'))
+        self.assertFalse(
+            StickerApplication.objects.filter(plate_number='PIC 001').exists()
+        )
+
+    # ── Image-only, verified by content ───────────────────────────────
+
+    def test_a_pdf_is_rejected_for_the_photo(self):
+        form = self.make_form(photo_2x2=doc('me.pdf'))
+        self.assertFalse(form.is_valid())
+        self.assertIn('photo_2x2', form.errors)
+        # ...and only for this field. A PDF is still a perfectly good OR.
+        self.assertNotIn('official_receipt', form.errors)
+
+    def test_a_pdf_is_still_fine_for_the_other_documents(self):
+        form = self.make_form()
+        self.assertTrue(form.is_valid(), form.errors)
+
+    def test_a_renamed_pdf_is_rejected_on_its_magic_bytes(self):
+        """A .jpg name over PDF bytes — the extension check alone would pass."""
+        liar = SimpleUploadedFile(
+            'me.jpg', b'%PDF-1.4 not really a photo',
+            content_type='image/jpeg',
+        )
+        form = self.make_form(photo_2x2=liar)
+        self.assertFalse(form.is_valid())
+        self.assertIn('photo_2x2', form.errors)
+        self.assertIn('does not look like a real', str(form.errors['photo_2x2']))
+
+    def test_a_png_photo_is_accepted(self):
+        form = self.make_form(photo_2x2=png('me.png'))
+        self.assertTrue(form.is_valid(), form.errors)
+
+    # ── Reaches the model ─────────────────────────────────────────────
+
+    def test_the_photo_attaches_to_the_application_on_submit(self):
+        body = b'\xff\xd8\xff' + b'face-' * 200
+        self.post_step2(photo_2x2=SimpleUploadedFile(
+            'my face.jpg', body, content_type='image/jpeg'
+        ))
+        response = self.submit()
+        self.assertRedirects(response, reverse('my_applications'))
+
+        app = StickerApplication.objects.get(plate_number='PIC 001')
+        self.assertTrue(app.photo_2x2.name, 'photo did not attach')
+        self.assertTrue(app.photo_2x2.name.startswith('documents/photo_2x2/'),
+                        app.photo_2x2.name)
+        self.assertTrue(app.photo_2x2.name.endswith('.jpg'), app.photo_2x2.name)
+        with app.photo_2x2.open('rb') as f:
+            self.assertEqual(f.read(), body)
+        # Its own file, not a second name for one of the documents.
+        self.assertNotEqual(app.photo_2x2.name, app.drivers_license.name)
+
+    def test_a_png_photo_keeps_its_extension_on_the_model(self):
+        self.post_step2(photo_2x2=png('me.png'))
+        self.assertRedirects(self.submit(), reverse('my_applications'))
+        app = StickerApplication.objects.get(plate_number='PIC 001')
+        self.assertTrue(app.photo_2x2.name.endswith('.png'), app.photo_2x2.name)
+
+    def test_revisiting_step2_does_not_force_a_rephoto(self):
+        self.post_step2()
+        before = self.client.session['app_temp_files']['photo_2x2']
+
+        response = self.client.post(reverse('apply_step2'), {
+            'plate_number': 'PIC 002', 'vehicle_type': 'four_wheels',
+            'vehicle_color': 'red', 'is_owner': 'yes',
+        })
+        self.assertRedirects(response, reverse('apply_step3'))
+        self.assertEqual(
+            self.client.session['app_temp_files']['photo_2x2'], before
+        )

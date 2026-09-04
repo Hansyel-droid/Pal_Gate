@@ -126,6 +126,27 @@
                             {{ form.drivers_license.errors }}
                         </div>
 
+                        {% comment %} The photo is what a guard actually looks at during
+                           a gate check, so it is shown inline there and on the admin
+                           review page rather than hidden behind a "View" link. It is
+                           required of everyone. {% endcomment %}
+                        <div class="mb-3">
+                            <label for="{{ form.photo_2x2.id_for_label }}" class="form-label">
+                                2x2 ID photo <span class="tag tag-required">Required</span>
+                            </label>
+                            <div class="photo-field">
+                                <img id="photo_preview" class="photo-thumb" alt="" hidden>
+                                <div class="photo-field-input">
+                                    {{ form.photo_2x2 }}
+                                    {% if existing_file_names.photo_2x2 %}
+                                    <p class="form-text">On file: {{ existing_file_names.photo_2x2 }}</p>
+                                    {% endif %}
+                                    <p class="form-text">{{ form.photo_2x2.help_text }}</p>
+                                </div>
+                            </div>
+                            {{ form.photo_2x2.errors }}
+                        </div>
+
                         <div class="mb-3" id="cor_wrapper">
                             <label for="{{ form.cor.id_for_label }}" class="form-label">
                                 COR <span class="tag tag-conditional">Students</span>
@@ -237,5 +258,27 @@
     updateCorField();
     updateAuthField();
     isOwnerSelect.addEventListener('change', updateAuthField);
+
+    // Show the picked photo before submitting, so an applicant who grabs the
+    // wrong file — or a picture of their OR instead of their face — sees it
+    // here rather than finding out at the counter. Purely additive: the
+    // upload works identically with JS off.
+    const photoInput = document.getElementById('id_photo_2x2');
+    const photoPreview = document.getElementById('photo_preview');
+    let photoPreviewUrl = null;
+
+    photoInput.addEventListener('change', function () {
+        if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
+        const file = photoInput.files && photoInput.files[0];
+        if (!file) {
+            photoPreview.hidden = true;
+            photoPreviewUrl = null;
+            return;
+        }
+        photoPreviewUrl = URL.createObjectURL(file);
+        photoPreview.src = photoPreviewUrl;
+        photoPreview.alt = 'Preview of the photo you just selected';
+        photoPreview.hidden = false;
+    });
 </script>
 {% endblock %}

@@ -1680,6 +1680,66 @@
         .doc-row-name .ic { color: var(--text-faint); }
         .doc-row.is-missing .doc-row-name { color: var(--text-muted); font-weight: 400; }
 
+        /* ── ID photo ────────────────────────────────────────────────────
+           The 2x2 photo is the only upload shown as an image rather than as
+           a "View" link: an administrator approving an application and a
+           guard matching a face at the barrier both need to see it without
+           a click. Square, because that is what a 2x2 is — object-fit keeps
+           an off-ratio upload from stretching the face.
+
+           .photo-thumb is the shared skin; the size comes from whichever
+           context it sits in, so one rule serves all four screens. */
+        .photo-thumb {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            object-fit: cover;
+            border-radius: var(--r2);
+            border: 1px solid var(--border);
+            background: var(--surface-sunk);
+            display: block;
+        }
+        /* Same box, no photo: older applications predate this upload, and a
+           broken-image glyph would read as a fault rather than as an
+           absence. */
+        .photo-thumb-empty {
+            display: grid;
+            place-items: center;
+            gap: 2px;
+            text-align: center;
+            padding: var(--s1);
+            color: var(--text-faint);
+            font-size: var(--fs-micro);
+            line-height: 1.2;
+            /* The box is sized by aspect-ratio, which only holds while its
+               contents fit. A caption too long for a small variant must be
+               clipped rather than stretch the square into a rectangle. */
+            overflow: hidden;
+        }
+        /* Sized off the box's width, with the ratio stated rather than left
+           to `height`. A percentage height here resolves against the box's
+           own auto height (circular, so it stretched the square into a
+           rectangle); `height: auto` on an <svg> falls back to the 150px
+           default for a replaced element, which overflowed and clipped the
+           caption. aspect-ratio settles it from the width alone. */
+        .photo-thumb-empty .ic {
+            width: 34%;
+            height: auto;
+            aspect-ratio: 1 / 1;
+            stroke-width: 1.5;
+        }
+
+        /* Admin review — beside the applicant's name in the record header. */
+        .record-photo { width: 104px; flex: none; }
+        /* Admin list — a face next to the name, scannable down the column.
+           Too small for the caption, so that variant is the icon alone with
+           the wording carried on the row's own name cell. */
+        .row-photo { width: 34px; flex: none; }
+        .row-photo.photo-thumb-empty .ic { width: 52%; }
+        /* Step 2 — the applicant's own preview of what they just picked. */
+        .photo-field { display: flex; align-items: flex-start; gap: var(--s3); }
+        .photo-field-input { flex: 1 1 auto; min-width: 0; }
+        .photo-field .photo-thumb { width: 84px; flex: none; }
+
         /* ── Pickable options ────────────────────────────────────────────
            Appointment dates and time slots. A full slot stays legible rather
            than dropping to opacity:0.4, which read as a rendering fault. */

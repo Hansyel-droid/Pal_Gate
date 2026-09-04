@@ -21,6 +21,13 @@ def make_doc(name='doc.pdf'):
     return SimpleUploadedFile(name, b'%PDF-1.4 test document content', content_type='application/pdf')
 
 
+def make_photo(name='me.jpg'):
+    """A 2x2 ID photo upload: real JPEG magic bytes."""
+    return SimpleUploadedFile(
+        name, b'\xff\xd8\xff' + b'photo-bytes' * 4, content_type='image/jpeg'
+    )
+
+
 def accept_policy(user):
     """
     CampusPolicyMiddleware redirects any applicant who hasn't accepted the
@@ -69,6 +76,7 @@ class ServeDocumentOwnershipTests(TestCase):
             vehicle_registration=make_doc('cr.pdf'),
             drivers_license=make_doc('license.pdf'),
             cor=make_doc('cor.pdf'),
+            photo_2x2=make_photo('me.jpg'),
             status='draft',
         )
         self.url = reverse(
@@ -76,6 +84,9 @@ class ServeDocumentOwnershipTests(TestCase):
         )
         self.cr_url = reverse(
             'serve_document', args=[self.application.pk, 'vehicle_registration']
+        )
+        self.photo_url = reverse(
+            'serve_document', args=[self.application.pk, 'photo_2x2']
         )
 
     def test_anonymous_redirected_to_login(self):
@@ -99,6 +110,40 @@ class ServeDocumentOwnershipTests(TestCase):
         self.client.force_login(self.security)
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 403)
+
+    def test_security_may_view_the_2x2_photo(self):
+        """
+        The one document a guard is allowed: at the barrier they have to
+        match the face in the vehicle to the person the sticker was issued
+        to, and the photo renders inline on the live scan card.
+        """
+        self.client.force_login(self.security)
+        response = self.client.get(self.photo_url)
+        self.assertEqual(response.status_code, 200)
+
+    def test_security_is_still_locked_out_of_every_other_document(self):
+        """
+        Letting a guard see the photo must not have widened the endpoint.
+        These are government IDs and LTO papers; the photo is not.
+        """
+        self.client.force_login(self.security)
+        for field in ('official_receipt', 'vehicle_registration',
+                      'drivers_license', 'cor'):
+            with self.subTest(field=field):
+                url = reverse('serve_document', args=[self.application.pk, field])
+                self.assertEqual(self.client.get(url).status_code, 403)
+
+    def test_owner_can_view_own_photo(self):
+        self.client.force_login(self.owner)
+        self.assertEqual(self.client.get(self.photo_url).status_code, 200)
+
+    def test_admin_can_view_the_photo(self):
+        self.client.force_login(self.admin)
+        self.assertEqual(self.client.get(self.photo_url).status_code, 200)
+
+    def test_another_applicant_cannot_view_someone_elses_photo(self):
+        self.client.force_login(self.other_applicant)
+        self.assertEqual(self.client.get(self.photo_url).status_code, 403)
 
     def test_admin_can_view_any_document(self):
         self.client.force_login(self.admin)
@@ -133,6 +178,121 @@ class ServeDocumentOwnershipTests(TestCase):
         self.client.force_login(self.owner)
         url = reverse('serve_document', args=[self.application.pk, 'or_cr'])
         self.assertEqual(self.client.get(url).status_code, 404)
+
+
+@override_settings(MEDIA_ROOT=tempfile.mkdtemp())
+class PhotoRenderingTests(TestCase):
+    """
+    Every screen that shows the 2x2 photo also has to cope with not having
+    one. The photo shipped after this table already held production rows,
+    and the model keeps it nullable, so an application submitted before the
+    feature existed must render a stated placeholder — not a broken image,
+    and not a 500.
+    """
+
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            username='admin-r', password='pw-1234567', role='admin'
+        )
+        self.security = User.objects.create_user(
+            username='security-r', password='pw-1234567', role='security'
+        )
+        self.applicant = User.objects.create_user(
+            username='applicant-r', password='pw-1234567', role='applicant'
+        )
+        accept_policy(self.applicant)
+
+    def make_application(self, plate, photo=None):
+        return StickerApplication.objects.create(
+            applicant=self.applicant,
+            full_name='Render Person',
+            college_department='CCIS',
+            id_number='2020-r',
+            classification='student',
+            plate_number=plate,
+            vehicle_type='four_wheels',
+            vehicle_color='blue',
+            is_owner=True,
+            official_receipt=make_doc(), vehicle_registration=make_doc(),
+            drivers_license=make_doc(),
+            photo_2x2=photo,
+            status='issued',
+            rfid_uid=f'UID-{plate}',
+            sticker_id=f'STK-{plate}',
+            issued_at=timezone.now(),
+        )
+
+    def scan(self, application):
+        from gate.models import GateLog
+        return GateLog.objects.create(
+            rfid_uid=application.rfid_uid,
+            application=application,
+            action='entry',
+            gate_location='Main Gate',
+        )
+
+    # ── An application from before the photo existed ──────────────────
+
+    def test_admin_detail_shows_a_placeholder_for_a_legacy_row(self):
+        legacy = self.make_application('OLD-001')
+        self.client.force_login(self.admin)
+        response = self.client.get(
+            reverse('application_detail', args=[legacy.pk])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'No 2x2 ID photo on file')
+        self.assertNotContains(response, "'photo_2x2'")
+
+    def test_admin_list_survives_a_legacy_row(self):
+        self.make_application('OLD-002')
+        self.client.force_login(self.admin)
+        response = self.client.get(reverse('application_list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Render Person')
+
+    def test_gate_live_shows_a_placeholder_for_a_legacy_scan(self):
+        self.scan(self.make_application('OLD-003'))
+        self.client.force_login(self.security)
+        response = self.client.get(reverse('gate_live'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'No 2x2 ID photo on file')
+
+    def test_gate_live_survives_a_scan_with_no_application_at_all(self):
+        """An unregistered tag has no applicant, let alone a photo."""
+        from gate.models import GateLog
+        GateLog.objects.create(
+            rfid_uid='UNKNOWN-TAG', application=None,
+            action='denied', denial_reason='Unregistered tag',
+            gate_location='Main Gate',
+        )
+        self.client.force_login(self.security)
+        response = self.client.get(reverse('gate_live'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Unregistered tag')
+
+    # ── An application that has one ───────────────────────────────────
+
+    def test_admin_detail_renders_the_photo_inline(self):
+        """
+        Inline <img> pointed at the permission-checked serve endpoint — not
+        a "View" link like the documents, and not a raw media URL.
+        """
+        app = self.make_application('NEW-001', photo=make_photo('me.jpg'))
+        photo_url = reverse('serve_document', args=[app.pk, 'photo_2x2'])
+        self.client.force_login(self.admin)
+        response = self.client.get(
+            reverse('application_detail', args=[app.pk])
+        )
+        self.assertContains(response, f'src="{photo_url}"')
+        self.assertNotContains(response, 'No 2x2 ID photo on file')
+
+    def test_gate_live_renders_the_photo_inline(self):
+        app = self.make_application('NEW-002', photo=make_photo('me.jpg'))
+        self.scan(app)
+        photo_url = reverse('serve_document', args=[app.pk, 'photo_2x2'])
+        self.client.force_login(self.security)
+        response = self.client.get(reverse('gate_live'))
+        self.assertContains(response, f'src="{photo_url}"')
 
 
 @override_settings(MEDIA_ROOT=tempfile.mkdtemp())
@@ -223,6 +383,7 @@ class RenewalFlowTests(TestCase):
             official_receipt=make_doc('old_or.pdf'),
             vehicle_registration=make_doc('old_cr.pdf'),
             drivers_license=make_doc('old_license.pdf'),
+            photo_2x2=make_photo('old_me.jpg'),
             status='expired',
             issued_at=timezone.now() - timedelta(days=400),
         )
@@ -266,6 +427,9 @@ class RenewalFlowTests(TestCase):
             session['app_temp_files']['vehicle_registration']['path'],
         )
         self.assertIsNone(session['app_temp_files']['cor'])
+        # The 2x2 photo comes along too — a renewal shouldn't make someone
+        # re-shoot a photo of themselves that hasn't changed.
+        self.assertIsNotNone(session['app_temp_files']['photo_2x2'])
         self.assertEqual(session['app_renewal_of'], self.expired_application.pk)
 
     def test_renewal_submission_creates_new_application_and_notifies(self):
@@ -294,6 +458,16 @@ class RenewalFlowTests(TestCase):
         self.assertEqual(new_application.status, 'scheduled')
         self.assertTrue(new_application.official_receipt.name)
         self.assertTrue(new_application.vehicle_registration.name)
+        # Carried forward onto the new row as its own stored file, with the
+        # original bytes intact — not a reference back to the expired row.
+        self.assertTrue(new_application.photo_2x2.name)
+        self.assertNotEqual(
+            new_application.photo_2x2.name,
+            self.expired_application.photo_2x2.name,
+        )
+        with new_application.photo_2x2.open('rb') as new_photo:
+            with self.expired_application.photo_2x2.open('rb') as old_photo:
+                self.assertEqual(new_photo.read(), old_photo.read())
 
         self.expired_application.refresh_from_db()
         self.assertEqual(self.expired_application.status, 'expired')

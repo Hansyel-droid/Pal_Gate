@@ -6,18 +6,35 @@
     {% comment %} The record names itself: plate first, because that is the object the
        whole chain of custody hangs on. {% endcomment %}
     <div class="record-head">
-        <div>
-            <div class="record-title">
-                <h1>{{ application.full_name }}</h1>
-                <span class="status-badge badge-{{ application.status }}">
-                    {{ application.get_status_display }}
-                </span>
-            </div>
-            <div class="record-sub">
-                <span class="plate">{{ application.plate_number }}</span>
-                <span>{{ application.get_classification_display }}</span>
-                <span>ID {{ application.id_number }}</span>
-                <span>Submitted {{ application.submitted_at|date:"M d, Y"|default:"—" }}</span>
+        <div class="d-flex align-items-start gap-3">
+            {% comment %} Shown inline, not behind a "View" link like the documents
+               on the right: deciding whether the face matches the ID is part of
+               reading this record, not a separate errand. Applications submitted
+               before the photo existed get a stated placeholder. {% endcomment %}
+            {% if application.photo_2x2 %}
+                <img class="photo-thumb record-photo"
+                     src="{% url 'serve_document' application.pk 'photo_2x2' %}"
+                     alt="2x2 ID photo of {{ application.full_name }}">
+            {% else %}
+                <div class="photo-thumb photo-thumb-empty record-photo" role="img"
+                     aria-label="No 2x2 ID photo on file">
+                    <svg class="ic" aria-hidden="true"><use href="#i-user"/></svg>
+                    No photo on file
+                </div>
+            {% endif %}
+            <div>
+                <div class="record-title">
+                    <h1>{{ application.full_name }}</h1>
+                    <span class="status-badge badge-{{ application.status }}">
+                        {{ application.get_status_display }}
+                    </span>
+                </div>
+                <div class="record-sub">
+                    <span class="plate">{{ application.plate_number }}</span>
+                    <span>{{ application.get_classification_display }}</span>
+                    <span>ID {{ application.id_number }}</span>
+                    <span>Submitted {{ application.submitted_at|date:"M d, Y"|default:"—" }}</span>
+                </div>
             </div>
         </div>
         <a href="{% url 'application_list' %}" class="btn btn-secondary">

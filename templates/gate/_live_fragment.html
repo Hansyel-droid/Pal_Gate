@@ -17,19 +17,39 @@
                 {% else %}Denied{% endif %}
             </span>
         </div>
-        <div class="live-hero-plate">
-            {% if latest_scan.application %}
-                {{ latest_scan.application.plate_number }}
+        {% comment %} The photo sits beside the plate, not below it: the guard is
+           doing one comparison — this face against that driver — while the
+           vehicle is physically at the barrier. A scan against an application
+           submitted before the photo existed, or an unregistered tag, shows a
+           stated placeholder rather than a gap. {% endcomment %}
+        <div class="live-hero-identity">
+            {% if latest_scan.application.photo_2x2 %}
+                <img class="photo-thumb live-hero-photo"
+                     src="{% url 'serve_document' latest_scan.application.pk 'photo_2x2' %}"
+                     alt="2x2 ID photo of {{ latest_scan.application.full_name }}">
             {% else %}
-                {{ latest_scan.rfid_uid }}
+                <div class="photo-thumb photo-thumb-empty live-hero-photo" role="img"
+                     aria-label="No 2x2 ID photo on file">
+                    <svg class="ic" aria-hidden="true"><use href="#i-user"/></svg>
+                    No photo
+                </div>
             {% endif %}
-        </div>
-        <div class="live-hero-name">
-            {% if latest_scan.application %}
-                {{ latest_scan.application.full_name }}
-            {% else %}
-                Unregistered tag
-            {% endif %}
+            <div class="live-hero-identity-text">
+                <div class="live-hero-plate">
+                    {% if latest_scan.application %}
+                        {{ latest_scan.application.plate_number }}
+                    {% else %}
+                        {{ latest_scan.rfid_uid }}
+                    {% endif %}
+                </div>
+                <div class="live-hero-name">
+                    {% if latest_scan.application %}
+                        {{ latest_scan.application.full_name }}
+                    {% else %}
+                        Unregistered tag
+                    {% endif %}
+                </div>
+            </div>
         </div>
         {% if latest_scan.action == 'denied' and latest_scan.denial_reason %}
             <div class="live-hero-reason">

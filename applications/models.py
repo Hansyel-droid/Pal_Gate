@@ -4,7 +4,7 @@ from django.db.models import Q
 from accounts.models import COLLEGE_CHOICES, User
 from .utils import (
     upload_official_receipt, upload_vehicle_registration,
-    upload_license, upload_cor, upload_auth,
+    upload_license, upload_cor, upload_auth, upload_photo_2x2,
 )
 
 # A sticker is valid for one academic year from the day it was handed out.
@@ -138,6 +138,16 @@ class StickerApplication(models.Model):
     # Authorization letter required if applicant is not the owner
     authorization_letter = models.FileField(
         upload_to=upload_auth,
+        blank=True,
+        null=True
+    )
+    # 2x2 ID photo of the applicant. Required going forward — but enforced
+    # in ApplicationStep2Form, not here, exactly like the OR/CR/licence
+    # fields above are. This table already holds production rows submitted
+    # before the photo existed, and a NOT NULL FileField with no default
+    # cannot be added to them without inventing a fake file.
+    photo_2x2 = models.FileField(
+        upload_to=upload_photo_2x2,
         blank=True,
         null=True
     )

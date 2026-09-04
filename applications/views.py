@@ -24,7 +24,7 @@ logger = logging.getLogger('django')
 
 DOCUMENT_FIELDS = {
     'official_receipt', 'vehicle_registration',
-    'drivers_license', 'cor', 'authorization_letter',
+    'drivers_license', 'cor', 'authorization_letter', 'photo_2x2',
 }
 
 # What each document is called when shown to the person who uploaded it.
@@ -36,6 +36,7 @@ DOCUMENT_LABELS = {
     'drivers_license': "Driver's licence",
     'cor': 'COR',
     'authorization_letter': 'Authorisation letter',
+    'photo_2x2': '2x2 ID Photo',
 }
 
 
@@ -210,6 +211,9 @@ def apply_renew(request, pk):
         'authorization_letter': copy_document_to_temp(
             old_application.authorization_letter, user, 'authorization_letter'
         ),
+        'photo_2x2': copy_document_to_temp(
+            old_application.photo_2x2, user, 'photo_2x2'
+        ),
     }
     # Read by apply_step4 only to enrich the audit log description below —
     # not required for the submission itself to work.
@@ -293,6 +297,7 @@ def apply_step2(request):
                 'drivers_license': True,
                 'cor': classification == 'student',
                 'authorization_letter': is_owner == 'no',
+                'photo_2x2': True,
             }
 
             # Save uploaded files to temp storage so the applicant does NOT
@@ -468,12 +473,13 @@ def apply_step4(request):
                     file_data['original_name'], File(handle), save=False
                 )
 
-        # The OR, the CR and the driver's licence are always required. If a
-        # temp file went missing (e.g. cleaned up by the scheduled task while
-        # the applicant was mid-wizard), don't silently save a broken record —
-        # send them back to re-upload.
+        # The OR, the CR, the driver's licence and the 2x2 photo are always
+        # required. If a temp file went missing (e.g. cleaned up by the
+        # scheduled task while the applicant was mid-wizard), don't silently
+        # save a broken record — send them back to re-upload.
         if not all(temp_file_available(name) for name in (
-                'official_receipt', 'vehicle_registration', 'drivers_license')):
+                'official_receipt', 'vehicle_registration', 'drivers_license',
+                'photo_2x2')):
             messages.error(
                 request,
                 'One or more of your required documents could not be found '
@@ -506,6 +512,7 @@ def apply_step4(request):
                 attach_document(
                     application.authorization_letter, 'authorization_letter'
                 )
+                attach_document(application.photo_2x2, 'photo_2x2')
 
                 application.save()
 
@@ -609,13 +616,20 @@ def serve_document(request, pk, field_name):
     Streams an applicant's uploaded ID/vehicle document.
     These are government IDs, OR/CR, etc. — only the owning applicant or an
     admin staff member may view them. Never served as a raw static file.
+
+    The one exception is photo_2x2, which a guard also needs: matching the
+    face in the vehicle to the person the sticker was issued to is the whole
+    point of a gate check. That widening is scoped to that single field —
+    the security role stays locked out of every other document here.
     """
     if field_name not in DOCUMENT_FIELDS:
         raise Http404('Unknown document field.')
 
     application = get_object_or_404(StickerApplication, pk=pk)
 
-    if request.user.role != 'admin' and request.user != application.applicant:
+    allowed_roles = ('admin', 'security') if field_name == 'photo_2x2' else ('admin',)
+    if (request.user.role not in allowed_roles
+            and request.user != application.applicant):
         raise PermissionDenied('You do not have permission to view this document.')
 
     file_field = getattr(application, field_name)

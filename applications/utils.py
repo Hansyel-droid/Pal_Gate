@@ -40,3 +40,11 @@ def upload_cor(instance, filename):
 def upload_auth(instance, filename):
     ext = filename.split('.')[-1].lower()
     return f'documents/auth/{uuid.uuid4().hex}.{ext}'
+
+
+# The 2x2 ID photo. Same shape as the document callables above, but it is
+# the only upload that is rendered inline (admin review, gate scan card)
+# rather than downloaded behind a "View" link.
+def upload_photo_2x2(instance, filename):
+    ext = filename.split('.')[-1].lower()
+    return f'documents/photo_2x2/{uuid.uuid4().hex}.{ext}'

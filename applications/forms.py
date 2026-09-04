@@ -37,10 +37,17 @@ class ApplicationStep2Form(forms.Form):
 
     DOCUMENT_FIELDS = [
         'official_receipt', 'vehicle_registration',
-        'drivers_license', 'cor', 'authorization_letter',
+        'drivers_license', 'cor', 'authorization_letter', 'photo_2x2',
     ]
 
     ALLOWED_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png']
+    # The 2x2 photo is the one upload that is rendered inline — on the admin
+    # review page and in the guard's live scan card — rather than downloaded
+    # behind a "View" link. A PDF there would draw as a broken image instead
+    # of a face, so this field takes images only.
+    IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png']
+    FIELD_EXTENSIONS = {'photo_2x2': IMAGE_EXTENSIONS}
+
     MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
     # Magic-byte signatures — checked against the file's actual bytes so a
@@ -106,6 +113,17 @@ class ApplicationStep2Form(forms.Form):
         required=False,
         widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf,.jpg,.jpeg,.png'})
     )
+    photo_2x2 = forms.FileField(
+        label='2x2 ID Photo',
+        help_text=(
+            'A recent photo of yourself, face clearly visible, similar to a '
+            'passport photo.'
+        ),
+        widget=forms.FileInput(attrs={
+            'class': 'form-control',
+            'accept': '.jpg,.jpeg,.png',
+        })
+    )
 
     def __init__(self, *args, existing_files=None, **kwargs):
         """
@@ -141,16 +159,25 @@ class ApplicationStep2Form(forms.Form):
             self.initial['vehicle_color'] = 'other'
             self.initial['vehicle_color_other'] = current_color
 
-    def validate_file_extension(self, file):
-        """Check that the uploaded file is PDF, JPG, JPEG, or PNG — by both
-        extension and actual file content, and enforce a size cap."""
+    def validate_file_extension(self, file, allowed=None):
+        """
+        Check that the uploaded file is one of the allowed types — by both
+        extension and actual file content — and enforce a size cap.
+
+        `allowed` narrows the accepted list for a single field; it defaults
+        to ALLOWED_EXTENSIONS. photo_2x2 passes IMAGE_EXTENSIONS so a PDF is
+        rejected there even though it is fine for every other document.
+        """
         if not file:
             return
 
+        allowed = allowed or self.ALLOWED_EXTENSIONS
+        allowed_label = ', '.join(e.upper() for e in allowed)
+
         extension = file.name.split('.')[-1].lower()
-        if extension not in self.ALLOWED_EXTENSIONS:
+        if extension not in allowed:
             raise forms.ValidationError(
-                f'Only PDF, JPG, JPEG, PNG files are allowed. You uploaded: .{extension}'
+                f'Only {allowed_label} files are allowed. You uploaded: .{extension}'
             )
 
         if file.size > self.MAX_FILE_SIZE:
@@ -165,7 +192,7 @@ class ApplicationStep2Form(forms.Form):
         if not any(header.startswith(sig) for sig in signatures):
             raise forms.ValidationError(
                 f'The file you uploaded does not look like a real .{extension} file. '
-                'Please upload an unmodified PDF, JPG, JPEG, or PNG.'
+                f'Please upload an unmodified {allowed_label} file.'
             )
 
     def clean_plate_number(self):
@@ -198,7 +225,9 @@ class ApplicationStep2Form(forms.Form):
             file = cleaned_data.get(field_name)
             if file:
                 try:
-                    self.validate_file_extension(file)
+                    self.validate_file_extension(
+                        file, self.FIELD_EXTENSIONS.get(field_name)
+                    )
                 except forms.ValidationError as e:
                     self.add_error(field_name, e)
 
