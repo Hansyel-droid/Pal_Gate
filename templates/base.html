@@ -917,6 +917,15 @@
             margin-bottom: var(--s1);
         }
 
+        /* The asterisk marking a required field is the one character in a
+           label that isn't decoration — it changes what the applicant has
+           to do. Colour is what makes it read as a signal instead of
+           punctuation. */
+        .required-mark {
+            color: var(--danger);
+            font-weight: 700;
+        }
+
         .form-control, .form-select {
             background: var(--surface);
             border: 1px solid var(--border-control);
@@ -2140,6 +2149,21 @@
                 font-size: var(--fs-2xs);
             }
             .wizard-connector { margin: 0 var(--s1); }
+
+            /* The panel's row layout (icon, text, action button) doesn't fit
+               a phone width — the button was overlapping the status text
+               instead of sitting after it. Stack the three pieces instead. */
+            .status-panel {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .status-panel-action {
+                padding-top: 0;
+                margin-top: var(--s2);
+            }
+            .status-panel-action .btn {
+                width: 100%;
+            }
         }
 
         @media (max-width: 420px) {

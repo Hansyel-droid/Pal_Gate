@@ -26,7 +26,7 @@
                     </div>
                     <div class="card-body">
                         <div class="mb-3">
-                            <label for="{{ form.plate_number.id_for_label }}" class="form-label">Plate number *</label>
+                            <label for="{{ form.plate_number.id_for_label }}" class="form-label">Plate number <span class="required-mark">*</span></label>
                             {{ form.plate_number }}
                             {{ form.plate_number.errors }}
                             <p class="form-text">
@@ -35,24 +35,24 @@
                             </p>
                         </div>
                         <div class="mb-3">
-                            <label for="{{ form.vehicle_type.id_for_label }}" class="form-label">Vehicle type *</label>
+                            <label for="{{ form.vehicle_type.id_for_label }}" class="form-label">Vehicle type <span class="required-mark">*</span></label>
                             {{ form.vehicle_type }}
                             {{ form.vehicle_type.errors }}
                         </div>
                         <div class="mb-3">
-                            <label for="{{ form.vehicle_color.id_for_label }}" class="form-label">Colour *</label>
+                            <label for="{{ form.vehicle_color.id_for_label }}" class="form-label">Colour <span class="required-mark">*</span></label>
                             {{ form.vehicle_color }}
                             {{ form.vehicle_color.errors }}
                         </div>
                         <div class="mb-3" id="vehicle_color_other_wrapper" style="display:none;">
                             <label for="{{ form.vehicle_color_other.id_for_label }}" class="form-label">
-                                Specify colour *
+                                Specify colour <span class="required-mark">*</span>
                             </label>
                             {{ form.vehicle_color_other }}
                             {{ form.vehicle_color_other.errors }}
                         </div>
                         <div>
-                            <label for="{{ form.is_owner.id_for_label }}" class="form-label">Are you the vehicle owner? *</label>
+                            <label for="{{ form.is_owner.id_for_label }}" class="form-label">Are you the vehicle owner? <span class="required-mark">*</span></label>
                             {{ form.is_owner }}
                             <p class="form-text">
                                 If not, an authorisation letter from the owner is required.

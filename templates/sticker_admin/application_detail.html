@@ -303,7 +303,7 @@
                     {% csrf_token %}
                     <div class="mb-3">
                         <label class="form-label" for="rejection_reason">
-                            Reason for rejection *
+                            Reason for rejection <span class="required-mark">*</span>
                         </label>
                         <textarea id="rejection_reason" name="rejection_reason" class="form-control"
                                   rows="3" aria-describedby="reject_help"

@@ -58,11 +58,11 @@
                     {% csrf_token %}
                     <input type="hidden" name="action" value="activate_range">
                     <div class="mb-3">
-                        <label for="id_range_start" class="form-label">From *</label>
+                        <label for="id_range_start" class="form-label">From <span class="required-mark">*</span></label>
                         <input id="id_range_start" type="date" name="range_start" class="form-control" required>
                     </div>
                     <div class="mb-4">
-                        <label for="id_range_end" class="form-label">To *</label>
+                        <label for="id_range_end" class="form-label">To <span class="required-mark">*</span></label>
                         <input id="id_range_end" type="date" name="range_end" class="form-control" required>
                     </div>
                     <button type="submit" class="btn btn-primary w-100">

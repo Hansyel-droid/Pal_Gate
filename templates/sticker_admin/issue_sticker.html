@@ -141,7 +141,7 @@
                     <form method="post" id="issue-form">
                         {% csrf_token %}
                         <div class="mb-4">
-                            <label for="rfid_uid" class="form-label">RFID tag UID *</label>
+                            <label for="rfid_uid" class="form-label">RFID tag UID <span class="required-mark">*</span></label>
                             <div class="input-group">
                                 <input type="text" name="rfid_uid" id="rfid_uid"
                                        class="form-control form-control-lg"

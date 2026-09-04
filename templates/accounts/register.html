@@ -20,25 +20,25 @@
 
                     <div class="row g-3">
                         <div class="col-sm-6">
-                            <label for="id_first_name" class="form-label">First name *</label>
+                            <label for="id_first_name" class="form-label">First name <span class="required-mark">*</span></label>
                             <input id="id_first_name" type="text" name="first_name" class="form-control"
                                    autocomplete="given-name"
                                    value="{{ form.first_name.value|default:'' }}" required>
                         </div>
                         <div class="col-sm-6">
-                            <label for="id_last_name" class="form-label">Last name *</label>
+                            <label for="id_last_name" class="form-label">Last name <span class="required-mark">*</span></label>
                             <input id="id_last_name" type="text" name="last_name" class="form-control"
                                    autocomplete="family-name"
                                    value="{{ form.last_name.value|default:'' }}" required>
                         </div>
                         <div class="col-12">
-                            <label for="id_username" class="form-label">Username *</label>
+                            <label for="id_username" class="form-label">Username <span class="required-mark">*</span></label>
                             <input id="id_username" type="text" name="username" class="form-control"
                                    autocomplete="username"
                                    value="{{ form.username.value|default:'' }}" required>
                         </div>
                         <div class="col-12">
-                            <label for="id_email" class="form-label">PalawanSU email *</label>
+                            <label for="id_email" class="form-label">PalawanSU email <span class="required-mark">*</span></label>
                             <input id="id_email" type="email" name="email" class="form-control"
                                    autocomplete="email"
                                    value="{{ form.email.value|default:'' }}"
@@ -90,13 +90,13 @@
 
                     <div class="row g-3">
                         <div class="col-sm-6">
-                            <label for="id_password1" class="form-label">Password *</label>
+                            <label for="id_password1" class="form-label">Password <span class="required-mark">*</span></label>
                             <input id="id_password1" type="password" name="password1" class="form-control"
                                    autocomplete="new-password"
                                    aria-describedby="password_help" required>
                         </div>
                         <div class="col-sm-6">
-                            <label for="id_password2" class="form-label">Confirm password *</label>
+                            <label for="id_password2" class="form-label">Confirm password <span class="required-mark">*</span></label>
                             <input id="id_password2" type="password" name="password2" class="form-control"
                                    autocomplete="new-password" required>
                         </div>

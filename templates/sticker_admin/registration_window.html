@@ -66,12 +66,12 @@
                 <input type="hidden" name="action" value="save">
                 <div class="row g-3 align-items-end">
                     <div class="col-sm-5">
-                        <label for="id_start_date" class="form-label">Start date *</label>
+                        <label for="id_start_date" class="form-label">Start date <span class="required-mark">*</span></label>
                         <input id="id_start_date" type="date" name="start_date" class="form-control" required
                                value="{% if current_window %}{{ current_window.start_date|date:'Y-m-d' }}{% endif %}">
                     </div>
                     <div class="col-sm-5">
-                        <label for="id_end_date" class="form-label">End date *</label>
+                        <label for="id_end_date" class="form-label">End date <span class="required-mark">*</span></label>
                         <input id="id_end_date" type="date" name="end_date" class="form-control" required
                                value="{% if current_window %}{{ current_window.end_date|date:'Y-m-d' }}{% endif %}">
                     </div>

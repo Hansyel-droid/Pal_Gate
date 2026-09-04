@@ -14,13 +14,7 @@ Usage: {% include 'applications/_wizard.html' with step=2 %}
             <li class="wizard-step
                        {% if forloop.counter < step %}done{% elif forloop.counter == step %}active{% endif %}"
                 {% if forloop.counter == step %}aria-current="step"{% endif %}>
-                <span class="step-num">
-                    {% if forloop.counter < step %}
-                        <svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>
-                    {% else %}
-                        {{ forloop.counter }}
-                    {% endif %}
-                </span>
+                <span class="step-num">{% if forloop.counter < step %}<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>{% else %}{{ forloop.counter }}{% endif %}</span>
                 <span>
                     {% if forloop.counter == 1 %}Personal details
                     {% elif forloop.counter == 2 %}Vehicle &amp; documents
