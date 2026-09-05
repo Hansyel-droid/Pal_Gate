@@ -488,10 +488,39 @@ if TRUST_X_FORWARDED_FOR:
     AXES_CLIENT_IP_CALLABLE = 'gate.audit.throttle_client_ip'
     RATELIMIT_IP_META_KEY = 'gate.audit.throttle_client_ip'
 
-# ── API Keys ─────────────────────────────────────────────────────────────────
+# ── API Keys / device authentication ──────────────────────────────────────────
 # No insecure fallback on purpose: a missing .env value must fail loudly,
 # not silently fall back to a key that's sitting in source control history.
-API_KEYS = config('API_KEYS', cast=Csv())
+#
+# Each physical device gets its own named secret rather than one key shared
+# by every device. A secret now does two jobs: it's what a signed request
+# (see require_device_auth in api/authentication.py) is verified against,
+# and its name is a scope — DEVICE_ALLOWED_ENDPOINTS says which URL each
+# device may call at all, so a leaked gate-scanner secret can't be replayed
+# against the registration endpoint and vice versa.
+#
+# These are the exact same two values the single API_KEYS list used to hold
+# — nothing was rotated, they were only unlabeled before. Must also be set
+# on Render's own environment variables (not just this local .env) before
+# deploying the backend change that reads them, or the app fails at startup.
+GATE_SCANNER_KEY = config('GATE_SCANNER_KEY')
+REGISTRATION_DEVICE_KEY = config('REGISTRATION_DEVICE_KEY')
+
+DEVICE_SECRETS = {
+    'gate_scanner': GATE_SCANNER_KEY,
+    'registration_device': REGISTRATION_DEVICE_KEY,
+}
+
+DEVICE_ALLOWED_ENDPOINTS = {
+    'gate_scanner': {'scan_tag'},
+    'registration_device': {'register_uid'},
+}
+
+# Back-compat for any device still sending a bare X-API-Key with no device
+# identity attached (gate_status, and scan_tag/register_uid until both
+# devices are reflashed with signed-request firmware) — see
+# require_api_key / require_device_auth in api/authentication.py.
+API_KEYS = list(DEVICE_SECRETS.values())
 
 # ── RFID tag authentication ──────────────────────────────────────────────────
 # Master key for deriving each NTAG215's PWD_AUTH password from its UID.

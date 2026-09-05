@@ -1,6 +1,10 @@
+import hashlib
+import hmac
 import json
+import time
 from datetime import timedelta
 
+from django.core.cache import cache
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -418,3 +422,194 @@ class RegisterUidCredentialResponseTests(TestCase):
             response = self.register()
         self.assertEqual(response.status_code, 500)
         self.assertFalse(PendingRFID.objects.exists())
+
+
+@override_settings(
+    DEVICE_SECRETS={
+        'gate_scanner': 'gs-test-secret',
+        'registration_device': 'rd-test-secret',
+    },
+    DEVICE_ALLOWED_ENDPOINTS={
+        'gate_scanner': {'scan_tag'},
+        'registration_device': {'register_uid'},
+    },
+    API_KEYS=[],  # signed-path tests must not accidentally pass on the legacy branch
+)
+class SignedDeviceRequestTests(TestCase):
+    """
+    require_device_auth's signed path (api/authentication.py) — the
+    stronger replacement for a bare shared X-API-Key. A device proves it
+    holds a secret that never travels on the wire by signing the exact
+    bytes of its own request, instead of sending something that would work
+    again for anyone who captured it once.
+
+    cache.clear() matters here specifically because replay protection is
+    built on the same file-based cache.add() the abandoned-signup cleanup
+    uses elsewhere — it persists between test runs, and a timestamp reused
+    across two tests would make the second one look like a replay of the
+    first.
+    """
+
+    def setUp(self):
+        cache.clear()
+
+    def tearDown(self):
+        cache.clear()
+
+    def sign(self, device_id, secret, timestamp, body_bytes):
+        message = device_id.encode() + b'|' + str(timestamp).encode() + b'|' + body_bytes
+        return hmac.new(secret.encode(), message, hashlib.sha256).hexdigest()
+
+    def signed_post(self, url_name, device_id, secret, payload, timestamp=None, signature=None):
+        body_bytes = json.dumps(payload).encode()
+        if timestamp is None:
+            timestamp = int(time.time())
+        if signature is None:
+            signature = self.sign(device_id, secret, timestamp, body_bytes)
+        return self.client.post(
+            reverse(url_name),
+            data=body_bytes,
+            content_type='application/json',
+            HTTP_X_DEVICE_ID=device_id,
+            HTTP_X_TIMESTAMP=str(timestamp),
+            HTTP_X_SIGNATURE=signature,
+        )
+
+    def test_valid_signature_from_the_gate_scanner_is_accepted(self):
+        response = self.signed_post(
+            'api_scan', 'gate_scanner', 'gs-test-secret',
+            {'uid': 'UNKNOWN-TAG', 'gate': 'Main Gate'},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()['allowed'])  # unregistered tag, but authenticated
+
+    def test_valid_signature_from_the_registration_device_is_accepted(self):
+        response = self.signed_post(
+            'api_register_uid', 'registration_device', 'rd-test-secret',
+            {'uid': 'NEWTAG001'},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['success'])
+
+    def test_unknown_device_id_is_rejected(self):
+        response = self.signed_post(
+            'api_scan', 'front_desk_kiosk', 'gs-test-secret',
+            {'uid': 'ABC123', 'gate': 'Main Gate'},
+        )
+        self.assertEqual(response.status_code, 401)
+
+    def test_wrong_secret_produces_a_signature_that_does_not_match(self):
+        response = self.signed_post(
+            'api_scan', 'gate_scanner', 'a-secret-the-server-never-configured',
+            {'uid': 'ABC123', 'gate': 'Main Gate'},
+        )
+        self.assertEqual(response.status_code, 401)
+
+    def test_tampering_with_the_body_after_signing_invalidates_it(self):
+        body = {'uid': 'ABC123', 'gate': 'Main Gate'}
+        timestamp = int(time.time())
+        signature = self.sign('gate_scanner', 'gs-test-secret', timestamp, json.dumps(body).encode())
+        # Same signature, different body — as if someone intercepted and
+        # altered the request in transit without knowing the secret.
+        tampered = json.dumps({'uid': 'SOMEONE-ELSES-TAG', 'gate': 'Main Gate'}).encode()
+        response = self.client.post(
+            reverse('api_scan'),
+            data=tampered,
+            content_type='application/json',
+            HTTP_X_DEVICE_ID='gate_scanner',
+            HTTP_X_TIMESTAMP=str(timestamp),
+            HTTP_X_SIGNATURE=signature,
+        )
+        self.assertEqual(response.status_code, 401)
+
+    def test_stale_timestamp_is_rejected(self):
+        old_timestamp = int(time.time()) - 300  # 5 minutes old
+        response = self.signed_post(
+            'api_scan', 'gate_scanner', 'gs-test-secret',
+            {'uid': 'ABC123', 'gate': 'Main Gate'},
+            timestamp=old_timestamp,
+        )
+        self.assertEqual(response.status_code, 401)
+
+    def test_timestamp_too_far_in_the_future_is_rejected(self):
+        # A device with a badly wrong clock is indistinguishable from a
+        # captured request being replayed after the fact — both get refused.
+        future_timestamp = int(time.time()) + 300
+        response = self.signed_post(
+            'api_scan', 'gate_scanner', 'gs-test-secret',
+            {'uid': 'ABC123', 'gate': 'Main Gate'},
+            timestamp=future_timestamp,
+        )
+        self.assertEqual(response.status_code, 401)
+
+    def test_malformed_timestamp_is_rejected_not_crashed(self):
+        response = self.client.post(
+            reverse('api_scan'),
+            data=json.dumps({'uid': 'ABC123', 'gate': 'Main Gate'}),
+            content_type='application/json',
+            HTTP_X_DEVICE_ID='gate_scanner',
+            HTTP_X_TIMESTAMP='not-a-number',
+            HTTP_X_SIGNATURE='irrelevant',
+        )
+        self.assertEqual(response.status_code, 401)
+
+    def test_exact_replay_within_the_window_is_rejected(self):
+        payload = {'uid': 'ABC123', 'gate': 'Main Gate'}
+        timestamp = int(time.time())
+        body_bytes = json.dumps(payload).encode()
+        signature = self.sign('gate_scanner', 'gs-test-secret', timestamp, body_bytes)
+
+        first = self.client.post(
+            reverse('api_scan'), data=body_bytes, content_type='application/json',
+            HTTP_X_DEVICE_ID='gate_scanner', HTTP_X_TIMESTAMP=str(timestamp),
+            HTTP_X_SIGNATURE=signature,
+        )
+        self.assertEqual(first.status_code, 200)
+
+        # The exact same request, byte for byte, sent again — as if it had
+        # been captured off the wire and replayed a moment later.
+        second = self.client.post(
+            reverse('api_scan'), data=body_bytes, content_type='application/json',
+            HTTP_X_DEVICE_ID='gate_scanner', HTTP_X_TIMESTAMP=str(timestamp),
+            HTTP_X_SIGNATURE=signature,
+        )
+        self.assertEqual(second.status_code, 401)
+
+    def test_registration_device_signature_cannot_be_used_to_scan(self):
+        # Least privilege: a secret valid for one endpoint must not work on
+        # another, even though the signature itself is perfectly genuine.
+        response = self.signed_post(
+            'api_scan', 'registration_device', 'rd-test-secret',
+            {'uid': 'ABC123', 'gate': 'Main Gate'},
+        )
+        self.assertEqual(response.status_code, 401)
+
+    def test_gate_scanner_signature_cannot_be_used_to_register(self):
+        response = self.signed_post(
+            'api_register_uid', 'gate_scanner', 'gs-test-secret',
+            {'uid': 'NEWTAG001'},
+        )
+        self.assertEqual(response.status_code, 401)
+
+    def test_incomplete_signed_headers_do_not_fall_back_to_legacy(self):
+        # X-Device-ID present with no signature must be refused outright,
+        # not silently accepted as a keyless legacy request.
+        response = self.client.post(
+            reverse('api_scan'),
+            data=json.dumps({'uid': 'ABC123', 'gate': 'Main Gate'}),
+            content_type='application/json',
+            HTTP_X_DEVICE_ID='gate_scanner',
+        )
+        self.assertEqual(response.status_code, 401)
+
+    def test_legacy_x_api_key_still_works_during_migration(self):
+        # Neither device has been reflashed yet in this scenario — the
+        # shared key from settings.API_KEYS must still work.
+        with override_settings(API_KEYS=['old-shared-key']):
+            response = self.client.post(
+                reverse('api_scan'),
+                data=json.dumps({'uid': 'ABC123', 'gate': 'Main Gate'}),
+                content_type='application/json',
+                HTTP_X_API_KEY='old-shared-key',
+            )
+        self.assertEqual(response.status_code, 200)

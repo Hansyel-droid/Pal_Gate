@@ -5,7 +5,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 from django_ratelimit.decorators import ratelimit
-from .authentication import require_api_key
+from .authentication import require_api_key, require_device_auth
 from .rfid_auth import derive_tag_credentials_hex
 
 from accounts.mixins import role_required
@@ -51,12 +51,16 @@ def _get_vehicle_color(application):
 
 
 @csrf_exempt
-@require_api_key
+@require_device_auth
 @ratelimit(key='ip', rate='60/m', method='POST', block=True)
 @require_http_methods(['POST'])
 def scan_tag(request):
     """
     Called by the ESP32 gate scanner when a tag is scanned.
+
+    Authenticated by require_device_auth — either a signed request
+    (X-Device-ID: gate_scanner, X-Timestamp, X-Signature) or, until that
+    device is reflashed, a legacy X-API-Key. See api/authentication.py.
 
     Expected JSON body:
     {
@@ -179,7 +183,7 @@ def scan_tag(request):
 
 
 @csrf_exempt
-@require_api_key
+@require_device_auth
 @ratelimit(key='ip', rate='30/m', method='POST', block=True)
 @require_http_methods(['POST'])
 def register_uid(request):
@@ -187,6 +191,10 @@ def register_uid(request):
     Called by the ESP32 registration scanner when a new tag is presented.
     Stores the UID temporarily so the sticker station can pick it up, and
     hands back the PWD_AUTH credentials the device writes to the tag.
+
+    Authenticated by require_device_auth — either a signed request
+    (X-Device-ID: registration_device, X-Timestamp, X-Signature) or, until
+    that device is reflashed, a legacy X-API-Key. See api/authentication.py.
 
     Expected JSON body:
     {
